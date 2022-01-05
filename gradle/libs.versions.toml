@@ -14,7 +14,7 @@ jide = "3.6.18"
 logback = "1.2.3"
 kotest = "5.0.3"
 zip4j = "2.9.1"
-ignition = "8.1.0"
+ignition = "8.1.1"
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -41,8 +41,8 @@ svgSalamander = { group = "com.formdev", name = "svgSalamander", version.ref = "
 jide-common = { group = "com.jidesoft", name = "jide-oss", version.ref = "jide" }
 
 # Ignition
-ignition-common = { group = "com.inductiveautomation.ignitionsdk", name = "ignition-common", version.ref = "ignition" }
-ignition-gateway = { group = "com.inductiveautomation.ignitionsdk", name = "gateway-api", version.ref = "ignition" }
+ignition-common = { group = "com.inductiveautomation.ignition", name = "common", version.ref = "ignition" }
+ignition-gateway = { group = "com.inductiveautomation.ignition", name = "gateway-api", version.ref = "ignition" }
 
 # test framework
 kotest-junit = { group = "io.kotest", name = "kotest-runner-junit5", version.ref = "kotest" }
