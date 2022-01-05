@@ -2,16 +2,22 @@
 
 A standalone utility project for Ignition users. Features various tools to help with troubleshooting Ignition systems.
 
-## Using
+## Usage
 
-Download either the installer or portable executable from the releases tab.
+![](assets/threads.gif)
+![](assets/logs.gif)
+![](assets/cache.gif)
+
+Download either the installer or portable executable from the releases tab. Once running, you can use Kindling to open
+various Ignition related files.
 
 ## Development
 
 Kindling is a Java Swing application, but written almost exclusively in Kotlin, an alternate JVM language. Gradle is
 used as the build tool, and will automatically download the appropriate Gradle and Java version (via the Gradle wrapper)
-. You can directly run the main class in your IDE ([MainPanel](src/main/kotlin/io/github/paulgriffith/MainPanel.kt)), or
-you can run the application directly via Gradle (`./gradlew run` at the command line).
+. Most IDEs (Eclipse, IntelliJ should "figure it out" automatically). You can directly run the main class in your
+IDE ([MainPanel](src/main/kotlin/io/github/paulgriffith/MainPanel.kt)), or you can run the application
+via`./gradlew run` at the command line.
 
 ## Contribution
 
