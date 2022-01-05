@@ -98,7 +98,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
                     } else {
                         systemTable.clearSelection()
                         selectedIndices
-                            .map { row -> stateTable.model[row, StateModel.State] }
+                            .map { row -> stateTable.model[stateTable.convertRowIndexToModel(row), StateModel.State] }
                             .let { states ->
                                 mainTable.rowSorter.rowFilter = states.map(Thread.State::name).toRowFilter()
                             }
@@ -115,7 +115,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
                     } else {
                         stateTable.clearSelection()
                         selectedIndices
-                            .map { row -> systemTable.model[row, SystemModel.System] }
+                            .map { row -> systemTable.model[systemTable.convertRowIndexToModel(row), SystemModel.System] }
                             .let { systems ->
                                 mainTable.rowSorter.rowFilter = systems.toRowFilter()
                             }
