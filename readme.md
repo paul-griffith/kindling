@@ -33,7 +33,7 @@ receives on startup as a filepath to open, allowing it to be registered as a fil
 
 ## Development
 
-Kindling uses Java Swing as a GUI framework, but written almost exclusively in Kotlin, an alternate JVM language. Gradle
+Kindling uses Java Swing as a GUI framework, but is written almost exclusively in Kotlin, an alternate JVM language. Gradle
 is used as the build tool, and will automatically download the appropriate Gradle and Java version (via the Gradle
 wrapper). Most IDEs (Eclipse, IntelliJ) should figure out the project structure automatically. You can directly run the
 main class in your IDE ([MainPanel](src/main/kotlin/io/github/paulgriffith/MainPanel.kt)), or you can run the
