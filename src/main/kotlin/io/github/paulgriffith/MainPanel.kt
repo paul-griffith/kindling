@@ -126,7 +126,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
             FlatUIDefaultsInspector.install("ctrl shift Y")
 
-            JFrame("Support Projects").apply {
+            JFrame("Kindling").apply {
                 defaultCloseOperation = JFrame.EXIT_ON_CLOSE
                 preferredSize = Dimension(1280, 800)
                 iconImage = FRAME_ICON
