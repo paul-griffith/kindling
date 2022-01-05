@@ -84,9 +84,10 @@ class LogView(override val path: Path) : ToolPanel() {
             }
     }
 
-    private fun runQuery(): List<Event> {
-        connection.prepareStatement(
-            """
+    // Run an initial query (blocking) so if this isn't a log export we bail out
+    // This is unfortunate (it can be a little slow) but better UX overall
+    private val rawData: List<Event> = connection.prepareStatement(
+        """
             SELECT
                    event_id,
                    timestmp,
@@ -98,31 +99,27 @@ class LogView(override val path: Path) : ToolPanel() {
                 logging_event
             ORDER BY
                 event_id
-            """.trimIndent()
-        ).executeQuery().use { resultSet ->
-            return buildList {
-                while (resultSet.next()) {
-                    val eventId = resultSet.getInt("event_id")
-                    add(
-                        Event(
-                            eventId = eventId,
-                            timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
-                            message = resultSet.getString("formatted_message"),
-                            logger = resultSet.getString("logger_name"),
-                            thread = resultSet.getString("thread_name"),
-                            level = resultSet.getString("level_string"),
-                            mdc = mdcKeys[eventId].orEmpty(),
-                            stacktrace = stackTraces[eventId].orEmpty(),
-                        )
+        """.trimIndent()
+    ).executeQuery().use { resultSet ->
+        buildList {
+            while (resultSet.next()) {
+                val eventId = resultSet.getInt("event_id")
+                this.add(
+                    Event(
+                        eventId = eventId,
+                        timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
+                        message = resultSet.getString("formatted_message"),
+                        logger = resultSet.getString("logger_name"),
+                        thread = resultSet.getString("thread_name"),
+                        level = resultSet.getString("level_string"),
+                        mdc = this@LogView.mdcKeys[eventId].orEmpty(),
+                        stacktrace = this@LogView.stackTraces[eventId].orEmpty(),
                     )
-                }
+                )
             }
         }
     }
 
-    // Run an initial query (blocking) so if this isn't a log export we bail out
-    // This is unfortunate (it can be a little slow) but better UX overall
-    private val rawData = runQuery()
     private val maxRows: Int = rawData.size
     private val tableModel: LogExportModel = LogExportModel(rawData)
     private val table = LogExportTable(tableModel)
@@ -156,6 +153,7 @@ class LogView(override val path: Path) : ToolPanel() {
     private var lockout: Boolean = false
 
     init {
+        connection.close() // all data is held locally in memory, close the connection so we don't lock the file
         add(loading, "hmax 10, hidemode 0, spanx 2, wrap")
         add(header, "wrap, spanx 2")
         add(sidebar, "growy, pushy, width 20%")
