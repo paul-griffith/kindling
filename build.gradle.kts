@@ -1,5 +1,6 @@
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeFirstWord
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
 
 @Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
@@ -12,7 +13,7 @@ plugins {
 }
 
 group = "io.github.paulgriffith"
-version = "0.0.1"
+version = "0.0.2"
 
 repositories {
     mavenCentral()
@@ -66,7 +67,7 @@ tasks {
 
 application {
     mainClass.set(className)
-    applicationName = "Kindling"
+    applicationName = rootProject.name.capitalizeFirstWord()
     applicationDefaultJvmArgs = defaultJvmArgs
 }
 
@@ -105,7 +106,7 @@ runtime {
             put("resource-dir", "src/main/resources")
             put("vendor", "Paul Griffith")
             put("app-version", version.toString())
-            put("copyright", "2021")
+            put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
             when {
@@ -116,11 +117,11 @@ runtime {
                     put("win-shortcut", null)
                 }
                 currentOs.isLinux -> {
-                    put("linux-package-name", "Ignition Tools")
+                    put("linux-package-name", rootProject.name.capitalizeFirstWord())
                     put("linux-shortcut", null)
                 }
                 currentOs.isMacOsX -> {
-                    put("mac-package-name", "Ignition Tools")
+                    put("mac-package-name", rootProject.name.capitalizeFirstWord())
                 }
             }
         }
