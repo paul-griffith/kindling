@@ -2,7 +2,6 @@ package io.github.paulgriffith
 
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import io.github.paulgriffith.main.TabPanel
 import io.github.paulgriffith.main.ThemeButton
@@ -19,17 +18,28 @@ import java.awt.Image
 import java.awt.Toolkit
 import java.io.File
 import java.nio.file.Path
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
+import javax.swing.filechooser.FileView
 import kotlin.io.path.nameWithoutExtension
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val fileChooser = JFileChooser().apply {
         isMultiSelectionEnabled = true
         preferredSize = Dimension(800, 600)
+        fileView = object : FileView() {
+            override fun getIcon(file: File): Icon? {
+                return if (file.isFile) {
+                    Tool.getOrNull(file)?.icon?.derive(16, 16)
+                } else {
+                    null
+                }
+            }
+        }
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.values().first().filter
@@ -123,8 +133,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         @JvmStatic
         fun main(args: Array<String>) {
             setupLaf()
-
-            FlatUIDefaultsInspector.install("ctrl shift Y")
 
             JFrame("Kindling").apply {
                 defaultCloseOperation = JFrame.EXIT_ON_CLOSE
