@@ -1,9 +1,9 @@
 package io.github.paulgriffith.logviewer
 
-import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
 import org.sqlite.SQLiteDataSource
 import java.nio.file.Path
@@ -192,7 +192,7 @@ class LogView(override val path: Path) : ToolPanel() {
         lockout = false
     }
 
-    override val icon: Icon = FlatSVGIcon("icons/bx-hdd.svg")
+    override val icon: Icon = Tool.LogViewer.icon
 
     companion object {
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")

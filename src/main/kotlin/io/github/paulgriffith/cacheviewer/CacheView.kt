@@ -1,11 +1,11 @@
 package io.github.paulgriffith.cacheviewer
 
-import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.getLogger
 import nb.deser.SerializationDumper
@@ -58,11 +58,13 @@ class CacheView(override val path: Path) : ToolPanel() {
         connection.close()
     }
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val dataQuery: PreparedStatement = connection.prepareStatement(
         "SELECT data FROM datastore_data WHERE id = ?"
     )
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val tableQuery: PreparedStatement = connection.prepareStatement(
         "SELECT id, schemaid, t_stamp, attemptcount, data_count FROM datastore_data"
@@ -205,7 +207,7 @@ class CacheView(override val path: Path) : ToolPanel() {
         )
     }
 
-    override val icon: Icon = FlatSVGIcon("icons/bx-data.svg")
+    override val icon: Icon = Tool.CacheViewer.icon
 
     companion object {
         val LOGGER = getLogger<CacheView>()

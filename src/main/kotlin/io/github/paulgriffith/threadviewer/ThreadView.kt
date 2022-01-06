@@ -1,12 +1,12 @@
 package io.github.paulgriffith.threadviewer
 
-import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.threadviewer.model.ThreadDump
 import io.github.paulgriffith.threadviewer.model.ThreadInfo
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.debounce
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -143,7 +143,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
         )
     }
 
-    override val icon: Icon = FlatSVGIcon("icons/bx-chip.svg")
+    override val icon: Icon = Tool.ThreadViewer.icon
 
     companion object {
         internal val JSON = Json {
