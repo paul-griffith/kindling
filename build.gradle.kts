@@ -123,6 +123,9 @@ runtime {
                 currentOs.isLinux -> {
                     put("linux-shortcut", null)
                 }
+                currentOs.isMacOsX -> {
+                    put("app-version", version.toString())
+                }
             }
         }
 
