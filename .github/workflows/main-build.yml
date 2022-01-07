@@ -22,4 +22,6 @@ jobs:
         run: ./gradlew jpackage
       - uses: actions/upload-artifact@v2
         with:
+          name: kindling-${{ matrix.os }}
           path: build/jpackage/kindling-**
+          if-no-files-found: error
