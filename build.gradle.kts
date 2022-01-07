@@ -110,9 +110,6 @@ runtime {
             put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
-//            put("file-associations", "jpackage/backups.properties")
-//            put("file-associations", "jpackage/logs.properties")
-
             when {
                 currentOs.isWindows -> {
                     put("win-per-user-install", null)
@@ -124,7 +121,7 @@ runtime {
                     put("linux-shortcut", null)
                 }
                 currentOs.isMacOsX -> {
-                    put("app-version", version.toString())
+                    put("app-version", "1.0.0")
                 }
             }
         }
