@@ -106,7 +106,7 @@ runtime {
         val options: Map<String, String?> = buildMap {
             put("resource-dir", "src/main/resources")
             put("vendor", "Paul Griffith")
-            put("app-version", version.toString())
+            put("app-version", "1.0.0")
             put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
@@ -119,9 +119,6 @@ runtime {
                 }
                 currentOs.isLinux -> {
                     put("linux-shortcut", null)
-                }
-                currentOs.isMacOsX -> {
-                    put("app-version", "1.0.0")
                 }
             }
         }
