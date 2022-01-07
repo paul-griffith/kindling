@@ -90,9 +90,7 @@ runtime {
             "java.sql",
             "java.logging",
             "java.naming",
-            "java.management",
             "java.xml",
-            "jdk.unsupported"
         )
     )
 
@@ -112,6 +110,9 @@ runtime {
             put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
+            put("file-associations", "jpackage/backups.properties")
+            put("file-associations", "jpackage/logs.properties")
+
             when {
                 currentOs.isWindows -> {
                     put("win-per-user-install", null)
@@ -120,11 +121,7 @@ runtime {
                     put("win-shortcut", null)
                 }
                 currentOs.isLinux -> {
-                    put("linux-package-name", rootProject.name.capitalizeFirstWord())
                     put("linux-shortcut", null)
-                }
-                currentOs.isMacOsX -> {
-                    put("mac-package-name", rootProject.name.capitalizeFirstWord())
                 }
             }
         }
