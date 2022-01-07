@@ -110,8 +110,8 @@ runtime {
             put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
-            put("file-associations", "jpackage/backups.properties")
-            put("file-associations", "jpackage/logs.properties")
+//            put("file-associations", "jpackage/backups.properties")
+//            put("file-associations", "jpackage/logs.properties")
 
             when {
                 currentOs.isWindows -> {
