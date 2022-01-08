@@ -7,8 +7,14 @@ import org.intellij.lang.annotations.Language
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTable
+import javax.swing.JTextPane
+import javax.swing.SwingConstants
+import javax.swing.text.SimpleAttributeSet
+import javax.swing.text.StyleConstants
+import javax.swing.text.StyledDocument
 import kotlin.properties.Delegates
 
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
@@ -18,7 +24,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     }
 
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
-        textPane.text = newValue.toDisplayFormat()
+        textPane.display(newValue)
         detailsModel.details = newValue.collapseDetails()
     }
 
@@ -51,21 +57,48 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         add(FlatScrollPane(detailsTable), "growy, pushy, width 15%")
     }
 
-    private fun List<Detail>.toDisplayFormat(): String {
-        return joinToString(separator = "", prefix = "<html>$STYLE") { event ->
-            buildString {
-                append("<b>").append(event.title).append("</b>")
-                if (event.message != null) {
-                    append("<br>")
-                    append(event.message)
+    private fun Detail.toIcon(): JLabel? {
+        return if (details.isNotEmpty()) {
+            JLabel(icon).apply {
+                toolTipText = details.entries.joinToString(separator = "\n") { (key, value) -> "$key: $value" }
+                horizontalAlignment = SwingConstants.RIGHT
+            }
+        } else {
+            null
+        }
+    }
+
+    private fun JTextPane.display(details: List<Detail>) {
+        text = "<html>$STYLE<body>"
+        styledDocument.apply {
+            details.forEach { detail ->
+                appendString(detail.title, StyleConstants.Bold)
+                val addtl = detail.toIcon()
+                if (addtl != null) {
+                    insertComponent(addtl)
                 }
-                if (event.body.isNotEmpty()) {
-                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
+                appendString("\n")
+                appendString(detail.message.orEmpty())
+                if (detail.body.isNotEmpty()) {
+                    appendString(
+                        detail.body.joinToString(separator = "\n"),
+                    )
                 } else {
-                    append("<br>")
+                    appendString("\n")
                 }
             }
         }
+    }
+
+    private fun StyledDocument.appendString(string: String, vararg attributes: Any) {
+        insertString(
+            endPosition.offset - 1, string,
+            SimpleAttributeSet().apply {
+                attributes.forEach { attribute ->
+                    addAttribute(attribute, true)
+                }
+            }
+        )
     }
 
     private fun List<Detail>.toClipboardFormat(): StringSelection {
@@ -91,5 +124,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
             }
             </style>
         """.trimIndent()
+
+        private val icon = FlatSVGIcon("icons/bx-search.svg")
     }
 }
