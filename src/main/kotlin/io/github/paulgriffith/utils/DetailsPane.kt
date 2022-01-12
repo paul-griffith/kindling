@@ -3,128 +3,140 @@ package io.github.paulgriffith.utils
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatTextPane
 import net.miginfocom.swing.MigLayout
-import org.intellij.lang.annotations.Language
+import java.awt.Component
+import java.awt.EventQueue
+import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
-import javax.swing.JLabel
+import javax.swing.JFileChooser
 import javax.swing.JPanel
-import javax.swing.JTable
-import javax.swing.JTextPane
-import javax.swing.SwingConstants
-import javax.swing.text.SimpleAttributeSet
+import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.text.ComponentView
+import javax.swing.text.Element
 import javax.swing.text.StyleConstants
-import javax.swing.text.StyledDocument
+import javax.swing.text.View
+import javax.swing.text.ViewFactory
+import javax.swing.text.html.HTML
+import javax.swing.text.html.HTMLEditorKit
 import kotlin.properties.Delegates
 
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
-    private val textPane = FlatTextPane().apply {
-        contentType = "text/html"
-        isEditable = false
-    }
-
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
-        textPane.display(newValue)
-        detailsModel.details = newValue.collapseDetails()
-    }
-
-    private val copy = Action(
-        description = "Copy",
-        icon = FlatSVGIcon("icons/bx-clipboard.svg"),
-    ) {
-        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        clipboard.setContents(events.toClipboardFormat(), null)
-    }
-
-    private fun List<Detail>.collapseDetails(): List<Pair<String, String>> {
-        return this.fold(mutableListOf()) { acc, detail ->
-            acc += detail.details.map { it.toPair() }
-            acc
+        textPane.text = newValue.toDisplayFormat()
+        EventQueue.invokeLater {
+            textPane.scrollRectToVisible(Rectangle(0, 0, 0, 0))
         }
     }
 
-    private val detailsModel = DetailsModel(events.collapseDetails())
-    private val detailsTable = JTable(detailsModel).apply {
-        setDefaultRenderer<String> { _, value, _, _, _, _ ->
-            text = value
-            toolTipText = value
+    private val textPane = FlatTextPane().apply {
+        isEditable = false
+        editorKit = DetailsEditorKit()
+    }
+
+    private val copy = Action(
+        description = "Copy to Clipboard",
+        icon = FlatSVGIcon("icons/bx-clipboard.svg"),
+    ) {
+        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+        clipboard.setContents(StringSelection(events.toClipboardFormat()), null)
+    }
+
+    private val save = Action(
+        description = "Save to File",
+        icon = FlatSVGIcon("icons/bx-save.svg")
+    ) {
+        JFileChooser().apply {
+            fileSelectionMode = JFileChooser.FILES_ONLY
+            fileFilter = FileNameExtensionFilter("Text File", "txt")
+            val save = showSaveDialog(this@DetailsPane)
+            if (save == JFileChooser.APPROVE_OPTION) {
+                selectedFile.writeText(events.toClipboardFormat())
+            }
         }
     }
 
     init {
         add(FlatScrollPane(textPane), "push, grow")
-        add(JButton(copy), "top")
-        add(FlatScrollPane(detailsTable), "growy, pushy, width 15%")
+        add(JButton(copy), "cell 1 0, top, flowy")
+        add(JButton(save), "cell 1 0")
     }
 
-    private fun Detail.toIcon(): JLabel? {
-        return if (details.isNotEmpty()) {
-            JLabel(icon).apply {
-                toolTipText = details.entries.joinToString(separator = "\n") { (key, value) -> "$key: $value" }
-                horizontalAlignment = SwingConstants.RIGHT
-            }
-        } else {
-            null
-        }
-    }
-
-    private fun JTextPane.display(details: List<Detail>) {
-        text = "<html>$STYLE<body>"
-        styledDocument.apply {
-            details.forEach { detail ->
-                appendString(detail.title, StyleConstants.Bold)
-                val addtl = detail.toIcon()
-                if (addtl != null) {
-                    insertComponent(addtl)
-                }
-                appendString("\n")
-                appendString(detail.message.orEmpty())
-                if (detail.body.isNotEmpty()) {
-                    appendString(
-                        detail.body.joinToString(separator = "\n"),
-                    )
-                } else {
-                    appendString("\n")
-                }
-            }
-        }
-    }
-
-    private fun StyledDocument.appendString(string: String, vararg attributes: Any) {
-        insertString(
-            endPosition.offset - 1, string,
-            SimpleAttributeSet().apply {
-                attributes.forEach { attribute ->
-                    addAttribute(attribute, true)
-                }
-            }
-        )
-    }
-
-    private fun List<Detail>.toClipboardFormat(): StringSelection {
-        return StringSelection(
-            joinToString(separator = "\n\n") { event ->
-                buildString {
-                    appendLine(event.title)
-                    if (event.message != null) {
-                        appendLine(event.message)
+    private fun List<Detail>.toDisplayFormat(): String {
+        return joinToString(separator = "", prefix = "<html>") { event ->
+            buildString {
+                append("<b>").append(event.title)
+                if (event.details.isNotEmpty()) {
+                    append("<object ")
+                    event.details.entries.joinTo(buffer = this, separator = " ") { (key, value) ->
+                        "data-$key = \"$value\""
                     }
-                    event.body.joinTo(buffer = this, separator = "\n") { "\t$it" }
+                    append("/>")
+                }
+                append("</b>")
+                if (event.message != null) {
+                    append("<br>")
+                    append(event.message)
+                }
+                if (event.body.isNotEmpty()) {
+                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
+                } else {
+                    append("<br>")
                 }
             }
-        )
+        }
     }
 
-    companion object {
-        @Language("HTML")
-        private val STYLE = """
-            <style>
-            pre {
-               font-size: 10px;
+    private fun List<Detail>.toClipboardFormat(): String {
+        return joinToString(separator = "\n\n") { event ->
+            buildString {
+                appendLine(event.title)
+                if (event.message != null) {
+                    appendLine(event.message)
+                }
+                event.body.joinTo(buffer = this, separator = "\n") { "\t$it" }
             }
-            </style>
-        """.trimIndent()
+        }
+    }
+}
 
-        private val icon = FlatSVGIcon("icons/bx-search.svg")
+class DetailsEditorKit : HTMLEditorKit() {
+    init {
+        styleSheet.apply {
+            //language=CSS
+            addRule(
+                """
+                b { 
+                    font-size: larger; 
+                }
+                pre { 
+                    font-size: 10px; 
+                }
+                object { 
+                    padding-left: 16px; 
+                }
+                """.trimIndent()
+            )
+        }
+    }
+
+    override fun getViewFactory(): ViewFactory {
+        return object : HTMLFactory() {
+            override fun create(elem: Element): View {
+                val attrs = elem.attributes
+                val o = attrs.getAttribute(StyleConstants.NameAttribute)
+                if (o == HTML.Tag.OBJECT) {
+                    return object : ComponentView(elem) {
+                        override fun createComponent(): Component {
+                            val details: Map<String, String> =
+                                elem.attributes.attributeNames.toList().filterIsInstance<String>()
+                                    .associateWith { elem.attributes.getAttribute(it) as String }
+                            return DetailsIcon(details)
+                        }
+                    }
+                }
+                return super.create(elem)
+            }
+        }
     }
 }

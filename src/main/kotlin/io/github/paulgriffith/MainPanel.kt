@@ -9,6 +9,7 @@ import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
+import io.github.paulgriffith.utils.ToolOpeningException
 import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -86,8 +87,12 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     FlatTextArea().apply {
                         isEditable = false
                         text = buildString {
-                            appendLine("Unable to open $path as a $fileDescription")
-                            append(ex.stackTraceToString())
+                            if (ex is ToolOpeningException) {
+                                appendLine(ex.message)
+                            } else {
+                                appendLine("Error opening $path: ${ex.message}")
+                            }
+                            append(ex.cause?.stackTraceToString().orEmpty())
                         }
                     }
                 )

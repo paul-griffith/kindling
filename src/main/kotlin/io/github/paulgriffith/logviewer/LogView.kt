@@ -4,9 +4,13 @@ import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
+import io.github.paulgriffith.utils.ToolOpeningException
 import io.github.paulgriffith.utils.ToolPanel
 import org.sqlite.SQLiteDataSource
+import org.sqlite.SQLiteErrorCode
+import org.sqlite.SQLiteException
 import java.nio.file.Path
+import java.sql.Connection
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -28,8 +32,21 @@ class LogView(override val path: Path) : ToolPanel() {
         header.displayedRows = data.size
     }
 
-    private val stackTraces: Map<Int, List<String>> = connection.prepareStatement(
-        """
+    private fun <T> Connection.useFragile(block: Connection.() -> T): T {
+        return try {
+            block(this)
+        } catch (e: SQLiteException) {
+            if (e.resultCode == SQLiteErrorCode.SQLITE_ERROR) {
+                throw ToolOpeningException("Unable to open $path as a log file; ${e.message}", e)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private val stackTraces: Map<Int, List<String>> = connection.useFragile {
+        prepareStatement(
+            """
         SELECT
             event_id,
             i,
@@ -39,22 +56,24 @@ class LogView(override val path: Path) : ToolPanel() {
         ORDER BY
             event_id,
             i
-        """.trimIndent()
-    ).executeQuery().use { resultSet ->
-        sequence {
-            while (resultSet.next()) {
-                yield(
-                    Pair(
-                        resultSet.getInt("event_id"),
-                        resultSet.getString("trace_line")
+            """.trimIndent()
+        ).executeQuery().use { resultSet ->
+            sequence {
+                while (resultSet.next()) {
+                    yield(
+                        Pair(
+                            resultSet.getInt("event_id"),
+                            resultSet.getString("trace_line")
+                        )
                     )
-                )
-            }
-        }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
+                }
+            }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
+        }
     }
 
-    private val mdcKeys: Map<Int, Map<String, String>> = connection.prepareStatement(
-        """
+    private val mdcKeys: Map<Int, Map<String, String>> = connection.useFragile {
+        prepareStatement(
+            """
         SELECT 
             event_id,
             mapped_key,
@@ -63,31 +82,33 @@ class LogView(override val path: Path) : ToolPanel() {
             logging_event_property
         ORDER BY 
             event_id
-        """.trimIndent()
-    ).executeQuery().use { resultSet ->
-        sequence {
-            while (resultSet.next()) {
-                yield(
-                    Triple(
-                        resultSet.getInt("event_id"),
-                        resultSet.getString("mapped_key"),
-                        resultSet.getString("mapped_value"),
+            """.trimIndent()
+        ).executeQuery().use { resultSet ->
+            sequence {
+                while (resultSet.next()) {
+                    yield(
+                        Triple(
+                            resultSet.getInt("event_id"),
+                            resultSet.getString("mapped_key"),
+                            resultSet.getString("mapped_value"),
+                        )
                     )
-                )
-            }
-        }.groupingBy { it.first }
-            // TODO I bet this can be improved
-            .aggregateTo(mutableMapOf<Int, MutableMap<String, String>>()) { _, accumulator, element, _ ->
-                val acc = accumulator ?: mutableMapOf()
-                acc[element.second] = element.third
-                acc
-            }
+                }
+            }.groupingBy { it.first }
+                // TODO I bet this can be improved
+                .aggregateTo(mutableMapOf<Int, MutableMap<String, String>>()) { _, accumulator, element, _ ->
+                    val acc = accumulator ?: mutableMapOf()
+                    acc[element.second] = element.third
+                    acc
+                }
+        }
     }
 
     // Run an initial query (blocking) so if this isn't a log export we bail out
     // This is unfortunate (it can be a little slow) but better UX overall
-    private val rawData: List<Event> = connection.prepareStatement(
-        """
+    private val rawData: List<Event> = connection.useFragile {
+        prepareStatement(
+            """
             SELECT
                    event_id,
                    timestmp,
@@ -99,23 +120,24 @@ class LogView(override val path: Path) : ToolPanel() {
                 logging_event
             ORDER BY
                 event_id
-        """.trimIndent()
-    ).executeQuery().use { resultSet ->
-        buildList {
-            while (resultSet.next()) {
-                val eventId = resultSet.getInt("event_id")
-                this.add(
-                    Event(
-                        eventId = eventId,
-                        timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
-                        message = resultSet.getString("formatted_message"),
-                        logger = resultSet.getString("logger_name"),
-                        thread = resultSet.getString("thread_name"),
-                        level = resultSet.getString("level_string"),
-                        mdc = this@LogView.mdcKeys[eventId].orEmpty(),
-                        stacktrace = this@LogView.stackTraces[eventId].orEmpty(),
+            """.trimIndent()
+        ).executeQuery().use { resultSet ->
+            buildList {
+                while (resultSet.next()) {
+                    val eventId = resultSet.getInt("event_id")
+                    this.add(
+                        Event(
+                            eventId = eventId,
+                            timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
+                            message = resultSet.getString("formatted_message"),
+                            logger = resultSet.getString("logger_name"),
+                            thread = resultSet.getString("thread_name"),
+                            level = resultSet.getString("level_string"),
+                            mdc = this@LogView.mdcKeys[eventId].orEmpty(),
+                            stacktrace = this@LogView.stackTraces[eventId].orEmpty(),
+                        )
                     )
-                )
+                }
             }
         }
     }

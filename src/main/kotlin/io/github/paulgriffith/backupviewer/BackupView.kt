@@ -13,7 +13,7 @@ import javax.swing.JSplitPane
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
-class BackupViewer(override val path: Path) : ToolPanel() {
+class BackupView(override val path: Path) : ToolPanel() {
     private val gwbk = ZipFile(path.toFile()).also {
         check(it.isValidZipFile) { "Not a valid zip file" }
     }
