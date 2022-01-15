@@ -2,6 +2,7 @@ package io.github.paulgriffith
 
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import io.github.paulgriffith.main.TabPanel
 import io.github.paulgriffith.main.ThemeButton
@@ -15,6 +16,7 @@ import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
 import java.awt.Dimension
+import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.io.File
@@ -26,6 +28,7 @@ import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
 import javax.swing.filechooser.FileView
+import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
@@ -136,7 +139,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
 
         @JvmStatic
-        fun main(args: Array<String>) {
+        fun main(args: Array<String>) = EventQueue.invokeLater {
             setupLaf()
 
             JFrame("Kindling").apply {
@@ -161,6 +164,8 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("ScrollBar.width", 16)
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             FlatLightLaf.setup()
+
+            FlatUIDefaultsInspector.install("ctrl shift Y")
         }
     }
 }

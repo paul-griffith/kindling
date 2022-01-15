@@ -1,4 +1,4 @@
-package io.github.paulgriffith.logviewer
+package io.github.paulgriffith.idb.logviewer
 
 import javax.swing.JLabel
 import kotlin.properties.Delegates
