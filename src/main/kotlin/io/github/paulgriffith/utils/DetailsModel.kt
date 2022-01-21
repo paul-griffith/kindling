@@ -3,8 +3,8 @@ package io.github.paulgriffith.utils
 import javax.swing.table.AbstractTableModel
 import kotlin.properties.Delegates
 
-class DetailsModel(details: List<Pair<String, String>>) : AbstractTableModel() {
-    var details: List<Pair<String, String>> by Delegates.observable(details) { _, _, _ ->
+class DetailsModel(details: List<Map.Entry<String, String>>) : AbstractTableModel() {
+    var details: List<Map.Entry<String, String>> by Delegates.observable(details) { _, _, _ ->
         fireTableDataChanged()
     }
 
@@ -21,8 +21,8 @@ class DetailsModel(details: List<Pair<String, String>>) : AbstractTableModel() {
     override fun getColumnClass(column: Int): Class<*> = DetailsColumns[column].clazz
 
     @Suppress("unused")
-    companion object DetailsColumns : ColumnList<Pair<String, String>>() {
-        val Key by column { it.first }
-        val Value by column { it.second }
+    companion object DetailsColumns : ColumnList<Map.Entry<String, String>>() {
+        val Key by column { it.key }
+        val Value by column { it.value }
     }
 }
