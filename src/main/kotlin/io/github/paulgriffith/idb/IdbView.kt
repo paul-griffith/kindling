@@ -1,6 +1,5 @@
 package io.github.paulgriffith.idb
 
-import io.github.paulgriffith.idb.configviewer.ConfigView
 import io.github.paulgriffith.idb.logviewer.LogView
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
