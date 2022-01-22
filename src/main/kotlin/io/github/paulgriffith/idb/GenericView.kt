@@ -10,6 +10,7 @@ import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.attachPopupMenu
 import io.github.paulgriffith.utils.javaType
+import io.github.paulgriffith.utils.setDefaultRenderer
 import io.github.paulgriffith.utils.toList
 import net.miginfocom.swing.MigLayout
 import java.awt.Font
@@ -21,8 +22,8 @@ import java.sql.JDBCType
 import java.util.Collections
 import java.util.Enumeration
 import javax.swing.JButton
-import javax.swing.JComponent
 import javax.swing.JFileChooser
+import javax.swing.JLabel
 import javax.swing.JMenuItem
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
@@ -139,42 +140,41 @@ class GenericView(connection: Connection) : IdbPanel(connection) {
     private val query = JTextArea(0, 0)
 
     private val execute = Action(name = "Execute") {
-        connection
-            .prepareStatement(query.text)
-            .executeQuery()
-            .use { resultSet ->
-                val columnCount = resultSet.metaData.columnCount
-                val names = List(columnCount) { i -> resultSet.metaData.getColumnName(i + 1) }
-                val types = List(columnCount) { i ->
-                    val sqlType = resultSet.metaData.getColumnType(i + 1)
-                    val jdbcType = JDBCType.valueOf(sqlType)
-                    jdbcType.javaType
-                }
-
-                val data = buildList {
-                    while (resultSet.next()) {
-                        add(
-                            List(columnCount) { i ->
-                                resultSet.getObject(i + 1)
-                            }
-                        )
+        if (!query.text.isNullOrEmpty()) {
+            connection.prepareStatement(query.text)
+                .executeQuery()
+                .use { resultSet ->
+                    val columnCount = resultSet.metaData.columnCount
+                    val names = List(columnCount) { i -> resultSet.metaData.getColumnName(i + 1) }
+                    val types = List(columnCount) { i ->
+                        val sqlType = resultSet.metaData.getColumnType(i + 1)
+                        val jdbcType = JDBCType.valueOf(sqlType)
+                        jdbcType.javaType
                     }
-                }
 
-                results.model = ResultModel(names, types, data)
-            }
+                    val data = resultSet.toList {
+                        List(columnCount) { i ->
+                            resultSet.getObject(i + 1)
+                        }
+                    }
+
+                    results.model = ResultModel(names, types, data)
+                }
+        } else {
+            results.model = ResultModel()
+        }
     }
 
     private val queryPanel = JPanel(MigLayout("ins 0, fill")).apply {
-        add(query, "push, grow, wrap")
-        add(JButton(execute))
+        add(JButton(execute), "wrap")
+        add(query, "push, grow")
     }
 
     private val results = ResultsPanel()
 
     init {
         val ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
-        getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(ctrlEnter, "execute")
+        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrlEnter, "execute")
         actionMap.put("execute", execute)
 
         add(
@@ -257,17 +257,22 @@ class ResultModel(
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Any? = data[rowIndex][columnIndex]
 }
 
-class ResultsPanel : JPanel(MigLayout("ins 0, fill")) {
-    private val table = object : JTable(ResultModel()) {
-        init {
-            autoCreateRowSorter = true
-            SearchableUtils.installSearchable(this).apply {
-                isCaseSensitive = false
-                isRepeats = true
+class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
+    private val table = ResultsTable().apply {
+        addPropertyChangeListener("model") { e ->
+            val newValue = e.newValue as ResultModel
+            if (newValue.rowCount == 0 && newValue.columnCount == 0) {
+                isVisible = false
+                noResults.isVisible = true
+            } else {
+                isVisible = true
+                noResults.isVisible = false
             }
         }
+    }
 
-        override fun getModel(): ResultModel = super.getModel() as ResultModel
+    private val noResults = JLabel("No results - run a query in the text area above").apply {
+        isVisible = false
     }
 
     var model: ResultModel by table::model
@@ -306,8 +311,25 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill")) {
             save.isEnabled = model.rowCount > 0
         }
 
-        add(FlatScrollPane(table), "push, grow")
+        add(noResults, "cell 0 0")
+        add(FlatScrollPane(table), "cell 0 0, push, grow")
         add(JButton(copy), "cell 1 0, top, flowy")
         add(JButton(save), "cell 1 0")
     }
+}
+
+class ResultsTable : JTable(ResultModel()) {
+    init {
+        autoCreateRowSorter = true
+        SearchableUtils.installSearchable(this).apply {
+            isCaseSensitive = false
+            isRepeats = true
+        }
+        setDefaultRenderer<String> { _, value, _, _, _, _ ->
+            text = value
+            toolTipText = value
+        }
+    }
+
+    override fun getModel(): ResultModel = super.getModel() as ResultModel
 }
