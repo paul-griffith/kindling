@@ -67,7 +67,9 @@ kotest = [
 ignition = [
     "ignition-common",
     "ignition-gateway",
+]
+ia-transitive = [
     "apache-commons",
     "google-guava",
-    "ia-gson"
+    "ia-gson",
 ]
