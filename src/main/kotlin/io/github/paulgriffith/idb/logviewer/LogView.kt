@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import javax.swing.JSplitPane
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
-class LogView(connection: Connection) : IdbPanel(connection) {
+class LogView(connection: Connection) : IdbPanel() {
     private fun updateData(filter: (Event) -> Boolean) {
         val data = rawData.filter(filter)
 
@@ -133,7 +133,6 @@ class LogView(connection: Connection) : IdbPanel(connection) {
     private var lockout: Boolean = false
 
     init {
-        connection.close() // all data is held locally in memory, close the connection early so we don't lock the file
         add(loading, "hmax 10, hidemode 0, spanx 2, wrap")
         add(header, "wrap, spanx 2")
         add(sidebar, "growy, pushy, width 20%")

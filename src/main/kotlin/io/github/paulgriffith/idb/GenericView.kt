@@ -36,11 +36,13 @@ import javax.swing.TransferHandler
 import javax.swing.UIManager
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.table.AbstractTableModel
+import javax.swing.table.JTableHeader
+import javax.swing.table.TableCellRenderer
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeNode
 import javax.swing.tree.TreeSelectionModel
 
-class GenericView(connection: Connection) : IdbPanel(connection) {
+class GenericView(connection: Connection) : IdbPanel() {
     private val tables: List<Table> = connection
         .prepareStatement("SELECT name FROM main.sqlite_schema WHERE type = \"table\" ORDER BY name")
         .executeQuery()
@@ -80,6 +82,7 @@ class GenericView(connection: Connection) : IdbPanel(connection) {
     private val tree = FlatTree().apply {
         model = DefaultTreeModel(root)
         isRootVisible = false
+        showsRootHandles = true
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
         cellRenderer = object : StyledTreeCellRenderer() {
             override fun customizeStyledLabel(
@@ -101,7 +104,7 @@ class GenericView(connection: Connection) : IdbPanel(connection) {
                         StyledLabelBuilder()
                             .add(value.name)
                             .add("   ")
-                            .add(value.type, Font.ITALIC)
+                            .add(value.type.takeIf { it.isNotEmpty() } ?: "UNKNOWN", Font.ITALIC)
                             .configure(this)
                         icon = if (sel) COLUMN_ICON_SELECTED else COLUMN_ICON
                     }
@@ -154,7 +157,12 @@ class GenericView(connection: Connection) : IdbPanel(connection) {
 
                     val data = resultSet.toList {
                         List(columnCount) { i ->
-                            resultSet.getObject(i + 1)
+                            // SQLite stores booleans as ints, we'll store actual booleans to make things easier
+                            if (types[i] == Boolean::class.javaObjectType) {
+                                resultSet.getObject(i + 1) == 1
+                            } else {
+                                resultSet.getObject(i + 1)
+                            }
                         }
                     }
 
@@ -328,6 +336,22 @@ class ResultsTable : JTable(ResultModel()) {
         setDefaultRenderer<String> { _, value, _, _, _, _ ->
             text = value
             toolTipText = value
+        }
+
+        tableHeader = JTableHeader(columnModel).apply {
+            val original = defaultRenderer
+            defaultRenderer = TableCellRenderer { table, value, isSelected, hasFocus, row, column ->
+                original.getTableCellRendererComponent(
+                    table,
+                    value,
+                    isSelected,
+                    hasFocus,
+                    row,
+                    column
+                ).apply {
+                    toolTipText = value?.toString()
+                }
+            }
         }
     }
 

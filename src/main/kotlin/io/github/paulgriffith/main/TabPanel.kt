@@ -24,15 +24,19 @@ class TabPanel : FlatTabbedPane() {
         attachPopupMenu { e ->
             val tabIndex = indexAtLocation(e.x, e.y)
             if (tabIndex == -1) return@attachPopupMenu null
-            val tab = getComponentAt(tabIndex) as? ToolPanel ?: return@attachPopupMenu null
-
-            JPopupMenu().apply {
-                add(
-                    Action(name = "Float") {
-                        val frame = createPopupFrame(tab)
-                        frame.isVisible = true
-                    }
-                )
+            val tab = getComponentAt(tabIndex)
+            if (tab is ToolPanel) {
+                JPopupMenu().apply {
+                    add(
+                        Action(name = "Float") {
+                            val frame = createPopupFrame(tab)
+                            frame.isVisible = true
+                        }
+                    )
+                    tab.customizePopupMenu(this)
+                }
+            } else {
+                null
             }
         }
     }

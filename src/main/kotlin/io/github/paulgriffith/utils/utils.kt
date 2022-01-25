@@ -9,10 +9,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.sqlite.SQLiteDataSource
 import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.math.BigDecimal
+import java.nio.file.Path
+import java.sql.Connection
 import java.sql.Date
 import java.sql.JDBCType
 import java.sql.ResultSet
@@ -149,7 +152,7 @@ val JDBCType.javaType: Class<*>
         JDBCType.NVARCHAR -> String::class
         JDBCType.LONGNVARCHAR -> String::class
         else -> Any::class
-    }.java
+    }.javaObjectType
 
 inline fun Component.attachPopupMenu(
     crossinline menuFn: Component.(event: MouseEvent) -> JPopupMenu?,
@@ -169,4 +172,11 @@ inline fun Component.attachPopupMenu(
             }
         }
     })
+}
+
+fun SQLiteConnection(path: Path): Connection {
+    return SQLiteDataSource().apply {
+        url = "jdbc:sqlite:file:$path"
+        setReadOnly(true)
+    }.connection
 }
