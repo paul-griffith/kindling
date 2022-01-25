@@ -2,6 +2,7 @@ package io.github.paulgriffith
 
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import io.github.paulgriffith.main.TabPanel
 import io.github.paulgriffith.main.ThemeButton
@@ -10,11 +11,13 @@ import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
+import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
 import java.awt.Dimension
+import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.io.File
@@ -26,6 +29,7 @@ import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
 import javax.swing.filechooser.FileView
+import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
@@ -78,7 +82,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 path.toString(),
             )
         }.getOrElse { ex ->
-            ex.printStackTrace()
+            LOGGER.error("Failed to open $path as a ${this.name}", ex)
 
             tabs.addTab(
                 "ERROR",
@@ -135,8 +139,10 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             toolkit.getImage(mainPanelClass.getResource("/icons/ignition.png"))
         }
 
+        val LOGGER = getLogger<MainPanel>()
+
         @JvmStatic
-        fun main(args: Array<String>) {
+        fun main(args: Array<String>) = EventQueue.invokeLater {
             setupLaf()
 
             JFrame("Kindling").apply {
@@ -161,6 +167,8 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("ScrollBar.width", 16)
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             FlatLightLaf.setup()
+
+            FlatUIDefaultsInspector.install("ctrl shift Y")
         }
     }
 }

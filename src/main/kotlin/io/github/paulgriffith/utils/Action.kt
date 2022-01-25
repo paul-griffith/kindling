@@ -11,7 +11,6 @@ class Action(
     name: String? = null,
     description: String? = null,
     icon: Icon? = null,
-    private val evaluateEnabled: () -> Boolean = { true },
     private val action: (e: ActionEvent) -> Unit,
 ) : AbstractAction() {
     init {
@@ -27,6 +26,4 @@ class Action(
     }
 
     override fun actionPerformed(e: ActionEvent) = action(e)
-
-    override fun isEnabled(): Boolean = evaluateEnabled()
 }

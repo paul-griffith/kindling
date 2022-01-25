@@ -3,7 +3,7 @@ package io.github.paulgriffith.utils
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.backupviewer.BackupView
 import io.github.paulgriffith.cacheviewer.CacheView
-import io.github.paulgriffith.logviewer.LogView
+import io.github.paulgriffith.idb.IdbView
 import io.github.paulgriffith.threadviewer.ThreadView
 import java.io.File
 import java.nio.file.Path
@@ -17,9 +17,9 @@ enum class Tool(
     val panelOpener: (path: Path) -> ToolPanel,
     val icon: FlatSVGIcon,
 ) {
-    LogViewer(
-        filter = FileNameExtensionFilter("Ignition Log .idb files", "idb"),
-        panelOpener = ::LogView,
+    IdbViewer(
+        filter = FileNameExtensionFilter("Ignition .idb (SQLite3) files", "idb"),
+        panelOpener = ::IdbView,
         icon = FlatSVGIcon("icons/bx-hdd.svg")
     ),
     ThreadViewer(
