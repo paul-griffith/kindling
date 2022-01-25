@@ -37,7 +37,7 @@ dependencies {
     implementation(libs.svgSalamander)
     implementation(libs.bundles.coroutines)
     implementation(libs.bundles.flatlaf)
-    implementation(libs.bundles.ignition) {
+    runtimeOnly(libs.bundles.ignition) {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
         isTransitive = false
     }
