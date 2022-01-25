@@ -1,7 +1,7 @@
 package io.github.paulgriffith.backupviewer
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
-import io.github.paulgriffith.idb.GenericView
+import io.github.paulgriffith.idb.generic.GenericView
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.SQLiteConnection
 import io.github.paulgriffith.utils.Tool

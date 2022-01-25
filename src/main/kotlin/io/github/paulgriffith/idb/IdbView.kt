@@ -1,6 +1,7 @@
 package io.github.paulgriffith.idb
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.paulgriffith.idb.generic.GenericView
 import io.github.paulgriffith.idb.logviewer.LogView
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.SQLiteConnection
