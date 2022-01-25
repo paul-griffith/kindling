@@ -5,6 +5,7 @@ import com.formdev.flatlaf.extras.components.FlatTree
 import com.inductiveautomation.ignition.common.util.csv.CSVWriter
 import com.jidesoft.swing.SearchableUtils
 import com.jidesoft.swing.StyledLabelBuilder
+import com.jidesoft.swing.TreeSearchable
 import com.jidesoft.tree.StyledTreeCellRenderer
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FlatScrollPane
@@ -40,6 +41,7 @@ import javax.swing.table.JTableHeader
 import javax.swing.table.TableCellRenderer
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeNode
+import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 
 class GenericView(connection: Connection) : IdbPanel() {
@@ -109,6 +111,21 @@ class GenericView(connection: Connection) : IdbPanel() {
                         icon = if (sel) COLUMN_ICON_SELECTED else COLUMN_ICON
                     }
                     else -> super.customizeStyledLabel(tree, value, sel, expanded, leaf, row, hasFocus)
+                }
+            }
+        }
+
+        object : TreeSearchable(this) {
+            init {
+                isRecursive = true
+                isRepeats = true
+            }
+
+            override fun convertElementToString(element: Any?): String {
+                return when (val node = (element as? TreePath)?.lastPathComponent) {
+                    is Table -> node.name
+                    is Column -> node.name
+                    else -> ""
                 }
             }
         }
