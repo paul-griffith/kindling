@@ -109,8 +109,8 @@ class CacheView(override val path: Path) : ToolPanel() {
     private val table = JTable(model).apply {
         autoCreateRowSorter = true
         selectionModel.apply {
-            addListSelectionListener { e ->
-                if (!e.valueIsAdjusting) {
+            addListSelectionListener { event ->
+                if (!event.valueIsAdjusting) {
                     details.events = selectedIndices.filter { isSelectedIndex(it) }
                         .map { index -> data[convertRowIndexToModel(index)].id }
                         .map { id ->

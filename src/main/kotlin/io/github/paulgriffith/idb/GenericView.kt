@@ -113,8 +113,8 @@ class GenericView(connection: Connection) : IdbPanel() {
             }
         }
 
-        attachPopupMenu { e ->
-            val path = getClosestPathForLocation(e.x, e.y)
+        attachPopupMenu { event ->
+            val path = getClosestPathForLocation(event.x, event.y)
             when (val node = path?.lastPathComponent) {
                 is Table -> JPopupMenu().apply {
                     add(
@@ -267,8 +267,8 @@ class ResultModel(
 
 class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
     private val table = ResultsTable().apply {
-        addPropertyChangeListener("model") { e ->
-            val newValue = e.newValue as ResultModel
+        addPropertyChangeListener("model") { event ->
+            val newValue = event.newValue as ResultModel
             if (newValue.rowCount == 0 && newValue.columnCount == 0) {
                 isVisible = false
                 noResults.isVisible = true

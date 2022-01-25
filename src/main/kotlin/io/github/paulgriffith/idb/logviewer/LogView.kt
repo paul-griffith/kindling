@@ -115,8 +115,8 @@ class LogView(connection: Connection) : IdbPanel() {
 
     private val sidebar = LoggerNamesPanel(rawData).apply {
         list.checkBoxListSelectionModel.apply {
-            addListSelectionListener { e ->
-                if (!e.valueIsAdjusting && !lockout) {
+            addListSelectionListener { event ->
+                if (!event.valueIsAdjusting && !lockout) {
                     selectedIndices
                         .map { list.model.getElementAt(it) }
                         .filterIsInstance<LoggerName>()
@@ -148,8 +148,8 @@ class LogView(connection: Connection) : IdbPanel() {
         )
 
         table.selectionModel.apply {
-            addListSelectionListener { e ->
-                if (!e.valueIsAdjusting) {
+            addListSelectionListener { selectionEvent ->
+                if (!selectionEvent.valueIsAdjusting) {
                     details.events = selectedIndices
                         .filter { isSelectedIndex(it) }
                         .map { table.convertRowIndexToModel(it) }

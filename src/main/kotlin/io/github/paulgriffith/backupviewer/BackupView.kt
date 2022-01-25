@@ -6,6 +6,7 @@ import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.SQLiteConnection
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
+import io.github.paulgriffith.utils.getLogger
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import net.miginfocom.swing.MigLayout
@@ -63,7 +64,7 @@ class BackupView(override val path: Path) : ToolPanel() {
                             val idbView = GenericView(connection)
                             add(FlatScrollPane(idbView), BorderLayout.CENTER)
                         } catch (e: ZipException) {
-                            e.printStackTrace()
+                            LOGGER.error("Error extracting $DB_BACKUP_SQLITE_IDB from $path", e)
                             add(JLabel("Unable to open $DB_BACKUP_SQLITE_IDB; ${e.message}"), BorderLayout.CENTER)
                         }
                     }
@@ -105,5 +106,7 @@ class BackupView(override val path: Path) : ToolPanel() {
         private val XML_FACTORY = DocumentBuilderFactory.newDefaultInstance().apply {
             setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
         }
+
+        private val LOGGER = getLogger<BackupView>()
     }
 }

@@ -21,8 +21,8 @@ class TabPanel : FlatTabbedPane() {
             removeTabAt(i)
         }
 
-        attachPopupMenu { e ->
-            val tabIndex = indexAtLocation(e.x, e.y)
+        attachPopupMenu { event ->
+            val tabIndex = indexAtLocation(event.x, event.y)
             if (tabIndex == -1) return@attachPopupMenu null
             val tab = getComponentAt(tabIndex)
             if (tab is ToolPanel) {

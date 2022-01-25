@@ -11,6 +11,7 @@ import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
+import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -81,7 +82,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 path.toString(),
             )
         }.getOrElse { ex ->
-            ex.printStackTrace()
+            LOGGER.error("Failed to open $path as a ${this.name}", ex)
 
             tabs.addTab(
                 "ERROR",
@@ -137,6 +138,8 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             val mainPanelClass = MainPanel::class.java
             toolkit.getImage(mainPanelClass.getResource("/icons/ignition.png"))
         }
+
+        val LOGGER = getLogger<MainPanel>()
 
         @JvmStatic
         fun main(args: Array<String>) = EventQueue.invokeLater {

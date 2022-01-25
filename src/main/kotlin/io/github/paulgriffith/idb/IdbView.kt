@@ -6,6 +6,7 @@ import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.SQLiteConnection
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
+import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.toList
 import net.miginfocom.swing.MigLayout
 import java.nio.file.Path
@@ -25,7 +26,7 @@ class IdbView(override val path: Path) : ToolPanel() {
 
     private var tool: IdbTool by Delegates.vetoable(
         when {
-            "logging_event" in tables -> IdbTool.Logs
+            "logging_event" in tables -> IdbTool.Log
 //        "SRFEATURES" in tables -> ConfigView(connection)
             else -> IdbTool.Generic
         }
@@ -36,14 +37,14 @@ class IdbView(override val path: Path) : ToolPanel() {
             add(newPanel, "push, grow")
             true
         } catch (e: Exception) {
-            JOptionPane.showInternalMessageDialog(
+            JOptionPane.showMessageDialog(
                 this,
-                e.message,
+                "Unable to open as a ${newValue.name}; ${e.message}",
                 "Error",
                 JOptionPane.ERROR_MESSAGE,
                 FlatSVGIcon("icons/bx-error.svg")
             )
-            e.printStackTrace()
+            LOGGER.error("Unable to swap tool to %s", newValue, e)
             false
         }
     }
@@ -58,14 +59,14 @@ class IdbView(override val path: Path) : ToolPanel() {
         menu.add(
             JMenu("View As").apply {
                 when (tool) {
-                    IdbTool.Logs -> add(
-                        Action(name = "Generic IDB") {
+                    IdbTool.Log -> add(
+                        Action(name = "Generic View") {
                             tool = IdbTool.Generic
                         }
                     )
                     IdbTool.Generic -> add(
                         Action(name = "Log View") {
-                            tool = IdbTool.Logs
+                            tool = IdbTool.Log
                         }
                     )
                 }
@@ -77,10 +78,14 @@ class IdbView(override val path: Path) : ToolPanel() {
         super.removeNotify()
         connection.close()
     }
+
+    companion object {
+        private val LOGGER = getLogger<IdbView>()
+    }
 }
 
 enum class IdbTool(val openPanel: (connection: Connection) -> IdbPanel) {
-    Logs(::LogView),
+    Log(::LogView),
     Generic(::GenericView);
 }
 
