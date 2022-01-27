@@ -29,13 +29,11 @@ import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
 import javax.swing.filechooser.FileView
-import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val fileChooser = JFileChooser().apply {
         isMultiSelectionEnabled = true
-        preferredSize = Dimension(800, 600)
         fileView = object : FileView() {
             override fun getIcon(file: File): Icon? {
                 return if (file.isFile) {
@@ -158,6 +156,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
                 transferHandler = FileTransferHandler(mainPanel::openFiles)
 
+                setLocationRelativeTo(null)
                 isVisible = true
             }
         }

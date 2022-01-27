@@ -4,7 +4,6 @@ import io.github.paulgriffith.threadviewer.model.ThreadDump
 import io.github.paulgriffith.threadviewer.model.ThreadInfo
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
-import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
@@ -47,10 +46,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
             override fun removeUpdate(e: DocumentEvent) = search.invoke(text)
             override fun changedUpdate(e: DocumentEvent) = search.invoke(text)
 
-            val search = debounce<String?>(
-                waitMs = 100L,
-                coroutineScope = EDT_SCOPE,
-            ) { text ->
+            val search = debounce<String?>(waitMs = 100L) { text ->
                 if (text.isNullOrEmpty()) {
                     mainTable.rowSorter.rowFilter = null
                 } else {

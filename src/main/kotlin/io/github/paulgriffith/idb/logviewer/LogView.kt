@@ -3,24 +3,24 @@ package io.github.paulgriffith.idb.logviewer
 import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.idb.IdbPanel
 import io.github.paulgriffith.utils.DetailsPane
+import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.debounce
 import io.github.paulgriffith.utils.toList
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.sql.Connection
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.swing.JSplitPane
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
 class LogView(connection: Connection) : IdbPanel() {
-    private fun updateData(filter: (Event) -> Boolean) {
-        val data = rawData.filter(filter)
-
-        tableModel.data = data
-        header.displayedRows = data.size
-    }
-
     private val stackTraces: Map<Int, List<String>> = connection.prepareStatement(
         //language=sql
         """
@@ -94,15 +94,14 @@ class LogView(connection: Connection) : IdbPanel() {
             message = resultSet.getString("formatted_message"),
             logger = resultSet.getString("logger_name"),
             thread = resultSet.getString("thread_name"),
-            level = resultSet.getString("level_string"),
+            level = Event.Level.valueOf(resultSet.getString("level_string")),
             mdc = mdcKeys[eventId].orEmpty(),
             stacktrace = stackTraces[eventId].orEmpty(),
         )
     }
 
     private val maxRows: Int = rawData.size
-    private val tableModel: LogExportModel = LogExportModel(rawData)
-    private val table = LogExportTable(tableModel)
+    private val table = LogExportTable(LogExportModel(rawData))
 
     private val details = DetailsPane()
 
@@ -113,36 +112,60 @@ class LogView(connection: Connection) : IdbPanel() {
 
     private val header = Header(maxRows)
 
-    private val sidebar = LoggerNamesPanel(rawData).apply {
-        list.checkBoxListSelectionModel.apply {
-            addListSelectionListener { event ->
-                if (!event.valueIsAdjusting && !lockout) {
-                    selectedIndices
-                        .map { list.model.getElementAt(it) }
-                        .filterIsInstance<LoggerName>()
-                        .let { checkedLoggers ->
-                            updateData { event ->
-                                event.logger in checkedLoggers.mapTo(mutableSetOf()) { it.name }
-                            }
-                        }
-                }
+    private val sidebar = LoggerNamesPanel(rawData)
+
+    private var lockout: Boolean = false
+
+    private val filters: List<(Event) -> Boolean> = listOf(
+        { event ->
+            event.logger in sidebar.list.checkBoxListSelectedIndices
+                .map { sidebar.list.model.getElementAt(it) }
+                .filterIsInstance<LoggerName>()
+                .mapTo(mutableSetOf()) { it.name }
+        },
+        { event ->
+            event.level >= header.levels.selectedItem as Event.Level
+        },
+        { event ->
+            val text = header.search.text
+            if (text.isNullOrEmpty()) {
+                true
+            } else {
+                text in event.message ||
+                    text in event.logger ||
+                    text in event.thread ||
+                    event.stacktrace.any { stacktrace -> text in stacktrace }
+            }
+        }
+    )
+
+    private fun updateData() {
+        BACKGROUND.launch {
+            val data = rawData.filter { event ->
+                filters.all { filter -> filter(event) }
+            }
+            EDT_SCOPE.launch {
+                table.model = LogExportModel(data)
             }
         }
     }
 
-    private var lockout: Boolean = false
-
     init {
         add(loading, "hmax 10, hidemode 0, spanx 2, wrap")
-        add(header, "wrap, spanx 2")
-        add(sidebar, "growy, pushy, width 20%")
+        add(header, "wrap, growx, spanx 2")
         add(
             JSplitPane(
-                JSplitPane.VERTICAL_SPLIT,
-                FlatScrollPane(table),
-                details,
+                JSplitPane.HORIZONTAL_SPLIT,
+                sidebar,
+                JSplitPane(
+                    JSplitPane.VERTICAL_SPLIT,
+                    FlatScrollPane(table),
+                    details,
+                ).apply {
+                    resizeWeight = 0.6
+                }
             ).apply {
-                resizeWeight = 0.6
+                resizeWeight = 0.1
             },
             "push, grow"
         )
@@ -153,7 +176,7 @@ class LogView(connection: Connection) : IdbPanel() {
                     details.events = selectedIndices
                         .filter { isSelectedIndex(it) }
                         .map { table.convertRowIndexToModel(it) }
-                        .map { row -> tableModel[row] }
+                        .map { row -> table.model[row] }
                         .map { event ->
                             DetailEvent(
                                 title = "${DATE_FORMAT.format(event.timestamp)} ${event.thread}",
@@ -166,12 +189,36 @@ class LogView(connection: Connection) : IdbPanel() {
             }
         }
 
+        table.addPropertyChangeListener("model") {
+            header.displayedRows = table.model.rowCount
+        }
+
+        sidebar.list.checkBoxListSelectionModel.addListSelectionListener { event ->
+            if (!event.valueIsAdjusting && !lockout) {
+                updateData()
+            }
+        }
+
+        header.levels.addActionListener {
+            updateData()
+        }
+
+        header.search.document.addDocumentListener(object : DocumentListener {
+            val search = debounce<DocumentEvent>(waitMs = 100L) { updateData() }
+
+            override fun insertUpdate(e: DocumentEvent) = search(e)
+            override fun removeUpdate(e: DocumentEvent) = search(e)
+            override fun changedUpdate(e: DocumentEvent) = search(e)
+        })
+
         lockout = true
         sidebar.list.selectAll()
         lockout = false
     }
 
     companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
+
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
             .withZone(ZoneId.from(ZoneOffset.UTC))
     }

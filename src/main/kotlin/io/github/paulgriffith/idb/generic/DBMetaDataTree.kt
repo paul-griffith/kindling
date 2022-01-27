@@ -4,49 +4,47 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatTree
 import com.jidesoft.swing.StyledLabelBuilder
 import com.jidesoft.swing.TreeSearchable
-import com.jidesoft.tree.StyledTreeCellRenderer
+import io.github.paulgriffith.utils.derive
+import io.github.paulgriffith.utils.treeCellRenderer
 import java.awt.Font
-import javax.swing.JTree
 import javax.swing.UIManager
-import javax.swing.tree.DefaultTreeModel
-import javax.swing.tree.TreeNode
+import javax.swing.tree.TreeModel
 import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 
-class DBMetaDataTree(root: TreeNode) : FlatTree() {
+class DBMetaDataTree(treeModel: TreeModel) : FlatTree() {
     init {
-        model = DefaultTreeModel(root)
+        model = treeModel
         isRootVisible = false
-        showsRootHandles = true
+        setShowsRootHandles(true)
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
-        cellRenderer = object : StyledTreeCellRenderer() {
-            override fun customizeStyledLabel(
-                tree: JTree,
-                value: Any?,
-                sel: Boolean,
-                expanded: Boolean,
-                leaf: Boolean,
-                row: Int,
-                hasFocus: Boolean,
-            ) {
-                clearStyleRanges()
+        setCellRenderer(
+            treeCellRenderer { _, value, selected, _, _, _, focused ->
                 when (value) {
                     is Table -> {
                         text = value.name
-                        icon = if (sel) TABLE_ICON_SELECTED else TABLE_ICON
+                        icon = if (selected && focused) TABLE_ICON_SELECTED else TABLE_ICON
+                        this
                     }
                     is Column -> {
                         StyledLabelBuilder()
                             .add(value.name)
                             .add("   ")
                             .add(value.type.takeIf { it.isNotEmpty() } ?: "UNKNOWN", Font.ITALIC)
-                            .configure(this)
-                        icon = if (sel) COLUMN_ICON_SELECTED else COLUMN_ICON
+                            .createLabel()
+                            .apply {
+                                icon = if (selected && focused) COLUMN_ICON_SELECTED else COLUMN_ICON
+                                foreground = when {
+                                    selected && focused -> UIManager.getColor("Tree.selectionForeground")
+                                    selected -> UIManager.getColor("Tree.selectionInactiveForeground")
+                                    else -> UIManager.getColor("Tree.textForeground")
+                                }
+                            }
                     }
-                    else -> super.customizeStyledLabel(tree, value, sel, expanded, leaf, row, hasFocus)
+                    else -> this
                 }
             }
-        }
+        )
 
         object : TreeSearchable(this) {
             init {
@@ -66,12 +64,9 @@ class DBMetaDataTree(root: TreeNode) : FlatTree() {
 
     companion object {
         private val TABLE_ICON = FlatSVGIcon("icons/bx-table.svg").derive(0.75F)
-        private val TABLE_ICON_SELECTED = FlatSVGIcon("icons/bx-table.svg").derive(0.75F).apply {
-            colorFilter = FlatSVGIcon.ColorFilter { UIManager.getColor("Tree.selectionForeground") }
-        }
+        private val TABLE_ICON_SELECTED = TABLE_ICON.derive { UIManager.getColor("Tree.selectionForeground") }
+
         private val COLUMN_ICON = FlatSVGIcon("icons/bx-column.svg").derive(0.75F)
-        private val COLUMN_ICON_SELECTED = FlatSVGIcon("icons/bx-column.svg").derive(0.75F).apply {
-            colorFilter = FlatSVGIcon.ColorFilter { UIManager.getColor("Tree.selectionForeground") }
-        }
+        private val COLUMN_ICON_SELECTED = COLUMN_ICON.derive { UIManager.getColor("Tree.selectionForeground") }
     }
 }

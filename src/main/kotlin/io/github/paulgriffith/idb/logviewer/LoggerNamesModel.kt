@@ -33,7 +33,7 @@ class LoggerNamesModel(names: List<LoggerName>) : AbstractListModel<Any>() {
     }
 }
 
-class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill, wrap 1")) {
+class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
     private val loggerNames: List<LoggerName> = events.groupingBy(Event::logger)
         .eachCount()
         .entries
@@ -66,7 +66,7 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill, wra
 
         override fun convertElementToString(element: Any?): String {
             return if (element is LoggerName) {
-                element.name
+                element.name.substringAfterLast('.')
             } else {
                 element.toString()
             }
@@ -118,7 +118,7 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill, wra
 
         sortButtons.setSelected(naturalAsc.model, true)
 
-        add(FlatScrollPane(list), "push, growy, span 4")
+        add(FlatScrollPane(list), "newline, push, grow, width 200")
     }
 
     companion object {

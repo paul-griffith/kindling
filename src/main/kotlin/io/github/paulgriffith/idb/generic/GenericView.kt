@@ -7,6 +7,7 @@ import io.github.paulgriffith.utils.attachPopupMenu
 import io.github.paulgriffith.utils.javaType
 import io.github.paulgriffith.utils.toList
 import net.miginfocom.swing.MigLayout
+import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.event.KeyEvent
 import java.sql.Connection
@@ -20,6 +21,7 @@ import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.JTextArea
 import javax.swing.KeyStroke
+import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeNode
 
 class GenericView(connection: Connection) : IdbPanel() {
@@ -59,38 +61,42 @@ class GenericView(connection: Connection) : IdbPanel() {
         override fun children(): Enumeration<out TreeNode> = Collections.enumeration(tables)
     }
 
-    private val tree = DBMetaDataTree(root)
+    private val tree = DBMetaDataTree(DefaultTreeModel(root))
 
     private val query = JTextArea(0, 0)
 
     private val execute = Action(name = "Execute") {
-        if (!query.text.isNullOrEmpty()) {
-            connection.prepareStatement(query.text)
-                .executeQuery()
-                .use { resultSet ->
-                    val columnCount = resultSet.metaData.columnCount
-                    val names = List(columnCount) { i -> resultSet.metaData.getColumnName(i + 1) }
-                    val types = List(columnCount) { i ->
-                        val sqlType = resultSet.metaData.getColumnType(i + 1)
-                        val jdbcType = JDBCType.valueOf(sqlType)
-                        jdbcType.javaType
-                    }
+        results.result = if (!query.text.isNullOrEmpty()) {
+            try {
+                connection.prepareStatement(query.text)
+                    .executeQuery()
+                    .use { resultSet ->
+                        val columnCount = resultSet.metaData.columnCount
+                        val names = List(columnCount) { i -> resultSet.metaData.getColumnName(i + 1) }
+                        val types = List(columnCount) { i ->
+                            val sqlType = resultSet.metaData.getColumnType(i + 1)
+                            val jdbcType = JDBCType.valueOf(sqlType)
+                            jdbcType.javaType
+                        }
 
-                    val data = resultSet.toList {
-                        List(columnCount) { i ->
-                            // SQLite stores booleans as ints, we'll use actual booleans to make things easier
-                            if (types[i] == Boolean::class.javaObjectType) {
-                                resultSet.getObject(i + 1) == 1
-                            } else {
-                                resultSet.getObject(i + 1)
+                        val data = resultSet.toList {
+                            List(columnCount) { i ->
+                                // SQLite stores booleans as ints, we'll use actual booleans to make things easier
+                                if (types[i] == Boolean::class.javaObjectType) {
+                                    resultSet.getObject(i + 1) == 1
+                                } else {
+                                    resultSet.getObject(i + 1)
+                                }
                             }
                         }
-                    }
 
-                    results.model = ResultModel(names, types, data)
-                }
+                        QueryResult.Success(names, types, data)
+                    }
+            } catch (e: Exception) {
+                QueryResult.Error(e.message ?: "Error")
+            }
         } else {
-            results.model = ResultModel()
+            QueryResult.Error("Enter a query in the text field above")
         }
     }
 
@@ -135,7 +141,9 @@ class GenericView(connection: Connection) : IdbPanel() {
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                FlatScrollPane(tree),
+                FlatScrollPane(tree).apply {
+                    preferredSize = Dimension(200, 10)
+                },
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     FlatScrollPane(queryPanel),
@@ -144,7 +152,7 @@ class GenericView(connection: Connection) : IdbPanel() {
                     resizeWeight = 0.5
                 }
             ).apply {
-                resizeWeight = 0.2
+                resizeWeight = 0.1
             },
             "push, grow"
         )

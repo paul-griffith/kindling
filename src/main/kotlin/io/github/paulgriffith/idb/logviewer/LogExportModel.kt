@@ -2,14 +2,11 @@ package io.github.paulgriffith.idb.logviewer
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
+import io.github.paulgriffith.utils.tableCellRenderer
+import java.time.Instant
 import javax.swing.table.AbstractTableModel
-import kotlin.properties.Delegates
 
-class LogExportModel(data: List<Event>) : AbstractTableModel() {
-    var data: List<Event> by Delegates.observable(data) { _, _, _ ->
-        fireTableDataChanged()
-    }
-
+class LogExportModel(val data: List<Event>) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = EventColumns[column].header
     override fun getRowCount(): Int = data.size
     override fun getColumnCount(): Int = size
@@ -25,11 +22,45 @@ class LogExportModel(data: List<Event>) : AbstractTableModel() {
 
     @Suppress("unused")
     companion object EventColumns : ColumnList<Event>() {
-        val EventId by column { it.eventId }
-        val Timestamp by column { it.timestamp }
-        val Message by column { it.message }
-        val Logger by column { it.logger }
-        val Thread by column { it.thread }
-        val Level by column { it.level }
+        val Level by column(
+            column = {
+                minWidth = 45
+                maxWidth = 45
+            },
+            value = Event::level
+        )
+        val Timestamp by column(
+            column = {
+                minWidth = 130
+                maxWidth = 130
+                cellRenderer = tableCellRenderer<Instant> { _, value, _, _, _, _ ->
+                    text = LogView.DATE_FORMAT.format(value)
+                    toolTipText = value.toEpochMilli().toString()
+                }
+            },
+            value = Event::timestamp
+        )
+        val Thread by column(
+            column = {
+                preferredWidth = 160
+            },
+            value = Event::thread
+        )
+        val Logger by column(
+            column = {
+                preferredWidth = 160
+                cellRenderer = tableCellRenderer<String> { _, value, _, _, _, _ ->
+                    text = value.substringAfterLast('.')
+                    toolTipText = value
+                }
+            },
+            value = Event::logger
+        )
+        val Message by column(
+            column = {
+                preferredWidth = 1000
+            },
+            value = Event::message
+        )
     }
 }
