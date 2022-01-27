@@ -125,9 +125,9 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
         private val byName = compareBy(String.CASE_INSENSITIVE_ORDER, LoggerName::name)
         private val byCount = compareBy(LoggerName::eventCount)
 
-        private val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg", 16, 16)
-        private val NATURAL_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-z-a.svg", 16, 16)
-        private val NUMERIC_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-up.svg", 16, 16)
-        private val NUMERIC_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-down.svg", 16, 16)
+        private val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg")
+        private val NATURAL_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-z-a.svg")
+        private val NUMERIC_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-up.svg")
+        private val NUMERIC_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-down.svg")
     }
 }
