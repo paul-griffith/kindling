@@ -1,8 +1,9 @@
 package io.github.paulgriffith.threadviewer
 
 import com.formdev.flatlaf.extras.components.FlatTextField
+import io.github.paulgriffith.threadviewer.model.Thread
 import io.github.paulgriffith.threadviewer.model.ThreadDump
-import io.github.paulgriffith.threadviewer.model.ThreadInfo
+import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
@@ -18,10 +19,12 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
+import java.awt.Desktop
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -40,15 +43,15 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     private val details = DetailsPane()
-    private val mainTable = ThreadsTable(ThreadModel(threadDump.threads))
-    private val stateList = StateList(threadDump.threads.groupingBy(ThreadInfo::state).eachCount())
-    private val systemList = SystemList(threadDump.threads.groupingBy(ThreadInfo::system).eachCount())
+    private val mainTable = ThreadsTable(threadDump.threads)
+    private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
+    private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
 
     private val searchField = FlatTextField().apply {
         placeholderText = "Search"
     }
 
-    private val filters: List<(ThreadInfo) -> Boolean> = listOf(
+    private val filters: List<(thread: Thread) -> Boolean> = listOf(
         { thread ->
             thread.state in stateList.checkBoxListSelectedValues
         },
@@ -81,21 +84,40 @@ class ThreadView(override val path: Path) : ToolPanel() {
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting) {
-                    selectedIndices
-                        .map { row ->
-                            mainTable.model.getValueAt(mainTable.convertRowIndexToModel(row), 0) as Int
-                        }
-                        .mapNotNull { id -> threadDump.threadsById[id] }
-                        .let { threads ->
-                            details.events = threads.map { thread ->
-                                Detail(
-                                    title = thread.name,
-                                    details = mapOf(
-                                        "id" to thread.id.toString(),
-                                    ),
-                                    body = thread.stacktrace,
-                                )
-                            }
+                    details.events = selectedIndices
+                        .map { viewRow -> mainTable.convertRowIndexToModel(viewRow) }
+                        .map { modelRow -> mainTable.model.threads[modelRow] }
+                        .map { thread ->
+                            Detail(
+                                title = thread.name,
+                                details = mapOf(
+                                    "id" to thread.id.toString(),
+                                ),
+                                body = buildList {
+                                    if (thread.blocker != null) {
+                                        add("waiting for:")
+                                        add(thread.blocker.toString())
+                                    }
+
+                                    if (thread.lockedMonitors.isNotEmpty()) {
+                                        add("locked monitors:")
+                                        thread.lockedMonitors.forEach { monitor ->
+                                            add(monitor.frame)
+                                            add(monitor.lock)
+                                        }
+                                    }
+
+                                    if (thread.lockedSynchronizers.isNotEmpty()) {
+                                        add("locked synchronizers:")
+                                        addAll(thread.lockedSynchronizers)
+                                    }
+
+                                    if (thread.stacktrace.isNotEmpty()) {
+                                        add("stacktrace:")
+                                        addAll(thread.stacktrace)
+                                    }
+                                },
+                            )
                         }
                 }
             }
@@ -142,6 +164,14 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     override val icon: Icon = Tool.ThreadViewer.icon
+
+    override fun customizePopupMenu(menu: JPopupMenu) {
+        menu.add(
+            Action(name = "Open in External Editor") {
+                Desktop.getDesktop().open(path.toFile())
+            }
+        )
+    }
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)

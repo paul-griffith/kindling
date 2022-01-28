@@ -185,8 +185,8 @@ val JDBCType.javaType: Class<*>
         else -> Any::class
     }.javaObjectType
 
-inline fun Component.attachPopupMenu(
-    crossinline menuFn: Component.(event: MouseEvent) -> JPopupMenu?,
+inline fun <T : Component> T.attachPopupMenu(
+    crossinline menuFn: T.(event: MouseEvent) -> JPopupMenu?,
 ) {
     addMouseListener(object : MouseAdapter() {
         override fun mousePressed(e: MouseEvent) {
