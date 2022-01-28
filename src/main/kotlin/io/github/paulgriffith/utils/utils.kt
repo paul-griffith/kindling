@@ -1,6 +1,8 @@
 package io.github.paulgriffith.utils
 
+import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
+import com.jidesoft.swing.ListSearchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -10,6 +12,7 @@ import kotlinx.coroutines.swing.Swing
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
+import java.awt.Color
 import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -26,10 +29,15 @@ import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPopupMenu
 import javax.swing.JTable
+import javax.swing.JTree
 import javax.swing.ListCellRenderer
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
+import javax.swing.tree.DefaultTreeCellRenderer
+import javax.swing.tree.TreeCellRenderer
+import kotlin.math.log2
+import kotlin.math.pow
 
 inline fun <reified T> tableCellRenderer(crossinline customize: JLabel.(table: JTable, value: T, selected: Boolean, focused: Boolean, row: Int, col: Int) -> Unit): TableCellRenderer {
     return object : DefaultTableCellRenderer() {
@@ -72,6 +80,23 @@ inline fun <reified T> listCellRenderer(crossinline customize: JLabel.(list: JLi
     }
 }
 
+fun treeCellRenderer(customize: JLabel.(tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean) -> Component): TreeCellRenderer {
+    return object : DefaultTreeCellRenderer() {
+        override fun getTreeCellRendererComponent(
+            tree: JTree,
+            value: Any?,
+            sel: Boolean,
+            expanded: Boolean,
+            leaf: Boolean,
+            row: Int,
+            hasFocus: Boolean,
+        ): Component {
+            val soup = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
+            return customize.invoke(soup as JLabel, tree, value, sel, expanded, leaf, row, hasFocus)
+        }
+    }
+}
+
 inline fun FlatScrollPane(component: Component, block: FlatScrollPane.() -> Unit = {}): FlatScrollPane {
     return FlatScrollPane().apply {
         setViewportView(component)
@@ -82,15 +107,17 @@ inline fun FlatScrollPane(component: Component, block: FlatScrollPane.() -> Unit
 val Document.text: String
     get() = getText(0, length)
 
+/**
+ * Launches [destinationFunction] on [EDT_SCOPE] no more frequently than [waitMs].
+ */
 fun <T> debounce(
     waitMs: Long = 300L,
-    coroutineScope: CoroutineScope,
     destinationFunction: (T) -> Unit,
 ): (T) -> Unit {
     var debounceJob: Job? = null
     return { param: T ->
         debounceJob?.cancel()
-        debounceJob = coroutineScope.launch {
+        debounceJob = EDT_SCOPE.launch {
             delay(waitMs)
             destinationFunction(param)
         }
@@ -151,6 +178,9 @@ val JDBCType.javaType: Class<*>
         JDBCType.NCHAR -> String::class
         JDBCType.NVARCHAR -> String::class
         JDBCType.LONGNVARCHAR -> String::class
+        JDBCType.BLOB -> ByteArray::class
+        JDBCType.CLOB -> ByteArray::class
+        JDBCType.NCLOB -> ByteArray::class
         else -> Any::class
     }.javaObjectType
 
@@ -179,4 +209,37 @@ fun SQLiteConnection(path: Path): Connection {
         url = "jdbc:sqlite:file:$path"
         setReadOnly(true)
     }.connection
+}
+
+fun FlatSVGIcon.derive(colorer: (Color) -> Color): FlatSVGIcon {
+    return FlatSVGIcon(name, scale).apply {
+        colorFilter = FlatSVGIcon.ColorFilter(colorer)
+    }
+}
+
+private val prefix = arrayOf("", "k", "m", "g", "t", "p", "e", "z", "y")
+
+fun Long.toFileSizeLabel(): String = when {
+    this == 0L -> "0B"
+    else -> {
+        val digits = log2(toDouble()).toInt() / 10
+        val precision = when (digits) {
+            0 -> 0
+            1 -> 1
+            else -> 2
+        }
+        "%,.${precision}f${prefix[digits]}b".format(toDouble() / 2.0.pow(digits * 10.0))
+    }
+}
+
+fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (Any?) -> String): ListSearchable {
+    return object : ListSearchable(this) {
+        init {
+            setup()
+        }
+
+        override fun convertElementToString(element: Any?): String {
+            return element.let(conversion)
+        }
+    }
 }

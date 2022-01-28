@@ -1,57 +1,39 @@
 package io.github.paulgriffith.idb.logviewer
 
+import io.github.paulgriffith.idb.logviewer.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.setDefaultRenderer
-import io.github.paulgriffith.utils.tableCellRenderer
-import java.time.Instant
+import io.github.paulgriffith.utils.setupColumns
 import javax.swing.JTable
-import javax.swing.RowSorter
+import javax.swing.RowSorter.SortKey
 import javax.swing.SortOrder
-import javax.swing.table.TableRowSorter
+import javax.swing.table.TableModel
 
 class LogExportTable(model: LogExportModel) : JTable(model) {
     init {
-        autoResizeMode = AUTO_RESIZE_ALL_COLUMNS
+        autoResizeMode = AUTO_RESIZE_LAST_COLUMN
         autoCreateRowSorter = true
+        rowSorter.sortKeys = listOf(
+            SortKey(LogExportModel[Timestamp], SortOrder.ASCENDING)
+        )
 
         setDefaultRenderer<String> { _, value, _, _, _, _ ->
             text = value
             toolTipText = value
         }
 
-        columnModel.apply {
-            getColumn(LogExportModel[LogExportModel.Timestamp]).apply {
-                preferredWidth = 140
-                maxWidth = 140
-                cellRenderer = tableCellRenderer<Instant> { _, value, _, _, _, _ ->
-                    text = LogView.DATE_FORMAT.format(value)
-                }
-            }
-            getColumn(LogExportModel[LogExportModel.Logger]).apply {
-                preferredWidth = 160
-                cellRenderer = tableCellRenderer<String> { _, value, _, _, _, _ ->
-                    text = value.substringAfterLast('.')
-                    toolTipText = value
-                }
-            }
-            getColumn(LogExportModel[LogExportModel.Thread]).apply {
-                preferredWidth = 160
-            }
-            getColumn(LogExportModel[LogExportModel.Level]).apply {
-                preferredWidth = 40
-                maxWidth = 40
-            }
-            removeColumn(columnModel.getColumn(LogExportModel[LogExportModel.EventId]))
-        }
-
-        rowSorter.sortKeys = listOf(
-            RowSorter.SortKey(LogExportModel[LogExportModel.Timestamp], SortOrder.ASCENDING)
-        )
+        setupColumns(LogExportModel.EventColumns)
     }
+
+    override fun createDefaultColumnsFromModel() = Unit
 
     override fun getModel(): LogExportModel = super.getModel() as LogExportModel
 
-    @Suppress("UNCHECKED_CAST")
-    override fun getRowSorter(): TableRowSorter<LogExportModel> {
-        return super.getRowSorter() as TableRowSorter<LogExportModel>
+    override fun setModel(model: TableModel) {
+        require(model is LogExportModel)
+        val keys: List<SortKey>? = rowSorter?.sortKeys
+        super.setModel(model)
+        if (keys != null) {
+            rowSorter?.sortKeys = keys
+        }
     }
 }

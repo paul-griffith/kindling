@@ -8,7 +8,16 @@ data class Event(
     val message: String,
     val logger: String,
     val thread: String,
-    val level: String,
+    val level: Level,
     val mdc: Map<String, String>,
     val stacktrace: List<String>,
-)
+) {
+    @Suppress("unused")
+    enum class Level {
+        TRACE,
+        DEBUG,
+        INFO,
+        WARN,
+        ERROR,
+    }
+}
