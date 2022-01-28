@@ -1,13 +1,19 @@
 package io.github.paulgriffith.threadviewer
 
+import com.formdev.flatlaf.extras.components.FlatTextField
 import io.github.paulgriffith.threadviewer.model.ThreadDump
 import io.github.paulgriffith.threadviewer.model.ThreadInfo
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
+import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.debounce
+import io.github.paulgriffith.utils.text
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
@@ -17,8 +23,6 @@ import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSplitPane
-import javax.swing.JTextField
-import javax.swing.RowFilter
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import kotlin.io.path.extension
@@ -36,24 +40,41 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     private val details = DetailsPane()
-    private val mainTable = ThreadsTable(threadDump.threads)
-    private val stateTable = StateTable(threadDump.threads.groupingBy(ThreadInfo::state).eachCount())
-    private val systemTable = SystemTable(threadDump.threads.groupingBy(ThreadInfo::system).eachCount())
+    private val mainTable = ThreadsTable(ThreadModel(threadDump.threads))
+    private val stateList = StateList(threadDump.threads.groupingBy(ThreadInfo::state).eachCount())
+    private val systemList = SystemList(threadDump.threads.groupingBy(ThreadInfo::system).eachCount())
 
-    private val searchField = JTextField(30).apply {
-        document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = search.invoke(text)
-            override fun removeUpdate(e: DocumentEvent) = search.invoke(text)
-            override fun changedUpdate(e: DocumentEvent) = search.invoke(text)
+    private val searchField = FlatTextField().apply {
+        placeholderText = "Search"
+    }
 
-            val search = debounce<String?>(waitMs = 100L) { text ->
-                if (text.isNullOrEmpty()) {
-                    mainTable.rowSorter.rowFilter = null
-                } else {
-                    mainTable.rowSorter.rowFilter = RowFilter.regexFilter(text)
-                }
+    private val filters: List<(ThreadInfo) -> Boolean> = listOf(
+        { thread ->
+            thread.state in stateList.checkBoxListSelectedValues
+        },
+        { thread ->
+            thread.system in systemList.checkBoxListSelectedValues
+        },
+        { thread ->
+            val search = searchField.text
+            search != null &&
+                thread.name.contains(search, ignoreCase = true) ||
+                thread.system != null && thread.system.contains(search, ignoreCase = true) ||
+                thread.scope != null && thread.scope.contains(search, ignoreCase = true) ||
+                thread.state.name.contains(search, ignoreCase = true) ||
+                thread.stacktrace.any { stack -> stack.contains(search, ignoreCase = true) }
+        }
+    )
+
+    private fun updateData() {
+        BACKGROUND.launch {
+            val data = threadDump.threads.filter { thread ->
+                filters.all { filter -> filter(thread) }
             }
-        })
+            EDT_SCOPE.launch {
+                mainTable.model = ThreadModel(data)
+            }
+        }
     }
 
     init {
@@ -80,56 +101,37 @@ class ThreadView(override val path: Path) : ToolPanel() {
             }
         }
 
-        fun <T> List<String?>.toRowFilter(): RowFilter<T, Int> {
-            return RowFilter.regexFilter(
-                this.joinToString(separator = "|", prefix = "^", postfix = "$", transform = String?::orEmpty)
-            )
-        }
-
-        stateTable.selectionModel.apply {
-            addListSelectionListener { selectionEvent ->
-                if (!selectionEvent.valueIsAdjusting) {
-                    if (isSelectionEmpty) {
-                        mainTable.rowSorter.rowFilter = null
-                    } else {
-                        systemTable.clearSelection()
-                        selectedIndices
-                            .map { row -> stateTable.model[stateTable.convertRowIndexToModel(row), StateModel.State] }
-                            .let { states ->
-                                mainTable.rowSorter.rowFilter = states.map(Thread.State::name).toRowFilter()
-                            }
-                    }
-                }
+        systemList.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
             }
         }
 
-        systemTable.selectionModel.apply {
-            addListSelectionListener { selectionEvent ->
-                if (!selectionEvent.valueIsAdjusting) {
-                    if (isSelectionEmpty) {
-                        mainTable.rowSorter.rowFilter = null
-                    } else {
-                        stateTable.clearSelection()
-                        selectedIndices
-                            .map { row -> systemTable.model[systemTable.convertRowIndexToModel(row), SystemModel.System] }
-                            .let { systems ->
-                                mainTable.rowSorter.rowFilter = systems.toRowFilter()
-                            }
-                    }
-                }
+        stateList.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
             }
         }
+
+        searchField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) = search.invoke(e.document.text)
+            override fun removeUpdate(e: DocumentEvent) = search.invoke(e.document.text)
+            override fun changedUpdate(e: DocumentEvent) = search.invoke(e.document.text)
+
+            val search = debounce<String?>(waitMs = 100L) {
+                updateData()
+            }
+        })
 
         add(JLabel("Version: ${threadDump.version}"))
-        add(JLabel("Search:"), "align right, gap related")
         add(searchField, "align right, width 25%, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill", "[shrink][fill]", "fill")).apply {
-                    add(FlatScrollPane(systemTable), "width 215")
+                    add(FlatScrollPane(systemList), "width 215")
                     add(FlatScrollPane(mainTable), "wrap, spany 2, push")
-                    add(FlatScrollPane(stateTable), "width 215")
+                    add(FlatScrollPane(stateList), "width 215")
                 },
                 details,
             ).apply {
@@ -142,6 +144,8 @@ class ThreadView(override val path: Path) : ToolPanel() {
     override val icon: Icon = Tool.ThreadViewer.icon
 
     companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
+
         internal val JSON = Json {
             ignoreUnknownKeys = true
             prettyPrint = true

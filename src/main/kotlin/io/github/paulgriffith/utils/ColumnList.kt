@@ -16,7 +16,7 @@ abstract class ColumnList<R> private constructor(
     // This is some real Kotlin 'magic', but makes it very easy to define JTable models that can be used type-safely
     protected inline fun <reified T> column(
         name: String? = null,
-        noinline column: (TableColumn.() -> Unit)? = null,
+        noinline column: (TableColumn.(table: JTable) -> Unit)? = null,
         noinline value: (R) -> T,
     ): PropertyDelegateProvider<ColumnList<R>, ReadOnlyProperty<ColumnList<R>, Column<R, T>>> {
         return PropertyDelegateProvider { thisRef, prop ->
@@ -37,9 +37,7 @@ abstract class ColumnList<R> private constructor(
 fun JTable.setupColumns(columns: ColumnList<*>) {
     columns.forEachIndexed { i, column ->
         val tableColumn = TableColumn(i)
-        if (column.columnCustomization != null) {
-            tableColumn.apply(column.columnCustomization)
-        }
+        column.columnCustomization?.invoke(tableColumn, this)
         addColumn(tableColumn)
     }
 }
