@@ -2,6 +2,7 @@ package io.github.paulgriffith.utils
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
+import com.jidesoft.swing.ListSearchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -228,5 +229,17 @@ fun Long.toFileSizeLabel(): String = when {
             else -> 2
         }
         "%,.${precision}f${prefix[digits]}b".format(toDouble() / 2.0.pow(digits * 10.0))
+    }
+}
+
+fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (Any?) -> String): ListSearchable {
+    return object : ListSearchable(this) {
+        init {
+            setup()
+        }
+
+        override fun convertElementToString(element: Any?): String {
+            return element.let(conversion)
+        }
     }
 }

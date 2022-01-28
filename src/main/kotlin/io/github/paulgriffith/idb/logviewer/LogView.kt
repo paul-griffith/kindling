@@ -114,8 +114,6 @@ class LogView(connection: Connection) : IdbPanel() {
 
     private val sidebar = LoggerNamesPanel(rawData)
 
-    private var lockout: Boolean = false
-
     private val filters: List<(Event) -> Boolean> = listOf(
         { event ->
             event.logger in sidebar.list.checkBoxListSelectedIndices
@@ -193,10 +191,8 @@ class LogView(connection: Connection) : IdbPanel() {
             header.displayedRows = table.model.rowCount
         }
 
-        sidebar.list.checkBoxListSelectionModel.addListSelectionListener { event ->
-            if (!event.valueIsAdjusting && !lockout) {
-                updateData()
-            }
+        sidebar.addPropertyChangeListener("loggers") {
+            updateData()
         }
 
         header.levels.addActionListener {
@@ -210,10 +206,6 @@ class LogView(connection: Connection) : IdbPanel() {
             override fun removeUpdate(e: DocumentEvent) = search(e)
             override fun changedUpdate(e: DocumentEvent) = search(e)
         })
-
-        lockout = true
-        sidebar.list.selectAll()
-        lockout = false
     }
 
     companion object {
