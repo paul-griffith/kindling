@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.miglayout)
     implementation(libs.jide.common)
+    implementation(libs.swingx)
     implementation(libs.logback)
     implementation(libs.svgSalamander)
     implementation(libs.bundles.coroutines)

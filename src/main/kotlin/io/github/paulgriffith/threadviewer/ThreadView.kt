@@ -1,6 +1,6 @@
 package io.github.paulgriffith.threadviewer
 
-import com.formdev.flatlaf.extras.components.FlatTextField
+import io.github.paulgriffith.threadviewer.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.threadviewer.model.Thread
 import io.github.paulgriffith.threadviewer.model.ThreadDump
 import io.github.paulgriffith.utils.Action
@@ -8,10 +8,9 @@ import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
-import io.github.paulgriffith.utils.debounce
-import io.github.paulgriffith.utils.text
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,6 +18,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
+import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
 import java.nio.file.Path
 import javax.swing.Icon
@@ -26,8 +26,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
+import javax.swing.SortOrder
 import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 
@@ -43,13 +42,14 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     private val details = DetailsPane()
-    private val mainTable = ThreadsTable(threadDump.threads)
+    private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel.ThreadColumns).apply {
+        setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
+    }
+
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
     private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
 
-    private val searchField = FlatTextField().apply {
-        placeholderText = "Search"
-    }
+    private val searchField = JXSearchField("Search")
 
     private val filters: List<(thread: Thread) -> Boolean> = listOf(
         { thread ->
@@ -59,13 +59,13 @@ class ThreadView(override val path: Path) : ToolPanel() {
             thread.system in systemList.checkBoxListSelectedValues
         },
         { thread ->
-            val search = searchField.text
-            search != null &&
-                thread.name.contains(search, ignoreCase = true) ||
-                thread.system != null && thread.system.contains(search, ignoreCase = true) ||
-                thread.scope != null && thread.scope.contains(search, ignoreCase = true) ||
-                thread.state.name.contains(search, ignoreCase = true) ||
-                thread.stacktrace.any { stack -> stack.contains(search, ignoreCase = true) }
+            val query = searchField.text
+            query != null &&
+                thread.name.contains(query, ignoreCase = true) ||
+                thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+                thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+                thread.state.name.contains(query, ignoreCase = true) ||
+                thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
         }
     )
 
@@ -135,15 +135,9 @@ class ThreadView(override val path: Path) : ToolPanel() {
             }
         }
 
-        searchField.document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = search.invoke(e.document.text)
-            override fun removeUpdate(e: DocumentEvent) = search.invoke(e.document.text)
-            override fun changedUpdate(e: DocumentEvent) = search.invoke(e.document.text)
-
-            val search = debounce<String?>(waitMs = 100L) {
-                updateData()
-            }
-        })
+        searchField.addActionListener {
+            updateData()
+        }
 
         add(JLabel("Version: ${threadDump.version}"))
         add(searchField, "align right, width 25%, wrap")
@@ -151,9 +145,9 @@ class ThreadView(override val path: Path) : ToolPanel() {
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill", "[shrink][fill]", "fill")).apply {
-                    add(FlatScrollPane(systemList), "width 215")
+                    add(FlatScrollPane(stateList), "width 215, height 200")
                     add(FlatScrollPane(mainTable), "wrap, spany 2, push")
-                    add(FlatScrollPane(stateList), "width 215")
+                    add(FlatScrollPane(systemList), "pushy 300, width 215")
                 },
                 details,
             ).apply {

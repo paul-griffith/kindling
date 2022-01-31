@@ -21,6 +21,7 @@ import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.io.File
+import java.lang.Boolean.getBoolean
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JButton
@@ -115,10 +116,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     init {
         tabs.leadingComponent = chooseButton
         tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
-            add(
-                ThemeButton(),
-                "align right"
-            )
+            add(ThemeButton(), "align right")
         }
         add(tabs, "dock center")
     }
@@ -162,12 +160,15 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
 
         private fun setupLaf() {
-            UIManager.put("ScrollBar.showButtons", true)
             UIManager.put("ScrollBar.width", 16)
+            UIManager.put("TabbedPane.showTabSeparators", true)
+            UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             FlatLightLaf.setup()
 
-            FlatUIDefaultsInspector.install("ctrl shift Y")
+            if (getBoolean("kindling.debug")) {
+                FlatUIDefaultsInspector.install("ctrl shift Y")
+            }
         }
     }
 }

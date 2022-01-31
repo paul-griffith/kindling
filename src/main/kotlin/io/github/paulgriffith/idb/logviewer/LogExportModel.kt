@@ -2,7 +2,9 @@ package io.github.paulgriffith.idb.logviewer
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
-import io.github.paulgriffith.utils.tableCellRenderer
+import org.jdesktop.swingx.renderer.CellContext
+import org.jdesktop.swingx.renderer.DefaultTableRenderer
+import org.jdesktop.swingx.renderer.LabelProvider
 import java.time.Instant
 import javax.swing.table.AbstractTableModel
 
@@ -24,43 +26,34 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
     companion object EventColumns : ColumnList<Event>() {
         val Level by column(
             column = {
-                minWidth = 45
-                maxWidth = 45
+                minWidth = 40
+                maxWidth = 40
             },
-            value = Event::level
+            value = { it.level },
         )
         val Timestamp by column(
             column = {
-                minWidth = 130
-                maxWidth = 130
-                cellRenderer = tableCellRenderer<Instant> { _, value, _, _, _, _ ->
-                    text = LogView.DATE_FORMAT.format(value)
-                    toolTipText = value.toEpochMilli().toString()
+                minWidth = 140
+                maxWidth = 140
+                cellRenderer = DefaultTableRenderer {
+                    LogView.DATE_FORMAT.format(it as Instant)
                 }
             },
             value = Event::timestamp
         )
-        val Thread by column(
-            column = {
-                preferredWidth = 160
-            },
-            value = Event::thread
-        )
+        val Thread by column { it.thread }
         val Logger by column(
             column = {
-                preferredWidth = 160
-                cellRenderer = tableCellRenderer<String> { _, value, _, _, _, _ ->
-                    text = value.substringAfterLast('.')
-                    toolTipText = value
+                val labelProvider = object : LabelProvider({ (it as String).substringAfterLast('.') }) {
+                    override fun format(context: CellContext) {
+                        super.format(context)
+                        rendererComponent.toolTipText = context.value as String
+                    }
                 }
+                cellRenderer = DefaultTableRenderer(labelProvider)
             },
             value = Event::logger
         )
-        val Message by column(
-            column = {
-                preferredWidth = 1000
-            },
-            value = Event::message
-        )
+        val Message by column { it.message }
     }
 }

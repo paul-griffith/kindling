@@ -1,11 +1,11 @@
 package io.github.paulgriffith.utils
 
-import javax.swing.JTable
-import javax.swing.table.TableColumn
+import org.jdesktop.swingx.table.TableColumnExt
+import javax.swing.table.TableModel
 
 data class Column<R, C>(
     val header: String,
     val getValue: (row: R) -> C,
-    val columnCustomization: (TableColumn.(table: JTable) -> Unit)?,
+    val columnCustomization: (TableColumnExt.(model: TableModel) -> Unit)?,
     val clazz: Class<C>,
 )

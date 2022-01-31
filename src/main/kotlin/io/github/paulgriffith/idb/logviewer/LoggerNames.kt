@@ -98,12 +98,6 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
             )
         }
 
-        list.checkBoxListSelectionModel.addListSelectionListener { event ->
-            if (!event.valueIsAdjusting) {
-                firePropertyChange("loggers", null, list.checkBoxListSelectedIndices)
-            }
-        }
-
         val naturalAsc = sortButton(
             icon = NATURAL_SORT_ASCENDING,
             tooltip = "Sort A-Z",

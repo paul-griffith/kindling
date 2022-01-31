@@ -2,9 +2,11 @@ package io.github.paulgriffith.idb.logviewer
 
 import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.idb.IdbPanel
+import io.github.paulgriffith.idb.logviewer.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.debounce
 import io.github.paulgriffith.utils.toList
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +18,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.swing.JSplitPane
+import javax.swing.SortOrder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import io.github.paulgriffith.utils.Detail as DetailEvent
@@ -101,7 +104,9 @@ class LogView(connection: Connection) : IdbPanel() {
     }
 
     private val maxRows: Int = rawData.size
-    private val table = LogExportTable(LogExportModel(rawData))
+    private val table = ReifiedJXTable(LogExportModel(rawData), LogExportModel).apply {
+        setSortOrder(LogExportModel[Timestamp], SortOrder.ASCENDING)
+    }
 
     private val details = DetailsPane()
 
@@ -191,8 +196,10 @@ class LogView(connection: Connection) : IdbPanel() {
             header.displayedRows = table.model.rowCount
         }
 
-        sidebar.addPropertyChangeListener("loggers") {
-            updateData()
+        sidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
+            }
         }
 
         header.levels.addActionListener {
