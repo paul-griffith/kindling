@@ -7,7 +7,6 @@ import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.ReifiedJXTable
-import io.github.paulgriffith.utils.debounce
 import io.github.paulgriffith.utils.toList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,8 +18,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
 class LogView(connection: Connection) : IdbPanel() {
@@ -206,13 +203,9 @@ class LogView(connection: Connection) : IdbPanel() {
             updateData()
         }
 
-        header.search.document.addDocumentListener(object : DocumentListener {
-            val search = debounce<DocumentEvent>(waitMs = 100L) { updateData() }
-
-            override fun insertUpdate(e: DocumentEvent) = search(e)
-            override fun removeUpdate(e: DocumentEvent) = search(e)
-            override fun changedUpdate(e: DocumentEvent) = search(e)
-        })
+        header.search.addActionListener {
+            updateData()
+        }
     }
 
     companion object {

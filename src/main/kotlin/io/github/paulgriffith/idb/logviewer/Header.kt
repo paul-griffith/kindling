@@ -1,7 +1,7 @@
 package io.github.paulgriffith.idb.logviewer
 
-import com.formdev.flatlaf.extras.components.FlatTextField
 import net.miginfocom.swing.MigLayout
+import org.jdesktop.swingx.JXSearchField
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -12,9 +12,7 @@ class Header(private val max: Int) : JPanel(MigLayout("ins 0, fill")) {
 
     val levels = JComboBox(Event.Level.values())
 
-    val search = FlatTextField().apply {
-        placeholderText = "Search"
-    }
+    val search = JXSearchField("Search")
 
     init {
         add(events, "pushx")

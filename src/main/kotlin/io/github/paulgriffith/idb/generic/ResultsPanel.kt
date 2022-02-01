@@ -4,6 +4,10 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.inductiveautomation.ignition.common.util.csv.CSVWriter
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
+import io.github.paulgriffith.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
+import io.github.paulgriffith.utils.selectedOrAllRowIndices
+import io.github.paulgriffith.utils.toFileSizeLabel
 import net.miginfocom.swing.MigLayout
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -16,7 +20,18 @@ import javax.swing.JPanel
 import javax.swing.filechooser.FileNameExtensionFilter
 
 class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
-    private val table = ResultsTable()
+    private val table = ReifiedJXTable(QueryResult.Success()).apply {
+        setDefaultRenderer<ByteArray>(
+            getText = {
+                if (it != null) {
+                    "${it.size.toLong().toFileSizeLabel()} BLOB"
+                } else {
+                    ""
+                }
+            },
+            getTooltip = { "Export to CSV to view full data (b64 encoded)" }
+        )
+    }
 
     private val errorDisplay = JLabel("No results - run a query in the text area above")
 
@@ -52,13 +67,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
         val tsv = buildString {
             table.model.columnNames.joinTo(buffer = this, separator = "\t")
             appendLine()
-            val rowsToExport = if (table.selectionModel.isSelectionEmpty) {
-                table.model.data.indices.toList()
-            } else {
-                table.selectionModel.selectedIndices
-                    .filter { table.isRowSelected(it) }
-                    .map { table.convertRowIndexToModel(it) }
-            }
+            val rowsToExport = table.selectedOrAllRowIndices()
             rowsToExport.map { table.model.data[it] }
                 .forEach { line ->
                     line.joinTo(buffer = this, separator = "\t") { cell ->
@@ -87,14 +96,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
             if (save == JFileChooser.APPROVE_OPTION) {
                 CSVWriter(selectedFile.writer()).use { csv ->
                     csv.writeNext(table.model.columnNames)
-                    val rowsToExport = if (table.selectionModel.isSelectionEmpty) {
-                        table.model.data.indices.toList()
-                    } else {
-                        table.selectionModel.selectedIndices
-                            .filter { table.isRowSelected(it) }
-                            .map { table.convertRowIndexToModel(it) }
-                    }
-
+                    val rowsToExport = table.selectedOrAllRowIndices()
                     rowsToExport.map { table.model.data[it] }
                         .forEach { line ->
                             csv.writeNext(

@@ -3,6 +3,7 @@ package io.github.paulgriffith.utils
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
 import com.jidesoft.swing.ListSearchable
+import io.github.paulgriffith.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -10,7 +11,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.jdesktop.swingx.JXTable
+import org.jdesktop.swingx.JXTableHeader
 import org.jdesktop.swingx.decorator.HighlighterFactory
+import org.jdesktop.swingx.renderer.CellContext
+import org.jdesktop.swingx.renderer.ComponentProvider
+import org.jdesktop.swingx.renderer.DefaultTableRenderer
+import org.jdesktop.swingx.renderer.JRendererLabel
 import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
@@ -19,6 +25,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
+import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
@@ -26,34 +33,77 @@ import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
-import javax.swing.table.DefaultTableCellRenderer
-import javax.swing.table.TableCellRenderer
 import javax.swing.table.TableModel
 import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
 import javax.swing.tree.TreeCellRenderer
+import kotlin.reflect.KClass
+import kotlin.reflect.safeCast
 
-inline fun <reified T> tableCellRenderer(crossinline customize: JLabel.(table: JTable, value: T, selected: Boolean, focused: Boolean, row: Int, col: Int) -> Unit): TableCellRenderer {
-    return object : DefaultTableCellRenderer() {
-        override fun getTableCellRendererComponent(
-            table: JTable,
-            value: Any?,
-            isSelected: Boolean,
-            focused: Boolean,
-            row: Int,
-            column: Int,
-        ): Component {
-            return super.getTableCellRendererComponent(table, value, isSelected, focused, row, column).apply {
-                if (value is T) {
-                    customize.invoke(this as JLabel, table, value, isSelected, focused, row, column)
-                }
-            }
+typealias StringProvider<T> = (T?) -> String?
+typealias IconProvider<T> = (T?) -> Icon?
+
+class ReifiedLabelProvider<T : Any>(
+    private val valueClass: KClass<T>,
+    private val getText: StringProvider<T>,
+    private val getIcon: IconProvider<T>,
+    private val getTooltip: StringProvider<T>,
+) : ComponentProvider<JLabel>() {
+    override fun createRendererComponent(): JLabel = JRendererLabel()
+
+    override fun configureState(context: CellContext) {
+        // TODO - Color icon when selected
+        rendererComponent.horizontalAlignment = horizontalAlignment
+    }
+
+    override fun format(context: CellContext) {
+        rendererComponent.apply {
+            val value = valueClass.safeCast(context.value)
+            text = getText(value)
+            icon = getIcon(value)
+            toolTipText = getTooltip(value)
+        }
+    }
+
+    companion object {
+        private val NULL_ICON = FlatSVGIcon("icons/null.svg")
+
+        fun <T> defaultIconFunction(): IconProvider<T> = {
+            if (it == null) {
+                NULL_ICON
+            } else null
+        }
+
+        inline operator fun <reified T : Any> invoke(
+            noinline getText: StringProvider<T>,
+            noinline getIcon: IconProvider<T> = defaultIconFunction(),
+            noinline getTooltip: StringProvider<T> = { null },
+        ): ReifiedLabelProvider<T> {
+            return ReifiedLabelProvider(T::class, getText, getIcon, getTooltip)
+        }
+
+        inline fun <reified T : Any> JXTable.setDefaultRenderer(
+            noinline getText: StringProvider<T>,
+            noinline getIcon: IconProvider<T> = defaultIconFunction(),
+            noinline getTooltip: StringProvider<T> = { null },
+        ) {
+            this.setDefaultRenderer(
+                T::class.java,
+                DefaultTableRenderer(ReifiedLabelProvider(getText, getIcon, getTooltip))
+            )
         }
     }
 }
 
-inline fun <reified T> JTable.setDefaultRenderer(crossinline customize: JLabel.(table: JTable, value: T, selected: Boolean, focused: Boolean, row: Int, col: Int) -> Unit) {
-    this.setDefaultRenderer(T::class.java, tableCellRenderer(customize))
+fun JTable.selectedOrAllRowIndices(): IntArray {
+    return if (selectionModel.isSelectionEmpty) {
+        IntArray(model.rowCount) { it }
+    } else {
+        selectionModel.selectedIndices
+            .filter { isRowSelected(it) }
+            .map { convertRowIndexToModel(it) }
+            .toIntArray()
+    }
 }
 
 inline fun <reified T> listCellRenderer(crossinline customize: JLabel.(list: JList<*>, value: T, index: Int, selected: Boolean, focused: Boolean) -> Unit): ListCellRenderer<Any> {
@@ -122,6 +172,7 @@ fun <T> debounce(
  * A common CoroutineScope bound to the event dispatch thread (see [Dispatchers.Swing]).
  */
 val EDT_SCOPE = CoroutineScope(Dispatchers.Swing)
+
 inline fun <T : Component> T.attachPopupMenu(
     crossinline menuFn: T.(event: MouseEvent) -> JPopupMenu?,
 ) {
@@ -179,19 +230,32 @@ class EmptySelectionModel : DefaultListSelectionModel() {
 
 class ReifiedJXTable<T : TableModel>(
     model: T,
-    columns: ColumnList<*>,
+    private val modelClass: Class<T>,
+    columns: ColumnList<*>?,
 ) : JXTable(model) {
     private val setup = true
 
     init {
-        installColumnFactory(columns)
-        isColumnControlVisible = true
-        addHighlighter(HighlighterFactory.createSimpleStriping())
-
-        setDefaultRenderer<String> { _, value, _, _, _, _ ->
-            text = value
-            toolTipText = value
+        if (columns != null) {
+            installColumnFactory(columns)
         }
+        isColumnControlVisible = true
+
+        setDefaultRenderer<String>(
+            getText = { it },
+            getTooltip = { it },
+        )
+
+        tableHeader = JXTableHeader(columnModel).apply {
+            defaultRenderer = DefaultTableRenderer(
+                ReifiedLabelProvider(
+                    getText = Any?::toString,
+                    getTooltip = Any?::toString,
+                )
+            )
+        }
+
+        addHighlighter(HighlighterFactory.createSimpleStriping())
 
         packAll()
         actionMap.remove("find")
@@ -205,7 +269,9 @@ class ReifiedJXTable<T : TableModel>(
     override fun getModel(): T = super.getModel() as T
 
     override fun setModel(model: TableModel) {
-//        require(model::class == modelClass) { "Expected $modelClass but got ${model::class}" }
+        if (setup) { // not sure why this is required, something with Kotlin's late initialization
+            require(model::class.java == modelClass) { "Expected $modelClass but got ${model::class.java}" }
+        }
         val sortedColumn = sortedColumnIndex
         val sortOrder = if (sortedColumn >= 0) (rowSorter as SortController<*>).getSortOrder(sortedColumn) else null
 
@@ -216,6 +282,15 @@ class ReifiedJXTable<T : TableModel>(
         }
         if (setup) {
             packAll()
+        }
+    }
+
+    companion object {
+        inline operator fun <reified T : TableModel> invoke(
+            model: T,
+            columns: ColumnList<*>? = null,
+        ): ReifiedJXTable<T> {
+            return ReifiedJXTable(model, T::class.java, columns)
         }
     }
 }

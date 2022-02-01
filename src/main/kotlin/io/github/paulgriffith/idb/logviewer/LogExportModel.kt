@@ -2,9 +2,8 @@ package io.github.paulgriffith.idb.logviewer
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
-import org.jdesktop.swingx.renderer.CellContext
+import io.github.paulgriffith.utils.ReifiedLabelProvider
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
-import org.jdesktop.swingx.renderer.LabelProvider
 import java.time.Instant
 import javax.swing.table.AbstractTableModel
 
@@ -44,13 +43,12 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
         val Thread by column { it.thread }
         val Logger by column(
             column = {
-                val labelProvider = object : LabelProvider({ (it as String).substringAfterLast('.') }) {
-                    override fun format(context: CellContext) {
-                        super.format(context)
-                        rendererComponent.toolTipText = context.value as String
-                    }
-                }
-                cellRenderer = DefaultTableRenderer(labelProvider)
+                cellRenderer = DefaultTableRenderer(
+                    ReifiedLabelProvider<String>(
+                        getText = { it?.substringAfterLast('.') },
+                        getTooltip = { it }
+                    )
+                )
             },
             value = Event::logger
         )
