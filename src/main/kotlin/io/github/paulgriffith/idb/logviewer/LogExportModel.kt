@@ -2,7 +2,8 @@ package io.github.paulgriffith.idb.logviewer
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
-import io.github.paulgriffith.utils.tableCellRenderer
+import io.github.paulgriffith.utils.ReifiedLabelProvider
+import org.jdesktop.swingx.renderer.DefaultTableRenderer
 import java.time.Instant
 import javax.swing.table.AbstractTableModel
 
@@ -27,40 +28,36 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
                 minWidth = 45
                 maxWidth = 45
             },
-            value = Event::level
+            value = { it.level },
         )
         val Timestamp by column(
             column = {
-                minWidth = 130
-                maxWidth = 130
-                cellRenderer = tableCellRenderer<Instant> { _, value, _, _, _, _ ->
-                    text = LogView.DATE_FORMAT.format(value)
-                    toolTipText = value.toEpochMilli().toString()
+                minWidth = 140
+                maxWidth = 140
+                cellRenderer = DefaultTableRenderer {
+                    LogView.DATE_FORMAT.format(it as Instant)
                 }
             },
             value = Event::timestamp
         )
         val Thread by column(
             column = {
-                preferredWidth = 160
+                preferredWidth = 100
             },
-            value = Event::thread
+            value = { it.thread }
         )
         val Logger by column(
             column = {
-                preferredWidth = 160
-                cellRenderer = tableCellRenderer<String> { _, value, _, _, _, _ ->
-                    text = value.substringAfterLast('.')
-                    toolTipText = value
-                }
+                preferredWidth = 100
+                cellRenderer = DefaultTableRenderer(
+                    ReifiedLabelProvider<String>(
+                        getText = { it?.substringAfterLast('.') },
+                        getTooltip = { it }
+                    )
+                )
             },
             value = Event::logger
         )
-        val Message by column(
-            column = {
-                preferredWidth = 1000
-            },
-            value = Event::message
-        )
+        val Message by column { it.message }
     }
 }

@@ -113,7 +113,7 @@ class GenericView(connection: Connection) : IdbPanel() {
         actionMap.put("execute", execute)
 
         tree.attachPopupMenu { event ->
-            val path = tree.getClosestPathForLocation(event.x, event.y)
+            val path = getClosestPathForLocation(event.x, event.y)
             when (val node = path?.lastPathComponent) {
                 is Table -> JPopupMenu().apply {
                     add(
@@ -149,7 +149,7 @@ class GenericView(connection: Connection) : IdbPanel() {
                     FlatScrollPane(queryPanel),
                     results,
                 ).apply {
-                    resizeWeight = 0.5
+                    resizeWeight = 0.2
                 }
             ).apply {
                 resizeWeight = 0.1

@@ -7,6 +7,7 @@ import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import javax.swing.Icon
 import javax.swing.JToggleButton
+import javax.swing.UIManager
 
 class ThemeButton : JToggleButton() {
     init {
@@ -17,6 +18,7 @@ class ThemeButton : JToggleButton() {
             } else {
                 FlatLightLaf.setup()
             }
+            UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             FlatLaf.updateUI()
             FlatAnimatedLafChange.hideSnapshotWithAnimation()
         }

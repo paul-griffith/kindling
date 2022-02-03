@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.NoSelectionModel
 import io.github.paulgriffith.utils.installSearchable
 import io.github.paulgriffith.utils.listCellRenderer
 import net.miginfocom.swing.MigLayout
@@ -45,6 +46,7 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
                 }
             }
         )
+        selectionModel = NoSelectionModel()
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             when (value) {
                 is LoggerName -> {
@@ -96,12 +98,6 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
             )
         }
 
-        list.checkBoxListSelectionModel.addListSelectionListener { event ->
-            if (!event.valueIsAdjusting) {
-                firePropertyChange("loggers", null, list.checkBoxListSelectedIndices)
-            }
-        }
-
         val naturalAsc = sortButton(
             icon = NATURAL_SORT_ASCENDING,
             tooltip = "Sort A-Z",
@@ -131,7 +127,7 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
 
         sortButtons.setSelected(naturalAsc.model, true)
 
-        add(FlatScrollPane(list), "newline, push, grow, width 200")
+        add(FlatScrollPane(list), "newline, push, grow")
     }
 
     companion object {

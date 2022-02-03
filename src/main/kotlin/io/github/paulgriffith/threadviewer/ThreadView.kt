@@ -1,26 +1,32 @@
 package io.github.paulgriffith.threadviewer
 
+import io.github.paulgriffith.threadviewer.ThreadModel.ThreadColumns.Id
+import io.github.paulgriffith.threadviewer.model.Thread
 import io.github.paulgriffith.threadviewer.model.ThreadDump
-import io.github.paulgriffith.threadviewer.model.ThreadInfo
+import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
+import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
-import io.github.paulgriffith.utils.debounce
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
+import org.jdesktop.swingx.JXSearchField
+import java.awt.Desktop
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
-import javax.swing.JTextField
-import javax.swing.RowFilter
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
+import javax.swing.SortOrder
 import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 
@@ -36,100 +42,112 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     private val details = DetailsPane()
-    private val mainTable = ThreadsTable(threadDump.threads)
-    private val stateTable = StateTable(threadDump.threads.groupingBy(ThreadInfo::state).eachCount())
-    private val systemTable = SystemTable(threadDump.threads.groupingBy(ThreadInfo::system).eachCount())
+    private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel.ThreadColumns).apply {
+        setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
+    }
 
-    private val searchField = JTextField(30).apply {
-        document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = search.invoke(text)
-            override fun removeUpdate(e: DocumentEvent) = search.invoke(text)
-            override fun changedUpdate(e: DocumentEvent) = search.invoke(text)
+    private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
+    private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
 
-            val search = debounce<String?>(waitMs = 100L) { text ->
-                if (text.isNullOrEmpty()) {
-                    mainTable.rowSorter.rowFilter = null
-                } else {
-                    mainTable.rowSorter.rowFilter = RowFilter.regexFilter(text)
-                }
+    private val searchField = JXSearchField("Search")
+
+    private val filters: List<(thread: Thread) -> Boolean> = listOf(
+        { thread ->
+            thread.state in stateList.checkBoxListSelectedValues
+        },
+        { thread ->
+            thread.system in systemList.checkBoxListSelectedValues
+        },
+        { thread ->
+            val query = searchField.text
+            query != null &&
+                thread.name.contains(query, ignoreCase = true) ||
+                thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+                thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+                thread.state.name.contains(query, ignoreCase = true) ||
+                thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+        }
+    )
+
+    private fun updateData() {
+        BACKGROUND.launch {
+            val data = threadDump.threads.filter { thread ->
+                filters.all { filter -> filter(thread) }
             }
-        })
+            EDT_SCOPE.launch {
+                mainTable.model = ThreadModel(data)
+            }
+        }
     }
 
     init {
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting) {
-                    selectedIndices
-                        .map { row ->
-                            mainTable.model.getValueAt(mainTable.convertRowIndexToModel(row), 0) as Int
+                    details.events = selectedIndices
+                        .map { viewRow -> mainTable.convertRowIndexToModel(viewRow) }
+                        .map { modelRow -> mainTable.model.threads[modelRow] }
+                        .map { thread ->
+                            Detail(
+                                title = thread.name,
+                                details = mapOf(
+                                    "id" to thread.id.toString(),
+                                ),
+                                body = buildList {
+                                    if (thread.blocker != null) {
+                                        add("waiting for:")
+                                        add(thread.blocker.toString())
+                                    }
+
+                                    if (thread.lockedMonitors.isNotEmpty()) {
+                                        add("locked monitors:")
+                                        thread.lockedMonitors.forEach { monitor ->
+                                            add(monitor.frame)
+                                            add(monitor.lock)
+                                        }
+                                    }
+
+                                    if (thread.lockedSynchronizers.isNotEmpty()) {
+                                        add("locked synchronizers:")
+                                        addAll(thread.lockedSynchronizers)
+                                    }
+
+                                    if (thread.stacktrace.isNotEmpty()) {
+                                        add("stacktrace:")
+                                        addAll(thread.stacktrace)
+                                    }
+                                },
+                            )
                         }
-                        .mapNotNull { id -> threadDump.threadsById[id] }
-                        .let { threads ->
-                            details.events = threads.map { thread ->
-                                Detail(
-                                    title = thread.name,
-                                    details = mapOf(
-                                        "id" to thread.id.toString(),
-                                    ),
-                                    body = thread.stacktrace,
-                                )
-                            }
-                        }
                 }
             }
         }
 
-        fun <T> List<String?>.toRowFilter(): RowFilter<T, Int> {
-            return RowFilter.regexFilter(
-                this.joinToString(separator = "|", prefix = "^", postfix = "$", transform = String?::orEmpty)
-            )
-        }
-
-        stateTable.selectionModel.apply {
-            addListSelectionListener { selectionEvent ->
-                if (!selectionEvent.valueIsAdjusting) {
-                    if (isSelectionEmpty) {
-                        mainTable.rowSorter.rowFilter = null
-                    } else {
-                        systemTable.clearSelection()
-                        selectedIndices
-                            .map { row -> stateTable.model[stateTable.convertRowIndexToModel(row), StateModel.State] }
-                            .let { states ->
-                                mainTable.rowSorter.rowFilter = states.map(Thread.State::name).toRowFilter()
-                            }
-                    }
-                }
+        systemList.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
             }
         }
 
-        systemTable.selectionModel.apply {
-            addListSelectionListener { selectionEvent ->
-                if (!selectionEvent.valueIsAdjusting) {
-                    if (isSelectionEmpty) {
-                        mainTable.rowSorter.rowFilter = null
-                    } else {
-                        stateTable.clearSelection()
-                        selectedIndices
-                            .map { row -> systemTable.model[systemTable.convertRowIndexToModel(row), SystemModel.System] }
-                            .let { systems ->
-                                mainTable.rowSorter.rowFilter = systems.toRowFilter()
-                            }
-                    }
-                }
+        stateList.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
             }
+        }
+
+        searchField.addActionListener {
+            updateData()
         }
 
         add(JLabel("Version: ${threadDump.version}"))
-        add(JLabel("Search:"), "align right, gap related")
         add(searchField, "align right, width 25%, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill", "[shrink][fill]", "fill")).apply {
-                    add(FlatScrollPane(systemTable), "width 215")
+                    add(FlatScrollPane(stateList), "width 215, height 200")
                     add(FlatScrollPane(mainTable), "wrap, spany 2, push")
-                    add(FlatScrollPane(stateTable), "width 215")
+                    add(FlatScrollPane(systemList), "pushy 300, width 215")
                 },
                 details,
             ).apply {
@@ -141,7 +159,17 @@ class ThreadView(override val path: Path) : ToolPanel() {
 
     override val icon: Icon = Tool.ThreadViewer.icon
 
+    override fun customizePopupMenu(menu: JPopupMenu) {
+        menu.add(
+            Action(name = "Open in External Editor") {
+                Desktop.getDesktop().open(path.toFile())
+            }
+        )
+    }
+
     companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
+
         internal val JSON = Json {
             ignoreUnknownKeys = true
             prettyPrint = true

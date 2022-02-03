@@ -1,7 +1,9 @@
 package io.github.paulgriffith.utils
 
-import javax.swing.JTable
-import javax.swing.table.TableColumn
+import org.jdesktop.swingx.JXTable
+import org.jdesktop.swingx.table.ColumnFactory
+import org.jdesktop.swingx.table.TableColumnExt
+import javax.swing.table.TableModel
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
 
@@ -16,7 +18,7 @@ abstract class ColumnList<R> private constructor(
     // This is some real Kotlin 'magic', but makes it very easy to define JTable models that can be used type-safely
     protected inline fun <reified T> column(
         name: String? = null,
-        noinline column: (TableColumn.() -> Unit)? = null,
+        noinline column: (TableColumnExt.(model: TableModel) -> Unit)? = null,
         noinline value: (R) -> T,
     ): PropertyDelegateProvider<ColumnList<R>, ReadOnlyProperty<ColumnList<R>, Column<R, T>>> {
         return PropertyDelegateProvider { thisRef, prop ->
@@ -34,12 +36,14 @@ abstract class ColumnList<R> private constructor(
     operator fun get(column: Column<R, *>): Int = indexOf(column)
 }
 
-fun JTable.setupColumns(columns: ColumnList<*>) {
-    columns.forEachIndexed { i, column ->
-        val tableColumn = TableColumn(i)
-        if (column.columnCustomization != null) {
-            tableColumn.apply(column.columnCustomization)
+fun JXTable.installColumnFactory(columns: ColumnList<*>) {
+    columnFactory = object : ColumnFactory() {
+        override fun configureTableColumn(model: TableModel, columnExt: TableColumnExt) {
+            super.configureTableColumn(model, columnExt)
+            val column = columns[columnExt.modelIndex]
+            columnExt.toolTipText = column.header
+            column.columnCustomization?.invoke(columnExt, model)
         }
-        addColumn(tableColumn)
     }
+    createDefaultColumnsFromModel()
 }

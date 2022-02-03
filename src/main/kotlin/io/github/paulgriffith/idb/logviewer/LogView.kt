@@ -1,11 +1,11 @@
 package io.github.paulgriffith.idb.logviewer
 
-import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.idb.IdbPanel
+import io.github.paulgriffith.idb.logviewer.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
-import io.github.paulgriffith.utils.debounce
+import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.toList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,8 +16,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.swing.JSplitPane
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
+import javax.swing.SortOrder
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
 class LogView(connection: Connection) : IdbPanel() {
@@ -100,18 +99,13 @@ class LogView(connection: Connection) : IdbPanel() {
         )
     }
 
-    private val maxRows: Int = rawData.size
-    private val table = LogExportTable(LogExportModel(rawData))
-
-    private val details = DetailsPane()
-
-    private val loading = FlatProgressBar().apply {
-        isIndeterminate = true
-        isVisible = false
+    private val totalRows: Int = rawData.size
+    private val table = ReifiedJXTable(LogExportModel(rawData), LogExportModel).apply {
+        setSortOrder(LogExportModel[Timestamp], SortOrder.ASCENDING)
     }
 
-    private val header = Header(maxRows)
-
+    private val details = DetailsPane()
+    private val header = Header(totalRows)
     private val sidebar = LoggerNamesPanel(rawData)
 
     private val filters: List<(Event) -> Boolean> = listOf(
@@ -149,7 +143,6 @@ class LogView(connection: Connection) : IdbPanel() {
     }
 
     init {
-        add(loading, "hmax 10, hidemode 0, spanx 2, wrap")
         add(header, "wrap, growx, spanx 2")
         add(
             JSplitPane(
@@ -191,21 +184,19 @@ class LogView(connection: Connection) : IdbPanel() {
             header.displayedRows = table.model.rowCount
         }
 
-        sidebar.addPropertyChangeListener("loggers") {
-            updateData()
+        sidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
+            }
         }
 
         header.levels.addActionListener {
             updateData()
         }
 
-        header.search.document.addDocumentListener(object : DocumentListener {
-            val search = debounce<DocumentEvent>(waitMs = 100L) { updateData() }
-
-            override fun insertUpdate(e: DocumentEvent) = search(e)
-            override fun removeUpdate(e: DocumentEvent) = search(e)
-            override fun changedUpdate(e: DocumentEvent) = search(e)
-        })
+        header.search.addActionListener {
+            updateData()
+        }
     }
 
     companion object {

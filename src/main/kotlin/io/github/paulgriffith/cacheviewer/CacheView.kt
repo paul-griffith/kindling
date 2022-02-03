@@ -5,15 +5,16 @@ import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.getLogger
+import io.github.paulgriffith.utils.selectedRowIndices
+import io.github.paulgriffith.utils.toList
 import nb.deser.SerializationDumper
 import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
-import java.awt.EventQueue
-import java.awt.Rectangle
 import java.io.ObjectInputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,7 +22,6 @@ import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
 import javax.swing.JSplitPane
-import javax.swing.JTable
 import javax.swing.SwingConstants
 import kotlin.io.path.nameWithoutExtension
 
@@ -84,48 +84,21 @@ class CacheView(override val path: Path) : ToolPanel() {
     }
 
     private val data: List<CacheEntry> = tableQuery.use { statement ->
-        statement.executeQuery().use { resultSet ->
-            buildList {
-                while (resultSet.next()) {
-                    add(
-                        CacheEntry(
-                            id = resultSet.getInt("ID"),
-                            schemaId = resultSet.getInt("SCHEMAID"),
-                            timestamp = resultSet.getString("T_STAMP"),
-                            attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
-                            dataCount = resultSet.getInt("DATA_COUNT"),
-                        )
-                    )
-                }
-            }
+        statement.executeQuery().toList { resultSet ->
+            CacheEntry(
+                id = resultSet.getInt("ID"),
+                schemaId = resultSet.getInt("SCHEMAID"),
+                timestamp = resultSet.getString("T_STAMP"),
+                attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
+                dataCount = resultSet.getInt("DATA_COUNT"),
+            )
         }
     }
 
     private val details = DetailsPane()
-
-    private val deserializeCache = mutableMapOf<Int, Detail>()
-
+    private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
-    private val table = JTable(model).apply {
-        autoCreateRowSorter = true
-        selectionModel.apply {
-            addListSelectionListener { event ->
-                if (!event.valueIsAdjusting) {
-                    details.events = selectedIndices.filter { isSelectedIndex(it) }
-                        .map { index -> data[convertRowIndexToModel(index)].id }
-                        .map { id ->
-                            deserializeCache.getOrPut(id) {
-                                queryForData(id)
-                            }
-                        }
-
-                    EventQueue.invokeLater {
-                        details.scrollRectToVisible(Rectangle(0, 10))
-                    }
-                }
-            }
-        }
-    }
+    private val table = ReifiedJXTable(model, CacheModel.CacheColumns)
 
     private fun deserialize(data: ByteArray): Detail {
         return try {
@@ -197,14 +170,26 @@ class CacheView(override val path: Path) : ToolPanel() {
     init {
         add(
             JSplitPane(
-                SwingConstants.HORIZONTAL,
+                SwingConstants.VERTICAL,
                 FlatScrollPane(table),
                 details
             ).apply {
-                resizeWeight = 0.6
+                resizeWeight = 0.3
             },
             "dock center"
         )
+
+        table.selectionModel.addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) {
+                details.events = table.selectedRowIndices()
+                    .map { index -> data[index].id }
+                    .map { id ->
+                        deserializedCache.getOrPut(id) {
+                            queryForData(id)
+                        }
+                    }
+            }
+        }
     }
 
     override val icon: Icon = Tool.CacheViewer.icon
