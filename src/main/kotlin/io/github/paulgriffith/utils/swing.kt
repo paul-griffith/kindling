@@ -11,7 +11,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.jdesktop.swingx.JXTable
-import org.jdesktop.swingx.JXTableHeader
 import org.jdesktop.swingx.decorator.HighlighterFactory
 import org.jdesktop.swingx.renderer.CellContext
 import org.jdesktop.swingx.renderer.ComponentProvider
@@ -95,14 +94,18 @@ class ReifiedLabelProvider<T : Any>(
     }
 }
 
+fun JTable.selectedRowIndices(): IntArray {
+    return selectionModel.selectedIndices
+        .filter { isRowSelected(it) }
+        .map { convertRowIndexToModel(it) }
+        .toIntArray()
+}
+
 fun JTable.selectedOrAllRowIndices(): IntArray {
     return if (selectionModel.isSelectionEmpty) {
         IntArray(model.rowCount) { it }
     } else {
-        selectionModel.selectedIndices
-            .filter { isRowSelected(it) }
-            .map { convertRowIndexToModel(it) }
-            .toIntArray()
+        selectedRowIndices()
     }
 }
 
@@ -211,7 +214,7 @@ fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (An
     }
 }
 
-class EmptySelectionModel : DefaultListSelectionModel() {
+class NoSelectionModel : DefaultListSelectionModel() {
     override fun setSelectionInterval(index0: Int, index1: Int) = Unit
     override fun addSelectionInterval(index0: Int, index1: Int) = Unit
     override fun removeSelectionInterval(index0: Int, index1: Int) = Unit
@@ -246,14 +249,7 @@ class ReifiedJXTable<T : TableModel>(
             getTooltip = { it },
         )
 
-        tableHeader = JXTableHeader(columnModel).apply {
-            defaultRenderer = DefaultTableRenderer(
-                ReifiedLabelProvider(
-                    getText = Any?::toString,
-                    getTooltip = Any?::toString,
-                )
-            )
-        }
+        // TODO header name as tooltip without breaking sorting
 
         addHighlighter(HighlighterFactory.createSimpleStriping())
 

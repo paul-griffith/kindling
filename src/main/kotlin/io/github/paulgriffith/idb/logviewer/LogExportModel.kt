@@ -25,8 +25,8 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
     companion object EventColumns : ColumnList<Event>() {
         val Level by column(
             column = {
-                minWidth = 40
-                maxWidth = 40
+                minWidth = 45
+                maxWidth = 45
             },
             value = { it.level },
         )
@@ -40,9 +40,15 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
             },
             value = Event::timestamp
         )
-        val Thread by column { it.thread }
+        val Thread by column(
+            column = {
+                preferredWidth = 100
+            },
+            value = { it.thread }
+        )
         val Logger by column(
             column = {
+                preferredWidth = 100
                 cellRenderer = DefaultTableRenderer(
                     ReifiedLabelProvider<String>(
                         getText = { it?.substringAfterLast('.') },

@@ -7,8 +7,8 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.properties.Delegates
 
-class Header(private val max: Int) : JPanel(MigLayout("ins 0, fill")) {
-    private val events = JLabel("$max (of $max) events")
+class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
+    private val events = JLabel("$totalRows (of $totalRows) events")
 
     val levels = JComboBox(Event.Level.values())
 
@@ -25,7 +25,7 @@ class Header(private val max: Int) : JPanel(MigLayout("ins 0, fill")) {
         }
     }
 
-    var displayedRows by Delegates.observable(max) { _, _, newValue ->
-        events.text = "$newValue (of $max) events"
+    var displayedRows by Delegates.observable(totalRows) { _, _, newValue ->
+        events.text = "$newValue (of $totalRows) events"
     }
 }

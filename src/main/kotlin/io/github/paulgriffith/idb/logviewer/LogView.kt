@@ -1,6 +1,5 @@
 package io.github.paulgriffith.idb.logviewer
 
-import com.formdev.flatlaf.extras.components.FlatProgressBar
 import io.github.paulgriffith.idb.IdbPanel
 import io.github.paulgriffith.idb.logviewer.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.DetailsPane
@@ -100,20 +99,13 @@ class LogView(connection: Connection) : IdbPanel() {
         )
     }
 
-    private val maxRows: Int = rawData.size
+    private val totalRows: Int = rawData.size
     private val table = ReifiedJXTable(LogExportModel(rawData), LogExportModel).apply {
         setSortOrder(LogExportModel[Timestamp], SortOrder.ASCENDING)
     }
 
     private val details = DetailsPane()
-
-    private val loading = FlatProgressBar().apply {
-        isIndeterminate = true
-        isVisible = false
-    }
-
-    private val header = Header(maxRows)
-
+    private val header = Header(totalRows)
     private val sidebar = LoggerNamesPanel(rawData)
 
     private val filters: List<(Event) -> Boolean> = listOf(
@@ -151,7 +143,6 @@ class LogView(connection: Connection) : IdbPanel() {
     }
 
     init {
-        add(loading, "hmax 10, hidemode 0, spanx 2, wrap")
         add(header, "wrap, growx, spanx 2")
         add(
             JSplitPane(

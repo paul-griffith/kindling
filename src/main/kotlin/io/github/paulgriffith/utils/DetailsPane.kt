@@ -58,7 +58,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
 
     init {
         add(FlatScrollPane(textPane), "push, grow")
-        add(JButton(copy), "cell 1 0, top, flowy")
+        add(JButton(copy), "cell 1 0, top, flowy, gap 0")
         add(JButton(save), "cell 1 0")
     }
 
@@ -67,7 +67,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
             buildString {
                 append("<b>").append(event.title)
                 if (event.details.isNotEmpty()) {
-                    append("<object ")
+                    append("&nbsp;<object ")
                     event.details.entries.joinTo(buffer = this, separator = " ") { (key, value) ->
                         "data-$key = \"$value\""
                     }

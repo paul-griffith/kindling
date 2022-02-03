@@ -3,8 +3,8 @@ package io.github.paulgriffith.idb.logviewer
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList
 import io.github.paulgriffith.utils.Action
-import io.github.paulgriffith.utils.EmptySelectionModel
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.NoSelectionModel
 import io.github.paulgriffith.utils.installSearchable
 import io.github.paulgriffith.utils.listCellRenderer
 import net.miginfocom.swing.MigLayout
@@ -46,7 +46,7 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
                 }
             }
         )
-        selectionModel = EmptySelectionModel()
+        selectionModel = NoSelectionModel()
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             when (value) {
                 is LoggerName -> {
@@ -127,7 +127,7 @@ class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
 
         sortButtons.setSelected(naturalAsc.model, true)
 
-        add(FlatScrollPane(list), "newline, push, grow, width 200")
+        add(FlatScrollPane(list), "newline, push, grow")
     }
 
     companion object {

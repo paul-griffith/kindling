@@ -1,7 +1,7 @@
 package io.github.paulgriffith.threadviewer
 
 import com.jidesoft.swing.CheckBoxList
-import io.github.paulgriffith.utils.EmptySelectionModel
+import io.github.paulgriffith.utils.NoSelectionModel
 import io.github.paulgriffith.utils.listCellRenderer
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
@@ -21,7 +21,7 @@ class StateModel(private val values: List<Thread.State>) : AbstractListModel<Any
 class StateList(data: Map<Thread.State, Int>) :
     CheckBoxList(StateModel(data.entries.sortedByDescending { it.value }.map { it.key })) {
     init {
-        selectionModel = EmptySelectionModel()
+        selectionModel = NoSelectionModel()
 
         val total = data.values.sum()
         val percentages = data.mapValues { (_, count) ->

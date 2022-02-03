@@ -22,7 +22,7 @@ class CacheModel(private val entries: List<CacheEntry>) : AbstractTableModel() {
         val Id by column { it.id }
         val SchemaId by column { it.schemaId }
         val Timestamp by column { it.timestamp }
-        val AttemptCount by column { it.attemptCount }
-        val DataCount by column { it.dataCount }
+        val AttemptCount by column(name = "Attempt Count") { it.attemptCount }
+        val DataCount by column(name = "Data Count") { it.dataCount }
     }
 }
