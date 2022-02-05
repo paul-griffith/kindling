@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.runtime)
+    alias(libs.plugins.sonarqube)
 }
 
 group = "io.github.paulgriffith"
@@ -80,6 +81,14 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
         vendor.set(JvmVendorSpec.AZUL)
+    }
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "paul-griffith_kindling")
+        property("sonar.organization", "paul-griffith")
+        property("sonar.host.url", "https://sonarcloud.io")
     }
 }
 
