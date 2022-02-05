@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "io.github.paulgriffith"
-version = "0.0.4"
+version = "0.0.5"
 
 repositories {
     mavenCentral()
@@ -79,7 +79,7 @@ application {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-        vendor.set(JvmVendorSpec.ADOPTOPENJDK)
+        vendor.set(JvmVendorSpec.AZUL)
     }
 }
 
