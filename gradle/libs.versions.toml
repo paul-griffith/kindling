@@ -30,7 +30,7 @@ flatlaf-extras = { group = "com.formdev", name = "flatlaf-extras", version.ref =
 flatlaf-jide = { group = "com.formdev", name = "flatlaf-jide-oss", version.ref = "flatlaf" }
 flatlaf-swingx = { group = "com.formdev", name = "flatlaf-swingx", version.ref = "flatlaf" }
 svgSalamander = { group = "com.formdev", name = "svgSalamander", version = "1.1.2.4" }
-jide-common = { group = "com.jidesoft", name = "jide-oss", version = "3.6.18" }
+jide-common = { group = "com.formdev", name = "jide-oss", version = "3.7.12" }
 swingx = { group = "org.swinglabs.swingx", name = "swingx-core", version = "1.6.5-1" }
 
 # Ignition
