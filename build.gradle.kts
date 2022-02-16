@@ -10,10 +10,11 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.runtime)
+    alias(libs.plugins.sonarqube)
 }
 
 group = "io.github.paulgriffith"
-version = "0.0.4"
+version = "0.0.5"
 
 repositories {
     mavenCentral()
@@ -79,7 +80,15 @@ application {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-        vendor.set(JvmVendorSpec.ADOPTOPENJDK)
+        vendor.set(JvmVendorSpec.AZUL)
+    }
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "paul-griffith_kindling")
+        property("sonar.organization", "paul-griffith")
+        property("sonar.host.url", "https://sonarcloud.io")
     }
 }
 
@@ -103,12 +112,13 @@ runtime {
             currentOs.isMacOsX -> "icns"
             else -> "png"
         }
+        // Reverse the package version because MacOS doesn't like leading zeroes
+        appVersion = if (currentOs.isMacOsX) version.toString().reversed() else version.toString()
         imageOptions = listOf("--icon", "src/main/resources/icons/ignition.$imgType")
         @OptIn(ExperimentalStdlibApi::class)
         val options: Map<String, String?> = buildMap {
             put("resource-dir", "src/main/resources")
             put("vendor", "Paul Griffith")
-            put("app-version", version.toString())
             put("copyright", "2022")
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
@@ -118,6 +128,8 @@ runtime {
                     put("win-dir-chooser", null)
                     put("win-menu", null)
                     put("win-shortcut", null)
+                    // random (consistent) UUID makes upgrades smoother
+                    put("win-upgrade-uuid", "8e7428c8-bbc6-460a-9995-db6d8b04a690")
                 }
                 currentOs.isLinux -> {
                     put("linux-shortcut", null)
