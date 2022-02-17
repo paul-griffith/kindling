@@ -1,9 +1,8 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
 import java.time.Instant
 
 data class Event(
-    val eventId: Int,
     val timestamp: Instant,
     val message: String,
     val logger: String,
@@ -18,6 +17,12 @@ data class Event(
         DEBUG,
         INFO,
         WARN,
-        ERROR,
+        ERROR;
+
+        companion object {
+            private val firstChars = values().associateBy { it.name.first() }
+
+            fun valueOf(char: Char): Level = firstChars.getValue(char)
+        }
     }
 }

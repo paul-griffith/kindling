@@ -1,4 +1,4 @@
-package io.github.paulgriffith.main
+package io.github.paulgriffith.core
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import io.github.paulgriffith.MainPanel

@@ -1,104 +1,29 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
+import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.idb.IdbPanel
-import io.github.paulgriffith.idb.logviewer.LogExportModel.EventColumns.Timestamp
+import io.github.paulgriffith.log.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.ReifiedJXTable
-import io.github.paulgriffith.utils.toList
+import io.github.paulgriffith.utils.ToolPanel
+import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.sql.Connection
+import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import javax.swing.Icon
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import kotlin.io.path.useLines
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
-class LogView(connection: Connection) : IdbPanel() {
-    private val stackTraces: Map<Int, List<String>> = connection.prepareStatement(
-        //language=sql
-        """
-        SELECT
-            event_id,
-            i,
-            trace_line
-        FROM 
-            logging_event_exception
-        ORDER BY
-            event_id,
-            i
-        """.trimIndent()
-    ).executeQuery()
-        .toList { resultSet ->
-            Pair(
-                resultSet.getInt("event_id"),
-                resultSet.getString("trace_line")
-            )
-        }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
-
-    private val mdcKeys: Map<Int, Map<String, String>> = connection.prepareStatement(
-        //language=sql
-        """
-        SELECT 
-            event_id,
-            mapped_key,
-            mapped_value
-        FROM 
-            logging_event_property
-        ORDER BY 
-            event_id
-        """.trimIndent()
-    ).executeQuery()
-        .toList { resultSet ->
-            Triple(
-                resultSet.getInt("event_id"),
-                resultSet.getString("mapped_key"),
-                resultSet.getString("mapped_value"),
-            )
-        }.groupingBy { it.first }
-        // TODO I bet this can be improved
-        .aggregateTo(mutableMapOf<Int, MutableMap<String, String>>()) { _, accumulator, element, _ ->
-            val acc = accumulator ?: mutableMapOf()
-            acc[element.second] = element.third
-            acc
-        }
-
-    // Run an initial query (blocking) so if this isn't a log export we bail out
-    // This is unfortunate (it can be a little slow) but better UX overall
-    private val rawData: List<Event> = connection.prepareStatement(
-        //language=sql
-        """
-            SELECT
-                   event_id,
-                   timestmp,
-                   formatted_message,
-                   logger_name,
-                   level_string,
-                   thread_name
-            FROM 
-                logging_event
-            ORDER BY
-                event_id
-        """.trimIndent()
-    ).executeQuery().toList { resultSet ->
-        val eventId = resultSet.getInt("event_id")
-        Event(
-            eventId = eventId,
-            timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
-            message = resultSet.getString("formatted_message"),
-            logger = resultSet.getString("logger_name"),
-            thread = resultSet.getString("thread_name"),
-            level = Event.Level.valueOf(resultSet.getString("level_string")),
-            mdc = mdcKeys[eventId].orEmpty(),
-            stacktrace = stackTraces[eventId].orEmpty(),
-        )
-    }
-
+class LogPanel(private val rawData: List<Event>) : IdbPanel() {
     private val totalRows: Int = rawData.size
     private val table = ReifiedJXTable(LogExportModel(rawData), LogExportModel).apply {
         setSortOrder(LogExportModel[Timestamp], SortOrder.ASCENDING)
@@ -204,5 +129,51 @@ class LogView(connection: Connection) : IdbPanel() {
 
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
             .withZone(ZoneId.from(ZoneOffset.UTC))
+
+        private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
+        private val DEFAULT_WRAPPER_MESSAGE_FORMAT = " (?<level>[TDIWE]) (?<logger>\\[.+?]) (?<message>.*)".toRegex()
+
+        fun parseLogs(lines: Sequence<String>): List<Event> {
+            val events = mutableListOf<Event>()
+            val currentStack = mutableListOf<String>()
+            for (line in lines) {
+                val elements = line.split('|')
+                if (elements.size == 4) { // assume we're properly formatted
+                    val time = DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(elements[2].trim(), Instant::from)
+                    val formatMatch = DEFAULT_WRAPPER_MESSAGE_FORMAT.find(elements[3])
+                    if (formatMatch == null) { // it's not in the expected format; maybe it's a stacktrace?
+                        currentStack += elements[3]
+                    } else {
+                        val level by formatMatch.groups
+                        val logger by formatMatch.groups
+                        val message by formatMatch.groups
+                        events += Event(
+                            timestamp = time,
+                            message = message.value,
+                            logger = logger.value,
+                            thread = "",
+                            level = Event.Level.valueOf(level.value.single()),
+                            mdc = emptyMap(),
+                            stacktrace = currentStack,
+                        )
+                        currentStack.clear()
+                    }
+                } else {
+                    throw IllegalArgumentException(line)
+                }
+            }
+            return events
+        }
+    }
+
+    // INFO   | jvm 1    | 2022/02/03 12:53:35 | W [c.i.x.s.d.s.SynchronousRead   ] [19:53:35]: ReadItem did not receive value before timeout: Global.KAS002.Latched
+
+    class LogView(override val path: Path) : ToolPanel() {
+        init {
+            val events = path.useLines(block = ::parseLogs)
+            add(LogPanel(events), "push, grow")
+        }
+
+        override val icon: Icon = FlatSVGIcon("icons/bx-hdd.svg")
     }
 }

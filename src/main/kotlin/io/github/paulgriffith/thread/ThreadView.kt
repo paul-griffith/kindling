@@ -1,8 +1,8 @@
-package io.github.paulgriffith.threadviewer
+package io.github.paulgriffith.thread
 
-import io.github.paulgriffith.threadviewer.ThreadModel.ThreadColumns.Id
-import io.github.paulgriffith.threadviewer.model.Thread
-import io.github.paulgriffith.threadviewer.model.ThreadDump
+import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
+import io.github.paulgriffith.thread.model.Thread
+import io.github.paulgriffith.thread.model.ThreadDump
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane

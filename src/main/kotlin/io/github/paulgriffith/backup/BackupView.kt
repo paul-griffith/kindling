@@ -1,4 +1,4 @@
-package io.github.paulgriffith.backupviewer
+package io.github.paulgriffith.backup
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import io.github.paulgriffith.idb.generic.GenericView

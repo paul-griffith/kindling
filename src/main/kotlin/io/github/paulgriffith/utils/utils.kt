@@ -13,6 +13,7 @@ import java.sql.Time
 import java.sql.Timestamp
 import kotlin.math.log2
 import kotlin.math.pow
+import kotlin.reflect.KProperty
 
 fun String.truncate(length: Int = 20): String {
     return asIterable().joinToString(separator = "", limit = length)
@@ -89,4 +90,8 @@ fun Long.toFileSizeLabel(): String = when {
         }
         "%,.${precision}f${prefix[digits]}b".format(toDouble() / 2.0.pow(digits * 10.0))
     }
+}
+
+operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>): MatchGroup {
+    return requireNotNull(get(property.name))
 }

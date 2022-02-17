@@ -1,4 +1,4 @@
-package io.github.paulgriffith.backupviewer
+package io.github.paulgriffith.backup
 
 import io.github.paulgriffith.utils.FlatScrollPane
 import net.lingala.zip4j.ZipFile

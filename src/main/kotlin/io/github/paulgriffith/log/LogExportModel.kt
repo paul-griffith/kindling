@@ -1,4 +1,4 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
@@ -35,7 +35,7 @@ class LogExportModel(val data: List<Event>) : AbstractTableModel() {
                 minWidth = 140
                 maxWidth = 140
                 cellRenderer = DefaultTableRenderer {
-                    LogView.DATE_FORMAT.format(it as Instant)
+                    LogPanel.DATE_FORMAT.format(it as Instant)
                 }
             },
             value = Event::timestamp

@@ -1,4 +1,4 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
@@ -11,7 +11,6 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
     private val events = JLabel("$totalRows (of $totalRows) events")
 
     val levels = JComboBox(Event.Level.values())
-
     val search = JXSearchField("Search")
 
     init {
@@ -19,10 +18,6 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         add(search, "width 300, gap unrelated")
         add(JLabel("Minimum Level:"), "gap related")
         add(levels)
-
-        levels.addActionListener {
-            firePropertyChange("level", null, levels.selectedItem)
-        }
     }
 
     var displayedRows by Delegates.observable(totalRows) { _, _, newValue ->

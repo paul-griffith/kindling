@@ -1,4 +1,4 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList

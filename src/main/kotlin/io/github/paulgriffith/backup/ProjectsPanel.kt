@@ -1,4 +1,4 @@
-package io.github.paulgriffith.backupviewer
+package io.github.paulgriffith.backup
 
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FlatScrollPane

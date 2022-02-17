@@ -1,4 +1,4 @@
-package io.github.paulgriffith.cacheviewer
+package io.github.paulgriffith.cache
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList

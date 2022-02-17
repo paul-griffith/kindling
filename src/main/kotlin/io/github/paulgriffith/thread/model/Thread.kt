@@ -1,4 +1,4 @@
-package io.github.paulgriffith.threadviewer.model
+package io.github.paulgriffith.thread.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

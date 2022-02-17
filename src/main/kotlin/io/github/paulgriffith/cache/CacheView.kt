@@ -1,4 +1,4 @@
-package io.github.paulgriffith.cacheviewer
+package io.github.paulgriffith.cache
 
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet

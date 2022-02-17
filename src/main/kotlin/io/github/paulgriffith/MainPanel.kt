@@ -4,8 +4,8 @@ import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
-import io.github.paulgriffith.main.TabPanel
-import io.github.paulgriffith.main.ThemeButton
+import io.github.paulgriffith.core.TabPanel
+import io.github.paulgriffith.core.ThemeButton
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
@@ -73,7 +73,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
      */
     private fun Tool.openFragile(path: Path) {
         runCatching {
-            val toolPanel = panelOpener(path)
+            val toolPanel = openTool(path)
             tabs.addTab(
                 path.nameWithoutExtension.truncate(),
                 toolPanel.icon,

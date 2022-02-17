@@ -1,4 +1,4 @@
-package io.github.paulgriffith.cacheviewer
+package io.github.paulgriffith.cache
 
 data class CacheEntry(
     val id: Int,
