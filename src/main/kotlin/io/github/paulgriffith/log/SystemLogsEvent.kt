@@ -5,16 +5,20 @@ import java.time.Instant
 sealed interface LogEvent {
     val timestamp: Instant
     val message: String
-    val logger: String?
+    val logger: String
 }
 
 data class WrapperLogEvent(
     override val timestamp: Instant,
     override val message: String,
-    override val logger: String? = null,
+    override val logger: String = STDOUT,
     val level: Level? = null,
     val stacktrace: List<String>? = null,
-) : LogEvent
+) : LogEvent {
+    companion object {
+        const val STDOUT = "STDOUT"
+    }
+}
 
 data class SystemLogsEvent(
     override val timestamp: Instant,

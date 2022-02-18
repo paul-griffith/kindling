@@ -9,6 +9,7 @@ import io.github.paulgriffith.core.ThemeButton
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.MENU_SHORTCUT_KEY_MASK
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
 import io.github.paulgriffith.utils.getLogger
@@ -16,10 +17,13 @@ import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
+import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
+import java.awt.desktop.QuitStrategy
+import java.awt.event.KeyEvent
 import java.io.File
 import java.lang.Boolean.getBoolean
 import java.nio.file.Path
@@ -28,12 +32,13 @@ import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JPanel
+import javax.swing.KeyStroke
 import javax.swing.UIManager
 import javax.swing.filechooser.FileView
 import kotlin.io.path.nameWithoutExtension
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
-    private val fileChooser = JFileChooser().apply {
+    private val fileChooser = JFileChooser(File(System.getProperty("user.home"), "Downloads")).apply {
         isMultiSelectionEnabled = true
         fileView = object : FileView() {
             override fun getIcon(file: File): Icon? {
@@ -52,7 +57,10 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val chooseButton = JButton(
         Action(
             name = "Choose File(s)",
-            icon = FlatSVGIcon("icons/bx-file-find.svg")
+            icon = FlatSVGIcon("icons/bx-file-find.svg"),
+            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_O, MENU_SHORTCUT_KEY_MASK).also {
+                println(it)
+            }
         ) {
             when (fileChooser.showOpenDialog(this@MainPanel)) {
                 JFileChooser.APPROVE_OPTION -> {
@@ -138,24 +146,29 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         val LOGGER = getLogger<MainPanel>()
 
         @JvmStatic
-        fun main(args: Array<String>) = EventQueue.invokeLater {
-            setupLaf()
+        fun main(args: Array<String>) {
+            System.setProperty("apple.awt.application.name", "Kindling")
 
-            JFrame("Kindling").apply {
-                defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-                preferredSize = Dimension(1280, 800)
-                iconImage = FRAME_ICON
+            EventQueue.invokeLater {
+                setupLaf()
 
-                val mainPanel = MainPanel()
-                add(mainPanel)
-                pack()
+                JFrame("Kindling").apply {
+                    defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+                    preferredSize = Dimension(1280, 800)
+                    iconImage = FRAME_ICON
 
-                args.map(::File).let(mainPanel::openFiles)
+                    val mainPanel = MainPanel()
+                    add(mainPanel)
+                    pack()
+                    rootPane.defaultButton = mainPanel.chooseButton
 
-                transferHandler = FileTransferHandler(mainPanel::openFiles)
+                    args.map(::File).let(mainPanel::openFiles)
 
-                setLocationRelativeTo(null)
-                isVisible = true
+                    transferHandler = FileTransferHandler(mainPanel::openFiles)
+
+                    setLocationRelativeTo(null)
+                    isVisible = true
+                }
             }
         }
 
@@ -165,6 +178,11 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             FlatLightLaf.setup()
+
+            Desktop.getDesktop().apply {
+                disableSuddenTermination()
+                setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+            }
 
             if (getBoolean("kindling.debug")) {
                 FlatUIDefaultsInspector.install("ctrl shift Y")

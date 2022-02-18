@@ -2,6 +2,7 @@ package io.github.paulgriffith.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.idb.IdbPanel
+import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
@@ -11,12 +12,14 @@ import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.awt.Desktop
 import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.swing.Icon
+import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
 import kotlin.io.path.useLines
@@ -26,7 +29,7 @@ class LogPanel<T : LogEvent>(
     rawData: List<T>,
     private val modelFn: (List<T>) -> LogsModel<T>,
 ) : IdbPanel() {
-    private val model = modelFn(rawData)
+    private val model: LogsModel<T> = modelFn(rawData)
     private val totalRows: Int = rawData.size
     private val table = ReifiedJXTable(model, model.columns).apply {
         // TODO avoid the hardcoded 1 here, somehow
@@ -49,7 +52,7 @@ class LogPanel<T : LogEvent>(
                 is SystemLogsEvent -> {
                     event.level >= header.levels.selectedItem as Level
                 }
-                is WrapperLogEvent -> TODO()
+                is WrapperLogEvent -> true
             }
         }
         add { event ->
@@ -60,14 +63,19 @@ class LogPanel<T : LogEvent>(
                 when (event) {
                     is SystemLogsEvent -> {
                         text in event.message ||
-                            text in event.logger ||
-                            text in event.thread ||
+                            event.logger.contains(text, ignoreCase = true) ||
+                            event.thread.contains(text, ignoreCase = true) ||
                             event.stacktrace.any { stacktrace -> text in stacktrace }
                     }
                     is WrapperLogEvent -> {
                         text in event.message ||
-                            event.logger?.contains(text) ?: true ||
-                            event.stacktrace?.any { stacktrace -> text in stacktrace } ?: true
+                            event.logger?.contains(text, ignoreCase = true) ?: true ||
+                            event.stacktrace?.any { stacktrace ->
+                                stacktrace.contains(
+                                    text,
+                                    ignoreCase = true
+                                )
+                            } ?: true
                     }
                 }
             }
@@ -111,7 +119,7 @@ class LogPanel<T : LogEvent>(
                         .filter { isSelectedIndex(it) }
                         .map { table.convertRowIndexToModel(it) }
                         .map { row -> table.model[row] }
-                        .map { event: T ->
+                        .map { event ->
                             when (event) {
                                 is SystemLogsEvent -> DetailEvent(
                                     title = "${DATE_FORMAT.format(event.timestamp)} ${event.thread}",
@@ -159,7 +167,7 @@ class LogPanel<T : LogEvent>(
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
             .withZone(ZoneId.systemDefault())
         private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
-            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] (?<message>.*)|(?<stack>.*))\$".toRegex()
+            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] (?<message>.*)| (?<stack>.*))\$".toRegex()
 
         fun parseLogs(lines: Sequence<String>): List<WrapperLogEvent> {
             val events = mutableListOf<WrapperLogEvent>()
@@ -202,19 +210,19 @@ class LogPanel<T : LogEvent>(
                         )
                     } else {
                         val stack by match.groups
-                        // same timestamp - must be attached stacktrace
+
                         if (lastEventTimestamp == time) {
+                            // same timestamp - must be attached stacktrace
                             currentStack += stack.value
-                            // different timestamp, but doesn't match our regex - just try to display it in a useful way
                         } else {
+                            partialEvent.flush()
+                            // different timestamp, but doesn't match our regex - just try to display it in a useful way
                             events += WrapperLogEvent(
                                 timestamp = time,
                                 message = stack.value,
-                                logger = "",
                                 level = Level.INFO,
                                 stacktrace = emptyList(),
                             )
-                            partialEvent.flush()
                         }
                     }
                 } else {
@@ -232,6 +240,14 @@ class LogPanel<T : LogEvent>(
             add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
         }
 
-        override val icon: Icon = FlatSVGIcon("icons/bx-hdd.svg")
+        override val icon: Icon = FlatSVGIcon("icons/bx-file.svg")
+
+        override fun customizePopupMenu(menu: JPopupMenu) {
+            menu.add(
+                Action(name = "Open in External Editor") {
+                    Desktop.getDesktop().open(path.toFile())
+                }
+            )
+        }
     }
 }

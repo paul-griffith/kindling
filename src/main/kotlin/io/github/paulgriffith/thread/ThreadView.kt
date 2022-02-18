@@ -51,14 +51,14 @@ class ThreadView(override val path: Path) : ToolPanel() {
 
     private val searchField = JXSearchField("Search")
 
-    private val filters: List<(thread: Thread) -> Boolean> = listOf(
-        { thread ->
+    private val filters: List<(thread: Thread) -> Boolean> = buildList {
+        add { thread ->
             thread.state in stateList.checkBoxListSelectedValues
-        },
-        { thread ->
+        }
+        add { thread ->
             thread.system in systemList.checkBoxListSelectedValues
-        },
-        { thread ->
+        }
+        add { thread ->
             val query = searchField.text
             query != null &&
                 thread.name.contains(query, ignoreCase = true) ||
@@ -67,7 +67,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
                 thread.state.name.contains(query, ignoreCase = true) ||
                 thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
         }
-    )
+    }
 
     private fun updateData() {
         BACKGROUND.launch {

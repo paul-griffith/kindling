@@ -18,31 +18,31 @@ enum class Tool(
     val icon: FlatSVGIcon,
 ) {
     IdbViewer(
-        filter = FileNameExtensionFilter("Ignition .idb (SQLite3) files", "idb"),
+        filter = FileNameExtensionFilter(".idb (SQLite3) files", "idb"),
         icon = FlatSVGIcon("icons/bx-hdd.svg")
     ) {
         override fun openTool(path: Path): ToolPanel = IdbView(path)
     },
     LogViewer(
-        filter = FileNameExtensionFilter("Ignition wrapper.log files", "log", "1", "2", "3", "4", "5"),
-        icon = FlatSVGIcon("icons/bx-hdd.svg")
+        filter = FileNameExtensionFilter("wrapper.log(.n) files", "log", "1", "2", "3", "4", "5"),
+        icon = FlatSVGIcon("icons/bx-file.svg")
     ) {
         override fun openTool(path: Path): ToolPanel = LogPanel.LogView(path)
     },
     ThreadViewer(
-        filter = FileNameExtensionFilter("Ignition Thread Dump .json files", "json"),
+        filter = FileNameExtensionFilter("Thread dump .json files", "json"),
         icon = FlatSVGIcon("icons/bx-chip.svg")
     ) {
         override fun openTool(path: Path): ToolPanel = ThreadView(path)
     },
     CacheViewer(
-        filter = FileNameExtensionFilter("S+F Cache ZIP Files", "zip"),
+        filter = FileNameExtensionFilter("S&F Cache ZIP Files", "zip"),
         icon = FlatSVGIcon("icons/bx-data.svg")
     ) {
         override fun openTool(path: Path): ToolPanel = CacheView(path)
     },
     BackupViewer(
-        filter = FileNameExtensionFilter("GWBK Files", "gwbk"),
+        filter = FileNameExtensionFilter(".gwbk Files", "gwbk"),
         icon = FlatSVGIcon("icons/bx-archive.svg")
     ) {
         override fun openTool(path: Path): ToolPanel = BackupView(path)

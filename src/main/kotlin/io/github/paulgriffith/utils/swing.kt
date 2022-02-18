@@ -20,6 +20,7 @@ import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
 import java.awt.Component
+import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.DefaultListCellRenderer
@@ -154,6 +155,8 @@ inline fun FlatScrollPane(component: Component, block: FlatScrollPane.() -> Unit
 val Document.text: String
     get() = getText(0, length)
 
+val MENU_SHORTCUT_KEY_MASK by lazy { Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx }
+
 /**
  * Launches [destinationFunction] on [EDT_SCOPE] no more frequently than [waitMs].
  */
@@ -174,7 +177,7 @@ fun <T> debounce(
 /**
  * A common CoroutineScope bound to the event dispatch thread (see [Dispatchers.Swing]).
  */
-val EDT_SCOPE = CoroutineScope(Dispatchers.Swing)
+val EDT_SCOPE by lazy { CoroutineScope(Dispatchers.Swing) }
 
 inline fun <T : Component> T.attachPopupMenu(
     crossinline menuFn: T.(event: MouseEvent) -> JPopupMenu?,
