@@ -10,7 +10,7 @@ import kotlin.properties.Delegates
 class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
     private val events = JLabel("$totalRows (of $totalRows) events")
 
-    val levels = JComboBox(Event.Level.values())
+    val levels = JComboBox(Level.values())
     val search = JXSearchField("Search")
 
     init {

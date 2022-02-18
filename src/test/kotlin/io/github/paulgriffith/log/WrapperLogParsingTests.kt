@@ -4,10 +4,8 @@ import io.kotest.assertions.asClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 class WrapperLogParsingTests : FunSpec({
     test("Simple case") {
@@ -18,12 +16,26 @@ class WrapperLogParsingTests : FunSpec({
         LogPanel.parseLogs(case).asClue { events ->
             events.shouldHaveSize(1)
             events.single().asClue { event ->
-                event.timestamp shouldBe LocalDateTime.of(2021, 3, 14, 8, 49, 25).toInstant(ZoneOffset.UTC)
-                event.level shouldBe Event.Level.INFO
+                event.level shouldBe Level.INFO
                 event.logger shouldBe "t.h.q.PartitionManager"
                 event.message shouldBe "[07:49:25]: Ignition Created Tag history partition sqlt_data_1_20210314"
                 event.stacktrace.shouldBeEmpty()
-                event.mdc.shouldBeEmpty()
+            }
+        }
+    }
+
+    test("Line with pipe in message") {
+        val case = """
+            INFO   | jvm 1    | 2022/02/03 15:46:57 | D [a.N.V.C.Agent                 ] [22:46:57]: SM z9hG4bKbIiG6tpOB|INVITE [InviteClientTransactionStateInit -> InviteClientTransactionStateCalling] setState 
+        """.trimIndent().lineSequence()
+
+        LogPanel.parseLogs(case).asClue { events ->
+            events.shouldHaveSize(1)
+            events.single().asClue { event ->
+                event.level shouldBe Level.DEBUG
+                event.logger shouldBe "a.N.V.C.Agent"
+                event.message shouldBe "[22:46:57]: SM z9hG4bKbIiG6tpOB|INVITE [InviteClientTransactionStateInit -> InviteClientTransactionStateCalling] setState"
+                event.stacktrace.shouldBeEmpty()
             }
         }
     }
@@ -46,6 +58,10 @@ class WrapperLogParsingTests : FunSpec({
         """.trimIndent().lineSequence()
         LogPanel.parseLogs(case).asClue { events ->
             events.shouldHaveSize(1)
+            events.single().asClue { event ->
+                event.stacktrace.shouldNotBeNull()
+                event.stacktrace?.shouldHaveSize(12)
+            }
         }
     }
 })

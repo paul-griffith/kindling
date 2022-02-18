@@ -2,7 +2,6 @@ package io.github.paulgriffith.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.idb.IdbPanel
-import io.github.paulgriffith.log.LogExportModel.EventColumns.Timestamp
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
@@ -23,46 +22,65 @@ import javax.swing.SortOrder
 import kotlin.io.path.useLines
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
-class LogPanel(private val rawData: List<Event>) : IdbPanel() {
+class LogPanel<T : LogEvent>(
+    rawData: List<T>,
+    private val modelFn: (List<T>) -> LogsModel<T>,
+) : IdbPanel() {
+    private val model = modelFn(rawData)
     private val totalRows: Int = rawData.size
-    private val table = ReifiedJXTable(LogExportModel(rawData), LogExportModel).apply {
-        setSortOrder(LogExportModel[Timestamp], SortOrder.ASCENDING)
+    private val table = ReifiedJXTable(model, model.columns).apply {
+        // TODO avoid the hardcoded 1 here, somehow
+        setSortOrder(model.columns[1], SortOrder.ASCENDING)
     }
 
     private val details = DetailsPane()
     private val header = Header(totalRows)
     private val sidebar = LoggerNamesPanel(rawData)
 
-    private val filters: List<(Event) -> Boolean> = listOf(
-        { event ->
+    private val filters: List<(LogEvent) -> Boolean> = buildList {
+        add { event ->
             event.logger in sidebar.list.checkBoxListSelectedIndices
                 .map { sidebar.list.model.getElementAt(it) }
                 .filterIsInstance<LoggerName>()
                 .mapTo(mutableSetOf()) { it.name }
-        },
-        { event ->
-            event.level >= header.levels.selectedItem as Event.Level
-        },
-        { event ->
+        }
+        add { event ->
+            when (event) {
+                is SystemLogsEvent -> {
+                    event.level >= header.levels.selectedItem as Level
+                }
+                is WrapperLogEvent -> TODO()
+            }
+        }
+        add { event ->
             val text = header.search.text
             if (text.isNullOrEmpty()) {
                 true
             } else {
-                text in event.message ||
-                    text in event.logger ||
-                    text in event.thread ||
-                    event.stacktrace.any { stacktrace -> text in stacktrace }
+                when (event) {
+                    is SystemLogsEvent -> {
+                        text in event.message ||
+                            text in event.logger ||
+                            text in event.thread ||
+                            event.stacktrace.any { stacktrace -> text in stacktrace }
+                    }
+                    is WrapperLogEvent -> {
+                        text in event.message ||
+                            event.logger?.contains(text) ?: true ||
+                            event.stacktrace?.any { stacktrace -> text in stacktrace } ?: true
+                    }
+                }
             }
         }
-    )
+    }
 
     private fun updateData() {
         BACKGROUND.launch {
-            val data = rawData.filter { event ->
+            val data = model.data.filter { event ->
                 filters.all { filter -> filter(event) }
             }
             EDT_SCOPE.launch {
-                table.model = LogExportModel(data)
+                table.model = modelFn(data)
             }
         }
     }
@@ -93,13 +111,21 @@ class LogPanel(private val rawData: List<Event>) : IdbPanel() {
                         .filter { isSelectedIndex(it) }
                         .map { table.convertRowIndexToModel(it) }
                         .map { row -> table.model[row] }
-                        .map { event ->
-                            DetailEvent(
-                                title = "${DATE_FORMAT.format(event.timestamp)} ${event.thread}",
-                                message = event.message,
-                                body = event.stacktrace,
-                                details = event.mdc,
-                            )
+                        .map { event: T ->
+                            when (event) {
+                                is SystemLogsEvent -> DetailEvent(
+                                    title = "${DATE_FORMAT.format(event.timestamp)} ${event.thread}",
+                                    message = event.message,
+                                    body = event.stacktrace,
+                                    details = event.mdc,
+                                )
+                                is WrapperLogEvent -> DetailEvent(
+                                    title = DATE_FORMAT.format(event.timestamp),
+                                    message = event.message,
+                                    body = event.stacktrace.orEmpty(),
+                                )
+                                else -> throw IllegalStateException("impossible")
+                            }
                         }
                 }
             }
@@ -131,47 +157,79 @@ class LogPanel(private val rawData: List<Event>) : IdbPanel() {
             .withZone(ZoneId.from(ZoneOffset.UTC))
 
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
-        private val DEFAULT_WRAPPER_MESSAGE_FORMAT = " (?<level>[TDIWE]) (?<logger>\\[.+?]) (?<message>.*)".toRegex()
+            .withZone(ZoneId.systemDefault())
+        private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
+            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] (?<message>.*)|(?<stack>.*))\$".toRegex()
 
-        fun parseLogs(lines: Sequence<String>): List<Event> {
-            val events = mutableListOf<Event>()
+        fun parseLogs(lines: Sequence<String>): List<WrapperLogEvent> {
+            val events = mutableListOf<WrapperLogEvent>()
             val currentStack = mutableListOf<String>()
+            var partialEvent: WrapperLogEvent? = null
+            var lastEventTimestamp: Instant? = null
+
+            fun WrapperLogEvent?.flush() {
+                if (this != null) {
+                    // flush our previously built event
+                    events += this.copy(
+                        stacktrace = currentStack.toList(),
+                    )
+                    currentStack.clear()
+                    partialEvent = null
+                }
+            }
+
             for (line in lines) {
-                val elements = line.split('|')
-                if (elements.size == 4) { // assume we're properly formatted
-                    val time = DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(elements[2].trim(), Instant::from)
-                    val formatMatch = DEFAULT_WRAPPER_MESSAGE_FORMAT.find(elements[3])
-                    if (formatMatch == null) { // it's not in the expected format; maybe it's a stacktrace?
-                        currentStack += elements[3]
-                    } else {
-                        val level by formatMatch.groups
-                        val logger by formatMatch.groups
-                        val message by formatMatch.groups
-                        events += Event(
+                val match = DEFAULT_WRAPPER_MESSAGE_FORMAT.matchEntire(line)
+                if (match != null) {
+                    val timestamp by match.groups
+                    val time = DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(timestamp.value.trim(), Instant::from)
+
+                    // we hit an actual logged event
+                    if (match.groups["level"] != null) {
+                        partialEvent.flush()
+
+                        // now build up a new partial (the next line(s) may have stacktrace)
+                        val level by match.groups
+                        val logger by match.groups
+                        val message by match.groups
+                        lastEventTimestamp = time
+                        partialEvent = WrapperLogEvent(
                             timestamp = time,
-                            message = message.value,
-                            logger = logger.value,
-                            thread = "",
-                            level = Event.Level.valueOf(level.value.single()),
-                            mdc = emptyMap(),
-                            stacktrace = currentStack,
+                            message = message.value.trim(),
+                            logger = logger.value.trim(),
+                            level = Level.valueOf(level.value.single()),
+                            stacktrace = emptyList(),
                         )
-                        currentStack.clear()
+                    } else {
+                        val stack by match.groups
+                        // same timestamp - must be attached stacktrace
+                        if (lastEventTimestamp == time) {
+                            currentStack += stack.value
+                            // different timestamp, but doesn't match our regex - just try to display it in a useful way
+                        } else {
+                            events += WrapperLogEvent(
+                                timestamp = time,
+                                message = stack.value,
+                                logger = "",
+                                level = Level.INFO,
+                                stacktrace = emptyList(),
+                            )
+                            partialEvent.flush()
+                        }
                     }
                 } else {
                     throw IllegalArgumentException(line)
                 }
             }
+            partialEvent.flush()
             return events
         }
     }
 
-    // INFO   | jvm 1    | 2022/02/03 12:53:35 | W [c.i.x.s.d.s.SynchronousRead   ] [19:53:35]: ReadItem did not receive value before timeout: Global.KAS002.Latched
-
     class LogView(override val path: Path) : ToolPanel() {
         init {
             val events = path.useLines(block = ::parseLogs)
-            add(LogPanel(events), "push, grow")
+            add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
         }
 
         override val icon: Icon = FlatSVGIcon("icons/bx-hdd.svg")

@@ -1,8 +1,11 @@
 package io.github.paulgriffith.idb
 
 import io.github.paulgriffith.idb.generic.GenericView
-import io.github.paulgriffith.log.Event
+import io.github.paulgriffith.log.Level
 import io.github.paulgriffith.log.LogPanel
+import io.github.paulgriffith.log.LogsModel
+import io.github.paulgriffith.log.SystemLogsColumns
+import io.github.paulgriffith.log.SystemLogsEvent
 import io.github.paulgriffith.utils.toList
 import java.sql.Connection
 import java.time.Instant
@@ -13,15 +16,15 @@ enum class IdbTool {
             val stackTraces: Map<Int, List<String>> = connection.prepareStatement(
                 //language=sql
                 """
-        SELECT
-            event_id,
-            i,
-            trace_line
-        FROM 
-            logging_event_exception
-        ORDER BY
-            event_id,
-            i
+                SELECT
+                    event_id,
+                    i,
+                    trace_line
+                FROM 
+                    logging_event_exception
+                ORDER BY
+                    event_id,
+                    i
                 """.trimIndent()
             ).executeQuery()
                 .toList { resultSet ->
@@ -34,14 +37,14 @@ enum class IdbTool {
             val mdcKeys: Map<Int, Map<String, String>> = connection.prepareStatement(
                 //language=sql
                 """
-        SELECT 
-            event_id,
-            mapped_key,
-            mapped_value
-        FROM 
-            logging_event_property
-        ORDER BY 
-            event_id
+                SELECT 
+                    event_id,
+                    mapped_key,
+                    mapped_value
+                FROM 
+                    logging_event_property
+                ORDER BY 
+                    event_id
                 """.trimIndent()
             ).executeQuery()
                 .toList { resultSet ->
@@ -63,31 +66,31 @@ enum class IdbTool {
             val events = connection.prepareStatement(
                 //language=sql
                 """
-            SELECT
-                   event_id,
-                   timestmp,
-                   formatted_message,
-                   logger_name,
-                   level_string,
-                   thread_name
-            FROM 
-                logging_event
-            ORDER BY
-                event_id
+                SELECT
+                       event_id,
+                       timestmp,
+                       formatted_message,
+                       logger_name,
+                       level_string,
+                       thread_name
+                FROM 
+                    logging_event
+                ORDER BY
+                    event_id
                 """.trimIndent()
             ).executeQuery().toList { resultSet ->
                 val eventId = resultSet.getInt("event_id")
-                Event(
+                SystemLogsEvent(
                     timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
                     message = resultSet.getString("formatted_message"),
                     logger = resultSet.getString("logger_name"),
                     thread = resultSet.getString("thread_name"),
-                    level = Event.Level.valueOf(resultSet.getString("level_string")),
+                    level = Level.valueOf(resultSet.getString("level_string")),
                     mdc = mdcKeys[eventId].orEmpty(),
                     stacktrace = stackTraces[eventId].orEmpty(),
                 )
             }
-            return LogPanel(events)
+            return LogPanel(events) { list -> LogsModel(list, SystemLogsColumns) }
         }
     },
     Generic {
