@@ -65,16 +65,13 @@ class LogPanel<T : LogEvent>(
                         text in event.message ||
                             event.logger.contains(text, ignoreCase = true) ||
                             event.thread.contains(text, ignoreCase = true) ||
-                            event.stacktrace.any { stacktrace -> text in stacktrace }
+                            event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
                     }
                     is WrapperLogEvent -> {
                         text in event.message ||
-                            event.logger?.contains(text, ignoreCase = true) ?: true ||
+                            event.logger.contains(text, ignoreCase = true) ||
                             event.stacktrace?.any { stacktrace ->
-                                stacktrace.contains(
-                                    text,
-                                    ignoreCase = true
-                                )
+                                stacktrace.contains(text, ignoreCase = true)
                             } ?: true
                     }
                 }

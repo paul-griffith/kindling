@@ -121,16 +121,6 @@ public class ClassDataDesc {
     }
 
     /*******************
-     * Set the className1 of the last field that was added to the last class to
-     * be added to the ClassDataDesc.
-     *
-     * @param cn1 The className1 value.
-     ******************/
-    public void setLastFieldClassName1(String cn1) {
-        this.classDetails.get(this.classDetails.size() - 1).setLastFieldClassName1(cn1);
-    }
-
-    /*******************
      * Get the details of a class by index.
      *
      * @param index The index of the class to retrieve details of.

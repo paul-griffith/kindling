@@ -14,6 +14,7 @@ import io.github.paulgriffith.utils.MultiTool
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
 import io.github.paulgriffith.utils.getLogger
+import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
@@ -88,7 +89,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 tool.open(paths.single())
             }
             tabs.addTab(
-                toolPanel.name,
+                toolPanel.name.truncate(),
                 toolPanel.icon,
                 toolPanel,
                 toolPanel.toolTipText,
