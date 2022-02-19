@@ -1,8 +1,8 @@
-package io.github.paulgriffith.threadviewer
+package io.github.paulgriffith.thread
 
-import io.github.paulgriffith.threadviewer.ThreadModel.ThreadColumns.Id
-import io.github.paulgriffith.threadviewer.model.Thread
-import io.github.paulgriffith.threadviewer.model.ThreadDump
+import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
+import io.github.paulgriffith.thread.model.Thread
+import io.github.paulgriffith.thread.model.ThreadDump
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
@@ -27,19 +27,12 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
-import kotlin.io.path.extension
 import kotlin.io.path.inputStream
+import kotlin.io.path.name
 
 @OptIn(ExperimentalSerializationApi::class)
-class ThreadView(override val path: Path) : ToolPanel() {
-    private val threadDump = run {
-        when {
-            path.extension.equals("json", ignoreCase = true) -> {
-                JSON.decodeFromStream<ThreadDump>(path.inputStream())
-            }
-            else -> throw IllegalArgumentException("Unable to parse $path; unexpected file type")
-        }
-    }
+class ThreadView(val path: Path) : ToolPanel() {
+    private val threadDump = JSON.decodeFromStream<ThreadDump>(path.inputStream())
 
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel.ThreadColumns).apply {
@@ -51,14 +44,14 @@ class ThreadView(override val path: Path) : ToolPanel() {
 
     private val searchField = JXSearchField("Search")
 
-    private val filters: List<(thread: Thread) -> Boolean> = listOf(
-        { thread ->
+    private val filters: List<(thread: Thread) -> Boolean> = buildList {
+        add { thread ->
             thread.state in stateList.checkBoxListSelectedValues
-        },
-        { thread ->
+        }
+        add { thread ->
             thread.system in systemList.checkBoxListSelectedValues
-        },
-        { thread ->
+        }
+        add { thread ->
             val query = searchField.text
             query != null &&
                 thread.name.contains(query, ignoreCase = true) ||
@@ -67,7 +60,7 @@ class ThreadView(override val path: Path) : ToolPanel() {
                 thread.state.name.contains(query, ignoreCase = true) ||
                 thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
         }
-    )
+    }
 
     private fun updateData() {
         BACKGROUND.launch {
@@ -81,6 +74,9 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     init {
+        name = path.name
+        toolTipText = path.toString()
+
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting) {

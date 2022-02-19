@@ -144,13 +144,4 @@ public class ClassDetails {
         this.fieldDescriptions.get(this.fieldDescriptions.size() - 1).setName(name);
     }
 
-    /*******************
-     * Set the className1 of the last field to be added to the ClassDetails
-     * object.
-     *
-     * @param cn1 The className1 value.
-     ******************/
-    public void setLastFieldClassName1(String cn1) {
-        this.fieldDescriptions.get(this.fieldDescriptions.size() - 1).setClassName1(cn1);
-    }
 }

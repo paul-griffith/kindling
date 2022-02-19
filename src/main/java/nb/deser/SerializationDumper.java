@@ -509,8 +509,6 @@ public class SerializationDumper {
             indent++;
             String cn1 = readNewString();
             print("className1 " + cn1);
-            // Set the className1 of the most recently added field
-            cdd.setLastFieldClassName1(cn1);
             indent--;
         }
     }

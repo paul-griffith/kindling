@@ -1,4 +1,4 @@
-package io.github.paulgriffith.threadviewer
+package io.github.paulgriffith.thread
 
 import com.jidesoft.swing.CheckBoxList
 import io.github.paulgriffith.utils.NoSelectionModel

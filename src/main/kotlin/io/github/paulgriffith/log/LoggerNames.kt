@@ -1,4 +1,4 @@
-package io.github.paulgriffith.idb.logviewer
+package io.github.paulgriffith.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList
@@ -74,9 +74,9 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
     }
 }
 
-class LoggerNamesPanel(events: List<Event>) : JPanel(MigLayout("ins 0, fill")) {
+class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")) {
     val list: LoggerNamesList = run {
-        val loggerNames: List<LoggerName> = events.groupingBy(Event::logger)
+        val loggerNames: List<LoggerName> = events.groupingBy { it.logger ?: "Unknown" }
             .eachCount()
             .entries
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key })

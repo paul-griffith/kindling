@@ -1,6 +1,6 @@
-package io.github.paulgriffith.threadviewer
+package io.github.paulgriffith.thread
 
-import io.github.paulgriffith.threadviewer.model.ThreadDump
+import io.github.paulgriffith.thread.model.ThreadDump
 import io.kotest.assertions.asClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

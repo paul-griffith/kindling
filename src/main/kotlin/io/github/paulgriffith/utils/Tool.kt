@@ -1,42 +1,31 @@
 package io.github.paulgriffith.utils
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.backupviewer.BackupView
-import io.github.paulgriffith.cacheviewer.CacheView
+import io.github.paulgriffith.backup.BackupView
+import io.github.paulgriffith.cache.CacheView
 import io.github.paulgriffith.idb.IdbView
-import io.github.paulgriffith.threadviewer.ThreadView
+import io.github.paulgriffith.log.LogPanel
+import io.github.paulgriffith.thread.ThreadView
 import java.io.File
 import java.nio.file.Path
-import javax.swing.filechooser.FileFilter
 import javax.swing.filechooser.FileNameExtensionFilter
 
 class ToolOpeningException(message: String, cause: Throwable) : Exception(message, cause)
 
-enum class Tool(
-    val filter: FileFilter,
-    val panelOpener: (path: Path) -> ToolPanel,
-    val icon: FlatSVGIcon,
-) {
-    IdbViewer(
-        filter = FileNameExtensionFilter("Ignition .idb (SQLite3) files", "idb"),
-        panelOpener = ::IdbView,
-        icon = FlatSVGIcon("icons/bx-hdd.svg")
-    ),
-    ThreadViewer(
-        filter = FileNameExtensionFilter("Ignition Thread Dump .json files", "json"),
-        panelOpener = ::ThreadView,
-        icon = FlatSVGIcon("icons/bx-chip.svg")
-    ),
-    CacheViewer(
-        filter = FileNameExtensionFilter("S+F Cache ZIP Files", "zip"),
-        panelOpener = ::CacheView,
-        icon = FlatSVGIcon("icons/bx-data.svg")
-    ),
-    BackupViewer(
-        filter = FileNameExtensionFilter("GWBK Files", "gwbk"),
-        panelOpener = ::BackupView,
-        icon = FlatSVGIcon("icons/bx-archive.svg")
-    );
+sealed interface MultiTool : Tool {
+    fun open(paths: List<Path>): ToolPanel
+}
+
+sealed interface Tool {
+    val title: String
+    val description: String
+    val icon: FlatSVGIcon
+    val extensions: Array<String>
+
+    fun open(path: Path): ToolPanel
+
+    val filter: FileNameExtensionFilter
+        get() = FileNameExtensionFilter(description, *extensions)
 
     companion object {
         operator fun get(file: File): Tool {
@@ -45,14 +34,55 @@ enum class Tool(
 
         fun getOrNull(file: File): Tool? {
             return values().firstOrNull { tool ->
-                val result = tool.filter.accept(file)
-                LOGGER.trace("%s %s %s", tool.name, if (result) "accepted" else "rejected", file)
-                result
+                tool.filter.accept(file)
             }
         }
 
-        private val LOGGER = getLogger<Tool>()
-
         val byFilter = values().associateBy(Tool::filter)
+
+        fun values(): List<Tool> = listOf(IdbViewer, LogViewer, ThreadViewer, CacheViewer, BackupViewer)
+    }
+
+    object IdbViewer : Tool {
+        override val title = "Idb File"
+        override val description = ".idb (SQLite3) files"
+        override val icon = FlatSVGIcon("icons/bx-hdd.svg")
+        override val extensions = arrayOf("idb")
+        override fun open(path: Path): ToolPanel = IdbView(path)
+    }
+
+    object LogViewer : MultiTool {
+        override val title = "Wrapper Log"
+        override val description = "wrapper.log(.n) files"
+        override val icon = FlatSVGIcon("icons/bx-file.svg")
+        override val extensions = arrayOf("log", "1", "2", "3", "4", "5")
+        override fun open(path: Path): ToolPanel = open(listOf(path))
+        override fun open(paths: List<Path>): ToolPanel {
+            return LogPanel.LogView(paths)
+        }
+    }
+
+    object ThreadViewer : Tool {
+        override val title = "Thread Dump"
+        override val description = "Thread dump .json files"
+        override val icon = FlatSVGIcon("icons/bx-chip.svg")
+        override val extensions = arrayOf("json")
+        override fun open(path: Path): ToolPanel = ThreadView(path)
+    }
+
+    object CacheViewer : Tool {
+        override val title = "Cache Dump"
+        override val description = "S&F Cache ZIP Files"
+        override val icon = FlatSVGIcon("icons/bx-data.svg")
+        override val extensions = arrayOf("zip")
+        override fun open(path: Path): ToolPanel = CacheView(path)
+    }
+
+    object BackupViewer : Tool {
+        override val title = "Gateway Backup"
+        override val description = ".gwbk Files"
+        override val icon = FlatSVGIcon("icons/bx-archive.svg")
+        override val extensions = arrayOf("gwbk")
+        override fun open(path: Path): ToolPanel = BackupView(path)
     }
 }

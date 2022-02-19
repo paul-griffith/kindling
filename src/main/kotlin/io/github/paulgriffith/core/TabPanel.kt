@@ -1,17 +1,15 @@
-package io.github.paulgriffith.main
+package io.github.paulgriffith.core
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import io.github.paulgriffith.MainPanel
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.attachPopupMenu
-import io.github.paulgriffith.utils.truncate
 import java.awt.Dimension
 import javax.swing.JFrame
 import javax.swing.JMenu
 import javax.swing.JMenuBar
 import javax.swing.JPopupMenu
-import kotlin.io.path.name
 
 class TabPanel : FlatTabbedPane() {
     init {
@@ -41,7 +39,7 @@ class TabPanel : FlatTabbedPane() {
         }
     }
 
-    private fun createPopupFrame(tab: ToolPanel): JFrame = JFrame(tab.path.name).apply {
+    private fun createPopupFrame(tab: ToolPanel): JFrame = JFrame(tab.name).apply {
         preferredSize = Dimension(1024, 768)
         iconImage = MainPanel.FRAME_ICON
         defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
@@ -52,10 +50,10 @@ class TabPanel : FlatTabbedPane() {
                 add(
                     Action(name = "Unfloat") {
                         addTab(
-                            tab.path.name.truncate(),
+                            tab.name,
                             tab.icon,
                             tab,
-                            tab.path.toString(),
+                            tab.toolTipText,
                         )
                         dispose()
                     }

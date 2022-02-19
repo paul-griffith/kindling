@@ -16,10 +16,6 @@ public class ClassField {
      * The field name
      */
     private String name;
-    /**
-     * The className1 property (object and array type fields)
-     */
-    private String className1;
 
     /*******************
      * Construct the ClassField object.
@@ -29,7 +25,6 @@ public class ClassField {
     public ClassField(byte typeCode) {
         this.typeCode = typeCode;
         this.name = "";
-        this.className1 = "";
     }
 
     /*******************
@@ -59,12 +54,4 @@ public class ClassField {
         return this.name;
     }
 
-    /*******************
-     * Set the className1 property of the field.
-     *
-     * @param cn1 The className1 value.
-     ******************/
-    public void setClassName1(String cn1) {
-        this.className1 = cn1;
-    }
 }

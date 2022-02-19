@@ -1,7 +1,7 @@
-package io.github.paulgriffith.threadviewer
+package io.github.paulgriffith.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.threadviewer.model.Thread
+import io.github.paulgriffith.thread.model.Thread
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
 import org.jdesktop.swingx.renderer.DefaultTableRenderer

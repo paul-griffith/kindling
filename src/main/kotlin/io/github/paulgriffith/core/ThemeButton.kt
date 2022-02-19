@@ -1,4 +1,4 @@
-package io.github.paulgriffith.main
+package io.github.paulgriffith.core
 
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLaf
@@ -24,11 +24,7 @@ class ThemeButton : JToggleButton() {
         }
     }
 
-    override fun getIcon(): Icon = if (isSelected) {
-        DARK_ICON
-    } else {
-        LIGHT_ICON
-    }
+    override fun getIcon(): Icon = if (isSelected) DARK_ICON else LIGHT_ICON
 
     companion object {
         private val LIGHT_ICON = FlatSVGIcon("icons/bx-sun.svg")
