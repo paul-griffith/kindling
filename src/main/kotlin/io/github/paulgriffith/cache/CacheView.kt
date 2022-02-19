@@ -23,9 +23,10 @@ import java.util.zip.GZIPInputStream
 import javax.swing.Icon
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
+import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
-class CacheView(override val path: Path) : ToolPanel() {
+class CacheView(val path: Path) : ToolPanel() {
     private val tempDirectory: Path = Files.createTempDirectory(path.nameWithoutExtension)
 
     private val dbName: String = run {
@@ -168,6 +169,9 @@ class CacheView(override val path: Path) : ToolPanel() {
     }
 
     init {
+        name = path.name
+        toolTipText = path.toString()
+
         add(
             JSplitPane(
                 SwingConstants.VERTICAL,

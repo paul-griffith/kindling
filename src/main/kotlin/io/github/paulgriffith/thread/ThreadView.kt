@@ -27,19 +27,12 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
-import kotlin.io.path.extension
 import kotlin.io.path.inputStream
+import kotlin.io.path.name
 
 @OptIn(ExperimentalSerializationApi::class)
-class ThreadView(override val path: Path) : ToolPanel() {
-    private val threadDump = run {
-        when {
-            path.extension.equals("json", ignoreCase = true) -> {
-                JSON.decodeFromStream<ThreadDump>(path.inputStream())
-            }
-            else -> throw IllegalArgumentException("Unable to parse $path; unexpected file type")
-        }
-    }
+class ThreadView(val path: Path) : ToolPanel() {
+    private val threadDump = JSON.decodeFromStream<ThreadDump>(path.inputStream())
 
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel.ThreadColumns).apply {
@@ -81,6 +74,9 @@ class ThreadView(override val path: Path) : ToolPanel() {
     }
 
     init {
+        name = path.name
+        toolTipText = path.toString()
+
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting) {

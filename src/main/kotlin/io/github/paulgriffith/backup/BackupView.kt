@@ -20,8 +20,9 @@ import javax.swing.JSplitPane
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.div
+import kotlin.io.path.name
 
-class BackupView(override val path: Path) : ToolPanel() {
+class BackupView(val path: Path) : ToolPanel() {
     private val gwbk = ZipFile(path.toFile()).also {
         check(it.isValidZipFile) { "Not a valid zip file" }
     }
@@ -79,6 +80,9 @@ class BackupView(override val path: Path) : ToolPanel() {
     }
 
     init {
+        name = path.name
+        toolTipText = path.toString()
+
         add(backupInfo, "north")
         add(
             JSplitPane(

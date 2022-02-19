@@ -22,6 +22,7 @@ import javax.swing.Icon
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import kotlin.io.path.name
 import kotlin.io.path.useLines
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
@@ -32,8 +33,7 @@ class LogPanel<T : LogEvent>(
     private val model: LogsModel<T> = modelFn(rawData)
     private val totalRows: Int = rawData.size
     private val table = ReifiedJXTable(model, model.columns).apply {
-        // TODO avoid the hardcoded 1 here, somehow
-        setSortOrder(model.columns[1], SortOrder.ASCENDING)
+        setSortOrder("Timestamp", SortOrder.ASCENDING)
     }
 
     private val details = DetailsPane()
@@ -234,20 +234,28 @@ class LogPanel<T : LogEvent>(
         }
     }
 
-    class LogView(override val path: Path) : ToolPanel() {
+    class LogView(private val paths: List<Path>) : ToolPanel() {
         init {
-            val events = path.useLines(block = ::parseLogs)
+            val toOpen = paths.sorted()
+            name = toOpen.first().name
+            toolTipText = toOpen.first().toString()
+
+            val events = toOpen.flatMap { path ->
+                path.useLines { parseLogs(it) }
+            }
             add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
         }
 
         override val icon: Icon = FlatSVGIcon("icons/bx-file.svg")
 
         override fun customizePopupMenu(menu: JPopupMenu) {
-            menu.add(
-                Action(name = "Open in External Editor") {
-                    Desktop.getDesktop().open(path.toFile())
-                }
-            )
+            if (paths.size == 1) {
+                menu.add(
+                    Action(name = "Open in External Editor") {
+                        Desktop.getDesktop().open(paths.single().toFile())
+                    }
+                )
+            }
         }
     }
 }

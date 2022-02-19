@@ -11,9 +11,10 @@ import java.nio.file.Path
 import javax.swing.JMenu
 import javax.swing.JOptionPane
 import javax.swing.JPopupMenu
+import kotlin.io.path.name
 import kotlin.properties.Delegates
 
-class IdbView(override val path: Path) : ToolPanel() {
+class IdbView(val path: Path) : ToolPanel() {
     private val connection = SQLiteConnection(path)
 
     private val tables: List<String> = connection.metaData.getTables("", "", "", null).toList { rs ->
@@ -23,7 +24,6 @@ class IdbView(override val path: Path) : ToolPanel() {
     private var tool: IdbTool by Delegates.vetoable(
         when {
             "logging_event" in tables -> IdbTool.Log
-//        "SRFEATURES" in tables -> ConfigView(connection)
             else -> IdbTool.Generic
         }
     ) { _, _, newValue ->
@@ -46,6 +46,9 @@ class IdbView(override val path: Path) : ToolPanel() {
     }
 
     init {
+        name = path.name
+        toolTipText = path.toString()
+
         add(tool.openPanel(connection), "push, grow")
     }
 

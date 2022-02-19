@@ -4,16 +4,16 @@ import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
+import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
 import io.github.paulgriffith.core.ThemeButton
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
-import io.github.paulgriffith.utils.MENU_SHORTCUT_KEY_MASK
+import io.github.paulgriffith.utils.MultiTool
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
 import io.github.paulgriffith.utils.getLogger
-import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
@@ -23,74 +23,78 @@ import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.desktop.QuitStrategy
-import java.awt.event.KeyEvent
+import java.awt.event.ActionEvent
 import java.io.File
 import java.lang.Boolean.getBoolean
 import java.nio.file.Path
-import javax.swing.Icon
-import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JFrame
+import javax.swing.JMenu
+import javax.swing.JMenuBar
 import javax.swing.JPanel
-import javax.swing.KeyStroke
 import javax.swing.UIManager
-import javax.swing.filechooser.FileView
-import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.Path
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
-    private val fileChooser = JFileChooser(File(System.getProperty("user.home"), "Downloads")).apply {
+    private val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
+
+    private val singleFileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
-        fileView = object : FileView() {
-            override fun getIcon(file: File): Icon? {
-                return if (file.isFile) {
-                    Tool.getOrNull(file)?.icon?.derive(16, 16)
-                } else {
-                    null
-                }
-            }
-        }
+        fileView = CustomIconView()
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.values().first().filter
     }
 
-    private val chooseButton = JButton(
-        Action(
-            name = "Choose File(s)",
-            icon = FlatSVGIcon("icons/bx-file-find.svg"),
-            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_O, MENU_SHORTCUT_KEY_MASK).also {
-                println(it)
-            }
-        ) {
-            when (fileChooser.showOpenDialog(this@MainPanel)) {
-                JFileChooser.APPROVE_OPTION -> {
-                    val selectedTool = Tool.byFilter[fileChooser.fileFilter]
-                    fileChooser.selectedFiles.forEach { file ->
-                        val actualTool = selectedTool ?: Tool[file]
-                        actualTool.openFragile(file.toPath())
-                    }
+    private val openAction = Action(
+        name = "Open...",
+    ) {
+        if (singleFileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
+            val selectedTool: Tool? = Tool.byFilter[singleFileChooser.fileFilter]
+            openFiles(singleFileChooser.selectedFiles.toList(), selectedTool)
+        }
+    }
+
+    private val menuBar = JMenuBar().apply {
+        add(
+            JMenu("File").apply {
+                add(openAction)
+                for (tool in Tool.values()) {
+                    add(
+                        Action(
+                            name = "Open ${tool.title}",
+                        ) {
+                            singleFileChooser.fileFilter = tool.filter
+                            if (singleFileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
+                                openFiles(singleFileChooser.selectedFiles.toList(), tool)
+                            }
+                        }
+                    )
                 }
             }
-        }
-    )
+        )
+    }
 
     private val tabs = TabPanel()
 
     /**
      * Opens a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */
-    private fun Tool.openFragile(path: Path) {
+    private fun safeOpen(tool: Tool, paths: List<Path>) {
         runCatching {
-            val toolPanel = openTool(path)
+            val toolPanel = if (tool is MultiTool) {
+                tool.open(paths.toList())
+            } else {
+                tool.open(paths.single())
+            }
             tabs.addTab(
-                path.nameWithoutExtension.truncate(),
+                toolPanel.name,
                 toolPanel.icon,
                 toolPanel,
-                path.toString(),
+                toolPanel.toolTipText,
             )
         }.getOrElse { ex ->
-            LOGGER.error("Failed to open $path as a ${this.name}", ex)
-
+            LOGGER.error("Failed to open ${paths.joinToString()} as a ${tool.title}", ex)
             tabs.addTab(
                 "ERROR",
                 FlatSVGIcon("icons/bx-error.svg"),
@@ -101,7 +105,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                             if (ex is ToolOpeningException) {
                                 appendLine(ex.message)
                             } else {
-                                appendLine("Error opening $path: ${ex.message}")
+                                appendLine("Error opening ${paths.joinToString()}: ${ex.message}")
                             }
                             append(ex.cause?.stackTraceToString().orEmpty())
                         }
@@ -112,17 +116,17 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         tabs.selectedIndex = tabs.tabCount - 1
     }
 
-    /**
-     * Opens a list of files, attempting to determine the appropriate tool automatically (based on [Tool.filter])
-     */
-    fun openFiles(files: List<File>) {
-        files.forEach { file ->
-            Tool[file].openFragile(file.toPath())
+    fun openFiles(files: List<File>, tool: Tool? = null) {
+        if (tool is MultiTool) {
+            safeOpen(tool, files.map(File::toPath))
+        } else {
+            files.forEach { file ->
+                safeOpen((tool ?: Tool[file]), listOf(file.toPath()))
+            }
         }
     }
 
     init {
-        tabs.leadingComponent = chooseButton
         tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
             add(ThemeButton(), "align right")
         }
@@ -133,7 +137,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     override fun updateUI() {
         super.updateUI()
         // the file chooser probably won't be visible when the theme is updated, so ensure that it rebuilds
-        fileChooser?.updateUI()
+        singleFileChooser?.updateUI()
     }
 
     companion object {
@@ -148,6 +152,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         @JvmStatic
         fun main(args: Array<String>) {
             System.setProperty("apple.awt.application.name", "Kindling")
+            System.setProperty("apple.laf.useScreenMenuBar", "true")
 
             EventQueue.invokeLater {
                 setupLaf()
@@ -160,9 +165,13 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     val mainPanel = MainPanel()
                     add(mainPanel)
                     pack()
-                    rootPane.defaultButton = mainPanel.chooseButton
+                    jMenuBar = mainPanel.menuBar
 
                     args.map(::File).let(mainPanel::openFiles)
+
+                    if (args.isEmpty()) {
+                        mainPanel.openAction.actionPerformed(ActionEvent(this, -1, null))
+                    }
 
                     transferHandler = FileTransferHandler(mainPanel::openFiles)
 

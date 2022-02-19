@@ -6,6 +6,8 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import kotlin.io.path.Path
+import kotlin.io.path.name
 
 class WrapperLogParsingTests : FunSpec({
     test("Simple case") {
@@ -124,6 +126,25 @@ class WrapperLogParsingTests : FunSpec({
                 event.logger shouldBe WrapperLogEvent.STDOUT
                 event.message shouldBe "Standard output"
             }
+        }
+    }
+
+    test("Wrapper file sorting test") {
+        val input = listOf(
+            "wrapper.log",
+            "wrapper.log.1",
+            "wrapper.log.2",
+            "wrapper.log.3",
+            "wrapper.log.4",
+            "wrapper.log.5"
+        ).map { Path(it) }.shuffled()
+        input.sorted().map { it.name }.asClue { sorted ->
+            sorted[0] shouldBe "wrapper.log"
+            sorted[1] shouldBe "wrapper.log.1"
+            sorted[2] shouldBe "wrapper.log.2"
+            sorted[3] shouldBe "wrapper.log.3"
+            sorted[4] shouldBe "wrapper.log.4"
+            sorted[5] shouldBe "wrapper.log.5"
         }
     }
 }) {
