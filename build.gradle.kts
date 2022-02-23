@@ -24,6 +24,7 @@ repositories {
     maven {
         url = uri("https://nexus.inductiveautomation.com/repository/inductiveautomation-thirdparty/")
     }
+    maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -43,6 +44,7 @@ dependencies {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
         isTransitive = false
     }
+    implementation("com.github.Dansoftowner:jSystemThemeDetector:3.8")
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)

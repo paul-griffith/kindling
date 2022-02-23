@@ -9,7 +9,12 @@ import javax.swing.Icon
 import javax.swing.JToggleButton
 import javax.swing.UIManager
 
-class ThemeButton : JToggleButton() {
+class ThemeButton(var isDark: Boolean = false) : JToggleButton() {
+
+    init {
+        isSelected = isDark
+    }
+
     init {
         addActionListener {
             FlatAnimatedLafChange.showSnapshot()
