@@ -82,7 +82,7 @@ application {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-//        vendor.set(JvmVendorSpec.AZUL)
+        vendor.set(JvmVendorSpec.AZUL)
     }
 }
 
