@@ -36,13 +36,13 @@ class BackupView(val path: Path) : ToolPanel() {
         }
         val version = file.getElementsByTagName("version").item(0).textContent
         val timestamp = file.getElementsByTagName("timestamp").item(0).textContent
-        val edition = file.getElementsByTagName("edition").item(0).textContent
+        val edition = file.getElementsByTagName("edition").item(0)?.textContent
 
         text = buildString {
             append(version)
             append(" - ")
             append(timestamp)
-            if (edition.isNotEmpty()) {
+            if (!edition.isNullOrEmpty()) {
                 append(" - ")
                 append(edition)
             }
