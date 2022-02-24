@@ -44,7 +44,7 @@ dependencies {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
         isTransitive = false
     }
-    implementation("com.github.Dansoftowner:jSystemThemeDetector:3.8")
+    implementation(libs.osthemedetector)
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
@@ -82,7 +82,7 @@ application {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-        vendor.set(JvmVendorSpec.AZUL)
+//        vendor.set(JvmVendorSpec.AZUL)
     }
 }
 

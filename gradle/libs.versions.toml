@@ -32,6 +32,8 @@ flatlaf-swingx = { group = "com.formdev", name = "flatlaf-swingx", version.ref =
 svgSalamander = { group = "com.formdev", name = "svgSalamander", version = "1.1.2.4" }
 jide-common = { group = "com.formdev", name = "jide-oss", version = "3.7.12" }
 swingx = { group = "org.swinglabs.swingx", name = "swingx-core", version = "1.6.5-1" }
+osthemedetector = {group = "com.github.Dansoftowner", name = "jSystemThemeDetector", version = "3.8"}
+
 
 # Ignition
 ignition-common = { group = "com.inductiveautomation.ignition", name = "common", version.ref = "ignition" }

@@ -9,7 +9,7 @@ import javax.swing.Icon
 import javax.swing.JToggleButton
 import javax.swing.UIManager
 
-class ThemeButton(var isDark: Boolean = false) : JToggleButton() {
+class ThemeButton(isDark: Boolean = false) : JToggleButton() {
 
     init {
         isSelected = isDark
