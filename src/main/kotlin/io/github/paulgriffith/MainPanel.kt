@@ -1,9 +1,11 @@
 package io.github.paulgriffith
 
+import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
+import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
 import io.github.paulgriffith.core.ThemeButton
@@ -129,7 +131,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
     init {
         tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
-            add(ThemeButton(), "align right")
+            add(ThemeButton(detector.isDark()), "align right")
         }
         add(tabs, "dock center")
     }
@@ -147,6 +149,8 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             val mainPanelClass = MainPanel::class.java
             toolkit.getImage(mainPanelClass.getResource("/icons/ignition.png"))
         }
+
+        val detector: OsThemeDetector = OsThemeDetector.getDetector()
 
         val LOGGER = getLogger<MainPanel>()
 
@@ -187,7 +191,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("TabbedPane.showTabSeparators", true)
             UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
-            FlatLightLaf.setup()
+            if (detector.isDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
 
             Desktop.getDesktop().apply {
                 disableSuddenTermination()
