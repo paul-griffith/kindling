@@ -76,7 +76,7 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
 
 class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")) {
     val list: LoggerNamesList = run {
-        val loggerNames: List<LoggerName> = events.groupingBy { it.logger ?: "Unknown" }
+        val loggerNames: List<LoggerName> = events.groupingBy { it.logger }
             .eachCount()
             .entries
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key })

@@ -1,11 +1,11 @@
 package io.github.paulgriffith
 
-import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.FlatDarkLaf
-import com.jthemedetecor.OsThemeDetector
+import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
+import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
 import io.github.paulgriffith.core.ThemeButton
@@ -202,6 +202,5 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 FlatUIDefaultsInspector.install("ctrl shift Y")
             }
         }
-
     }
 }
