@@ -1,6 +1,7 @@
 package io.github.paulgriffith
 
 import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
@@ -46,7 +47,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         fileView = CustomIconView()
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
-        fileFilter = Tool.values().first().filter
     }
 
     private val openAction = Action(
@@ -131,7 +131,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
     init {
         tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
-            add(ThemeButton(detector.isDark()), "align right")
+            add(ThemeButton(THEME_DETECTOR.isDark), "align right")
         }
         add(tabs, "dock center")
     }
@@ -150,7 +150,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             toolkit.getImage(mainPanelClass.getResource("/icons/ignition.png"))
         }
 
-        val detector: OsThemeDetector = OsThemeDetector.getDetector()
+        val THEME_DETECTOR: OsThemeDetector = OsThemeDetector.getDetector()
 
         val LOGGER = getLogger<MainPanel>()
 
@@ -191,11 +191,14 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("TabbedPane.showTabSeparators", true)
             UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
-            if (detector.isDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
+            if (THEME_DETECTOR.isDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
+            FlatLaf.updateUI()
 
             Desktop.getDesktop().apply {
-                disableSuddenTermination()
-                setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+                runCatching {
+                    disableSuddenTermination()
+                    setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+                }
             }
 
             if (getBoolean("kindling.debug")) {

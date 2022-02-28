@@ -8,6 +8,7 @@ import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.ToolPanel
+import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +22,10 @@ import java.time.format.DateTimeFormatter
 import javax.swing.Icon
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
+import javax.swing.JTextPane
 import javax.swing.SortOrder
 import kotlin.io.path.name
+import kotlin.io.path.readLines
 import kotlin.io.path.useLines
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
@@ -161,6 +164,8 @@ class LogPanel<T : LogEvent>(
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
             .withZone(ZoneId.from(ZoneOffset.UTC))
 
+        val LOGGER = getLogger<LogPanel<*>>()
+
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
             .withZone(ZoneId.systemDefault())
         private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
@@ -237,10 +242,25 @@ class LogPanel<T : LogEvent>(
             name = toOpen.first().name
             toolTipText = toOpen.first().toString()
 
-            val events = toOpen.flatMap { path ->
-                path.useLines { parseLogs(it) }
+            try {
+                val events = toOpen.flatMap { path ->
+                    path.useLines { parseLogs(it) }
+                }
+                add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
+            } catch (e: Exception) {
+                LOGGER.info("Unable to parse ${paths.joinToString()} as a wrapper log; opening as a text file", e)
+                add(
+                    FlatScrollPane(
+                        JTextPane().apply {
+                            isEditable = false
+                            text = toOpen.flatMap { path ->
+                                path.readLines()
+                            }.joinToString(separator = "\n")
+                        }
+                    ),
+                    "push, grow"
+                )
             }
-            add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
         }
 
         override val icon: Icon = FlatSVGIcon("icons/bx-file.svg")
@@ -249,7 +269,10 @@ class LogPanel<T : LogEvent>(
             if (paths.size == 1) {
                 menu.add(
                     Action(name = "Open in External Editor") {
-                        Desktop.getDesktop().open(paths.single().toFile())
+                        val desktop = Desktop.getDesktop()
+                        paths.forEach { path ->
+                            desktop.open(path.toFile())
+                        }
                     }
                 )
             }
