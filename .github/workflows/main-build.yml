@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '17'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
       - name: Install JDeploy
         run: npm install
@@ -27,4 +28,4 @@ jobs:
       - name: JDeploy Publish
         run: npx jdeploy publish
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
