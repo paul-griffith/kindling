@@ -1,11 +1,13 @@
 {
-    "bin": {"kindling": "jdeploy-bundle/jdeploy.js"},
+    "bin": {
+        "kindling": "jdeploy-bundle/jdeploy.js"
+    },
     "author": "Paul Griffith",
     "description": "A standalone collection of utilities to help Ignition users.",
     "main": "index.js",
     "preferGlobal": true,
     "repository": "",
-    "version": "0.0.6-TEST-2",
+    "version": "0.0.6",
     "jdeploy": {
         "jdk": false,
         "args": [],
@@ -38,6 +40,8 @@
     },
     "license": "MIT",
     "name": "ignition-kindling",
-    "files": ["jdeploy-bundle"],
+    "files": [
+        "jdeploy-bundle"
+    ],
     "homepage": "https://github.com/paul-griffith/kindling"
 }
