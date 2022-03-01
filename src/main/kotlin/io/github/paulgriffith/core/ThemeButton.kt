@@ -1,31 +1,17 @@
 package io.github.paulgriffith.core
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
-import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.paulgriffith.utils.DARK_THEME
+import io.github.paulgriffith.utils.LIGHT_THEME
+import io.github.paulgriffith.utils.display
 import javax.swing.Icon
 import javax.swing.JToggleButton
-import javax.swing.UIManager
 
-class ThemeButton(isDark: Boolean = false) : JToggleButton() {
-
-    init {
-        isSelected = isDark
-    }
-
+class ThemeButton(isDark: Boolean = false) : JToggleButton(null as Icon?, isDark) {
     init {
         addActionListener {
-            FlatAnimatedLafChange.showSnapshot()
-            if (isSelected) {
-                FlatDarkLaf.setup()
-            } else {
-                FlatLightLaf.setup()
-            }
-            UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
-            FlatLaf.updateUI()
-            FlatAnimatedLafChange.hideSnapshotWithAnimation()
+            val theme = if (isSelected) DARK_THEME else LIGHT_THEME
+            theme.display(true)
         }
     }
 

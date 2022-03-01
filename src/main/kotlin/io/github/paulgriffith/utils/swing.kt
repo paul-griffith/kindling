@@ -1,5 +1,9 @@
 package io.github.paulgriffith.utils
 
+import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatLaf
+import com.formdev.flatlaf.FlatLightLaf
+import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
 import com.jidesoft.swing.ListSearchable
@@ -11,7 +15,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.jdesktop.swingx.JXTable
-import org.jdesktop.swingx.decorator.HighlighterFactory
+import org.jdesktop.swingx.decorator.ColorHighlighter
+import org.jdesktop.swingx.decorator.HighlightPredicate
 import org.jdesktop.swingx.renderer.CellContext
 import org.jdesktop.swingx.renderer.ComponentProvider
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
@@ -23,6 +28,7 @@ import java.awt.Component
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.io.File
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
@@ -33,6 +39,9 @@ import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
+import javax.swing.LookAndFeel
+import javax.swing.UIManager
+import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
@@ -254,7 +263,9 @@ class ReifiedJXTable<T : TableModel>(
 
         // TODO header name as tooltip without breaking sorting
 
-        addHighlighter(HighlighterFactory.createSimpleStriping())
+        addHighlighter(object : ColorHighlighter(HighlightPredicate.ODD) {
+            override fun getBackground(): Color = UIManager.getColor("UIColorHighlighter.stripingBackground")
+        })
 
         packAll()
         actionMap.remove("find")
@@ -291,5 +302,35 @@ class ReifiedJXTable<T : TableModel>(
         ): ReifiedJXTable<T> {
             return ReifiedJXTable(model, T::class.java, columns)
         }
+    }
+}
+
+/**
+ * Like [FileNameExtensionFilter], but with a useful equals and hashcode.
+ */
+data class FileExtensionFilter(
+    private val description: String,
+    private val extensions: List<String>,
+) : FileFilter() {
+    override fun accept(f: File): Boolean {
+        return f.isDirectory || f.extension in extensions
+    }
+
+    override fun getDescription(): String = description
+}
+
+val LIGHT_THEME = FlatLightLaf()
+val DARK_THEME = FlatDarkLaf()
+
+fun LookAndFeel.display(animate: Boolean = false) {
+    try {
+        if (animate) {
+            FlatAnimatedLafChange.showSnapshot()
+        }
+        UIManager.setLookAndFeel(this)
+        UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
+        FlatLaf.updateUI()
+    } finally {
+        FlatAnimatedLafChange.hideSnapshotWithAnimation()
     }
 }

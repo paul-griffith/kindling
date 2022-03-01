@@ -8,7 +8,7 @@ import io.github.paulgriffith.log.LogPanel
 import io.github.paulgriffith.thread.ThreadView
 import java.io.File
 import java.nio.file.Path
-import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.filechooser.FileFilter
 
 class ToolOpeningException(message: String, cause: Throwable) : Exception(message, cause)
 
@@ -20,16 +20,16 @@ sealed interface Tool {
     val title: String
     val description: String
     val icon: FlatSVGIcon
-    val extensions: Array<String>
+    val extensions: List<String>
 
     fun open(path: Path): ToolPanel
 
-    val filter: FileNameExtensionFilter
-        get() = FileNameExtensionFilter(description, *extensions)
+    val filter: FileFilter
+        get() = FileExtensionFilter(description, extensions)
 
     companion object {
         operator fun get(file: File): Tool {
-            return getOrNull(file) ?: throw IllegalArgumentException("No tool found for $file")
+            return requireNotNull(getOrNull(file)) { "No tool found for $file" }
         }
 
         fun getOrNull(file: File): Tool? {
@@ -47,7 +47,7 @@ sealed interface Tool {
         override val title = "Idb File"
         override val description = ".idb (SQLite3) files"
         override val icon = FlatSVGIcon("icons/bx-hdd.svg")
-        override val extensions = arrayOf("idb")
+        override val extensions = listOf("idb")
         override fun open(path: Path): ToolPanel = IdbView(path)
     }
 
@@ -55,7 +55,7 @@ sealed interface Tool {
         override val title = "Wrapper Log"
         override val description = "wrapper.log(.n) files"
         override val icon = FlatSVGIcon("icons/bx-file.svg")
-        override val extensions = arrayOf("log", "1", "2", "3", "4", "5")
+        override val extensions = listOf("log", "1", "2", "3", "4", "5")
         override fun open(path: Path): ToolPanel = open(listOf(path))
         override fun open(paths: List<Path>): ToolPanel {
             return LogPanel.LogView(paths)
@@ -66,7 +66,7 @@ sealed interface Tool {
         override val title = "Thread Dump"
         override val description = "Thread dump .json files"
         override val icon = FlatSVGIcon("icons/bx-chip.svg")
-        override val extensions = arrayOf("json")
+        override val extensions = listOf("json")
         override fun open(path: Path): ToolPanel = ThreadView(path)
     }
 
@@ -74,7 +74,7 @@ sealed interface Tool {
         override val title = "Cache Dump"
         override val description = "S&F Cache ZIP Files"
         override val icon = FlatSVGIcon("icons/bx-data.svg")
-        override val extensions = arrayOf("zip")
+        override val extensions = listOf("zip")
         override fun open(path: Path): ToolPanel = CacheView(path)
     }
 
@@ -82,7 +82,7 @@ sealed interface Tool {
         override val title = "Gateway Backup"
         override val description = ".gwbk Files"
         override val icon = FlatSVGIcon("icons/bx-archive.svg")
-        override val extensions = arrayOf("gwbk")
+        override val extensions = listOf("gwbk")
         override fun open(path: Path): ToolPanel = BackupView(path)
     }
 }

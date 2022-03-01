@@ -29,15 +29,15 @@ class LogsModel<T : LogEvent>(
 object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
     val Level by column(
         column = {
-            minWidth = 45
-            maxWidth = 45
+            minWidth = 55
+            maxWidth = 55
         },
         value = { it.level },
     )
     val Timestamp by column(
         column = {
-            minWidth = 140
-            maxWidth = 140
+            minWidth = 155
+            maxWidth = 155
             cellRenderer = DefaultTableRenderer {
                 LogPanel.DATE_FORMAT.format(it as Instant)
             }
@@ -46,13 +46,13 @@ object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
     )
     val Thread by column(
         column = {
-            preferredWidth = 100
+            minWidth = 50
         },
         value = { it.thread }
     )
     val Logger by column(
         column = {
-            preferredWidth = 100
+            minWidth = 50
             cellRenderer = DefaultTableRenderer(
                 ReifiedLabelProvider<String>(
                     getText = { it?.substringAfterLast('.') },
@@ -69,15 +69,15 @@ object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
 object WrapperLogColumns : ColumnList<WrapperLogEvent>() {
     val Level by column(
         column = {
-            minWidth = 45
-            maxWidth = 45
+            minWidth = 55
+            maxWidth = 55
         },
         value = { it.level },
     )
     val Timestamp by column(
         column = {
-            minWidth = 140
-            maxWidth = 140
+            minWidth = 155
+            maxWidth = 155
             cellRenderer = DefaultTableRenderer {
                 LogPanel.DATE_FORMAT.format(it as Instant)
             }
@@ -86,7 +86,7 @@ object WrapperLogColumns : ColumnList<WrapperLogEvent>() {
     )
     val Logger by column(
         column = {
-            preferredWidth = 100
+            minWidth = 50
             cellRenderer = DefaultTableRenderer(
                 ReifiedLabelProvider<String>(
                     getText = { it?.substringAfterLast('.') },

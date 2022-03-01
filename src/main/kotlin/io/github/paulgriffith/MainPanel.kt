@@ -1,8 +1,5 @@
 package io.github.paulgriffith
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
@@ -11,11 +8,14 @@ import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
 import io.github.paulgriffith.core.ThemeButton
 import io.github.paulgriffith.utils.Action
+import io.github.paulgriffith.utils.DARK_THEME
 import io.github.paulgriffith.utils.FileTransferHandler
 import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.LIGHT_THEME
 import io.github.paulgriffith.utils.MultiTool
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
+import io.github.paulgriffith.utils.display
 import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
@@ -42,19 +42,20 @@ import kotlin.io.path.Path
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
-    private val singleFileChooser = JFileChooser(homeLocation).apply {
+    private val fileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
         fileView = CustomIconView()
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
+        fileFilter = Tool.IdbViewer.filter
     }
 
     private val openAction = Action(
         name = "Open...",
     ) {
-        if (singleFileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
-            val selectedTool: Tool? = Tool.byFilter[singleFileChooser.fileFilter]
-            openFiles(singleFileChooser.selectedFiles.toList(), selectedTool)
+        if (fileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
+            val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
+            openFiles(fileChooser.selectedFiles.toList(), selectedTool)
         }
     }
 
@@ -67,9 +68,9 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         Action(
                             name = "Open ${tool.title}",
                         ) {
-                            singleFileChooser.fileFilter = tool.filter
-                            if (singleFileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
-                                openFiles(singleFileChooser.selectedFiles.toList(), tool)
+                            fileChooser.fileFilter = tool.filter
+                            if (fileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
+                                openFiles(fileChooser.selectedFiles.toList(), tool)
                             }
                         }
                     )
@@ -83,7 +84,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     /**
      * Opens a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */
-    private fun safeOpen(tool: Tool, paths: List<Path>) {
+    private fun openOrError(tool: Tool, paths: List<Path>) {
         runCatching {
             val toolPanel = if (tool is MultiTool) {
                 tool.open(paths.toList())
@@ -121,10 +122,16 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
     fun openFiles(files: List<File>, tool: Tool? = null) {
         if (tool is MultiTool) {
-            safeOpen(tool, files.map(File::toPath))
+            openOrError(
+                tool = tool,
+                paths = files.map(File::toPath)
+            )
         } else {
             files.forEach { file ->
-                safeOpen((tool ?: Tool[file]), listOf(file.toPath()))
+                openOrError(
+                    tool = tool ?: Tool[file],
+                    paths = listOf(file.toPath())
+                )
             }
         }
     }
@@ -140,7 +147,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     override fun updateUI() {
         super.updateUI()
         // the file chooser probably won't be visible when the theme is updated, so ensure that it rebuilds
-        singleFileChooser?.updateUI()
+        fileChooser?.updateUI()
     }
 
     companion object {
@@ -191,8 +198,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             UIManager.put("TabbedPane.showTabSeparators", true)
             UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
-            if (THEME_DETECTOR.isDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
-            FlatLaf.updateUI()
+            if (THEME_DETECTOR.isDark) DARK_THEME.display() else LIGHT_THEME.display()
 
             Desktop.getDesktop().apply {
                 runCatching {
