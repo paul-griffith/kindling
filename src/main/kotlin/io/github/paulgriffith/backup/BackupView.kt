@@ -2,7 +2,6 @@ package io.github.paulgriffith.backup
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import io.github.paulgriffith.idb.generic.GenericView
-import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.SQLiteConnection
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolPanel
@@ -63,7 +62,7 @@ class BackupView(val path: Path) : ToolPanel() {
                             gwbk.extractFile(gwbk.getFileHeader(DB_BACKUP_SQLITE_IDB), dbTempFile.toString())
                             val connection = SQLiteConnection(dbTempFile / DB_BACKUP_SQLITE_IDB)
                             val idbView = GenericView(connection)
-                            add(FlatScrollPane(idbView), BorderLayout.CENTER)
+                            add(idbView, BorderLayout.CENTER)
                         } catch (e: ZipException) {
                             LOGGER.error("Error extracting $DB_BACKUP_SQLITE_IDB from $path", e)
                             add(JLabel("Unable to open $DB_BACKUP_SQLITE_IDB; ${e.message}"), BorderLayout.CENTER)

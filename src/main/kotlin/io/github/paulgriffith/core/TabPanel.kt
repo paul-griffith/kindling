@@ -22,19 +22,27 @@ class TabPanel : FlatTabbedPane() {
         attachPopupMenu { event ->
             val tabIndex = indexAtLocation(event.x, event.y)
             if (tabIndex == -1) return@attachPopupMenu null
-            val tab = getComponentAt(tabIndex)
-            if (tab is ToolPanel) {
-                JPopupMenu().apply {
-                    add(
-                        Action(name = "Float") {
-                            val frame = createPopupFrame(tab)
-                            frame.isVisible = true
-                        }
-                    )
-                    tab.customizePopupMenu(this)
-                }
-            } else {
-                null
+            val tab = getComponentAt(tabIndex) as ToolPanel
+            JPopupMenu().apply {
+                add(
+                    Action(name = "Float") {
+                        val frame = createPopupFrame(tab)
+                        frame.isVisible = true
+                    }
+                )
+                add(
+                    Action(name = "Close") {
+                        removeTabAt(tabIndex)
+                    }
+                )
+                val closable = isTabClosable(tabIndex)
+                add(
+                    Action(name = if (closable) "Pin" else "Unpin") {
+                        setTabClosable(tabIndex, !closable)
+                    }
+                )
+                addSeparator()
+                tab.customizePopupMenu(this)
             }
         }
     }

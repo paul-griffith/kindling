@@ -140,10 +140,10 @@ class ThreadView(val path: Path) : ToolPanel() {
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
-                JPanel(MigLayout("ins 0, fill", "[shrink][fill]", "fill")).apply {
-                    add(FlatScrollPane(stateList), "width 215, height 200")
+                JPanel(MigLayout("ins 0, fill", "[][fill]", "fill")).apply {
+                    add(FlatScrollPane(stateList), "growy")
                     add(FlatScrollPane(mainTable), "wrap, spany 2, push")
-                    add(FlatScrollPane(systemList), "pushy 300, width 215")
+                    add(FlatScrollPane(systemList), "growy")
                 },
                 details,
             ).apply {
