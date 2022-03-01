@@ -264,7 +264,7 @@ class ReifiedJXTable<T : TableModel>(
         // TODO header name as tooltip without breaking sorting
 
         addHighlighter(object : ColorHighlighter(HighlightPredicate.ODD) {
-            override fun getBackground(): Color = UIManager.getColor("UIColorHighlighter.stripingBackground")
+            override fun getBackground(): Color? = UIManager.getColor("UIColorHighlighter.stripingBackground")
         })
 
         packAll()
@@ -306,7 +306,7 @@ class ReifiedJXTable<T : TableModel>(
 }
 
 /**
- * Like [FileNameExtensionFilter], but with a useful equals and hashcode.
+ * Like FileNameExtensionFilter, but with a useful equals and hashcode.
  */
 data class FileExtensionFilter(
     private val description: String,
