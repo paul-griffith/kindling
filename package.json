@@ -30,7 +30,7 @@
                 "mimetype": "application/json"
             }
         ],
-        "jar": "build/libs/kindling.jar",
+        "jar": "build/libs/kindling-bundle.jar",
         "javafx": false,
         "title": "Kindling"
     },
