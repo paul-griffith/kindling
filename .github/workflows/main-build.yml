@@ -23,7 +23,7 @@ jobs:
       - name: Install JDeploy
         run: npm install
       - name: Bump package version
-        run: npm version ${{github.ref_name}}
+        run: npm --no-git-tag-version version ${{github.ref_name}}
       - name: JDeploy Publish
         run: npx jdeploy publish
         env:
