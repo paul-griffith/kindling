@@ -11,18 +11,17 @@ plugins {
 }
 
 group = "io.github.paulgriffith"
-//version = "0.0.6"
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://jitpack.io")
+    }
     maven {
         url = uri("https://nexus.inductiveautomation.com/repository/inductiveautomation-releases/")
     }
     maven {
         url = uri("https://nexus.inductiveautomation.com/repository/inductiveautomation-thirdparty/")
-    }
-    maven {
-        url = uri("https://jitpack.io")
     }
 }
 
@@ -50,8 +49,19 @@ dependencies {
 }
 
 tasks {
+    build {
+        finalizedBy(shadowJar)
+    }
     test {
         useJUnitPlatform()
+    }
+    shadowJar {
+        manifest {
+            attributes["Main-Class"] = "io.github.paulgriffith.MainPanel"
+        }
+        archiveBaseName.set("kindling-bundle")
+        archiveClassifier.set("")
+        archiveVersion.set("")
     }
     withType<KotlinCompile> {
         kotlinOptions {
@@ -60,16 +70,6 @@ tasks {
                 "-Xopt-in=kotlin.RequiresOptIn"
             )
         }
-    }
-    jar {
-        manifest {
-            attributes["Main-Class"] = "io.github.paulgriffith.MainPanel"
-        }
-    }
-    shadowJar {
-        archiveBaseName.set("kindling")
-        archiveClassifier.set("")
-        archiveVersion.set("")
     }
 }
 
