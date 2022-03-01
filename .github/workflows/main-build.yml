@@ -19,9 +19,12 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '17'
+          cache: 'npm'
+      - name: Install JDeploy
+        run: npm install
       - name: Bump package version
-        run: ./npm version ${{github.ref_name}}
+        run: npm version ${{github.ref_name}}
       - name: JDeploy Publish
-        run: ./jdeploy publish
+        run: npx jdeploy publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
