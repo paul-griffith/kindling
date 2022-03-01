@@ -1,14 +1,11 @@
-name: Build artifacts across OSes
+name: Commit new version upon tag
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 jobs:
   gradle:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
@@ -18,10 +15,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
       - name: Execute Gradle build
         run: ./gradlew build
-      - name: Execute jpackage
-        run: ./gradlew jpackage
-      - uses: actions/upload-artifact@v2
+      - name: Setup Node
+        uses: actions/setup-node@v2
         with:
-          name: kindling-${{ matrix.os }}
-          path: build/jpackage/kindling-**
-          if-no-files-found: error
+          node-version: '17'
+      - name: Bump package version
+        run: ./npm version ${{github.ref_name}}
+      - name: JDeploy Publish
+        run: ./jdeploy publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
