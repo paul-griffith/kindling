@@ -10,9 +10,6 @@ import com.jidesoft.swing.ListSearchable
 import io.github.paulgriffith.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.jdesktop.swingx.JXTable
 import org.jdesktop.swingx.decorator.ColorHighlighter
@@ -25,7 +22,6 @@ import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
 import java.awt.Component
-import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -40,7 +36,6 @@ import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
-import javax.swing.LookAndFeel
 import javax.swing.UIManager
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
@@ -164,25 +159,6 @@ inline fun FlatScrollPane(component: Component, block: FlatScrollPane.() -> Unit
 
 val Document.text: String
     get() = getText(0, length)
-
-val MENU_SHORTCUT_KEY_MASK by lazy { Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx }
-
-/**
- * Launches [destinationFunction] on [EDT_SCOPE] no more frequently than [waitMs].
- */
-fun <T> debounce(
-    waitMs: Long = 300L,
-    destinationFunction: (T) -> Unit,
-): (T) -> Unit {
-    var debounceJob: Job? = null
-    return { param: T ->
-        debounceJob?.cancel()
-        debounceJob = EDT_SCOPE.launch {
-            delay(waitMs)
-            destinationFunction(param)
-        }
-    }
-}
 
 /**
  * A common CoroutineScope bound to the event dispatch thread (see [Dispatchers.Swing]).
@@ -323,7 +299,7 @@ data class FileExtensionFilter(
 val LIGHT_THEME = FlatLightLaf()
 val DARK_THEME = FlatDarkLaf()
 
-fun LookAndFeel.display(animate: Boolean = false) {
+fun FlatLaf.display(animate: Boolean = false) {
     try {
         if (animate) {
             FlatAnimatedLafChange.showSnapshot()
@@ -332,6 +308,7 @@ fun LookAndFeel.display(animate: Boolean = false) {
         UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
         FlatLaf.updateUI()
     } finally {
+        // Will no-op if not animated
         FlatAnimatedLafChange.hideSnapshotWithAnimation()
     }
 }

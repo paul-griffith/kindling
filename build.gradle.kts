@@ -64,7 +64,7 @@ tasks {
         kotlinOptions {
             jvmTarget = libs.versions.java.get()
             freeCompilerArgs = listOf(
-                "-Xopt-in=kotlin.RequiresOptIn"
+                "-opt-in=kotlin.RequiresOptIn"
             )
         }
     }

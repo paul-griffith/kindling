@@ -204,9 +204,13 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
 
         private fun setupLaf() {
-            UIManager.put("ScrollBar.width", 16)
-            UIManager.put("TabbedPane.showTabSeparators", true)
-            UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
+            UIManager.getDefaults().apply {
+                put("ScrollBar.width", 16)
+                put("TabbedPane.showTabSeparators", true)
+                put("TabbedPane.selectedBackground", getColor("TabbedPane.highlight"))
+                put("MenuItem.minimumIconSize", Dimension()) // https://github.com/JFormDesigner/FlatLaf/issues/328
+            }
+
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             if (THEME_DETECTOR.isDark) DARK_THEME.display() else LIGHT_THEME.display()
 
