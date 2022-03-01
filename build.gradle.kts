@@ -49,9 +49,6 @@ dependencies {
 }
 
 tasks {
-    build {
-        finalizedBy(shadowJar)
-    }
     test {
         useJUnitPlatform()
     }
@@ -70,6 +67,12 @@ tasks {
                 "-Xopt-in=kotlin.RequiresOptIn"
             )
         }
+    }
+    val cleanupJDeploy by registering(Delete::class) {
+        delete("jdeploy", "jdeploy-bundle")
+    }
+    clean {
+        finalizedBy(cleanupJDeploy)
     }
 }
 

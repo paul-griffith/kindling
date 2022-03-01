@@ -15,6 +15,7 @@ import io.github.paulgriffith.utils.LIGHT_THEME
 import io.github.paulgriffith.utils.MultiTool
 import io.github.paulgriffith.utils.Tool
 import io.github.paulgriffith.utils.ToolOpeningException
+import io.github.paulgriffith.utils.chooseFiles
 import io.github.paulgriffith.utils.display
 import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.truncate
@@ -27,9 +28,7 @@ import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.desktop.QuitStrategy
-import java.awt.event.ActionEvent
 import java.io.File
-import java.lang.Boolean.getBoolean
 import java.nio.file.Path
 import javax.swing.JFileChooser
 import javax.swing.JFrame
@@ -53,9 +52,9 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val openAction = Action(
         name = "Open...",
     ) {
-        if (fileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
+        fileChooser.chooseFiles(this)?.let { selectedFiles ->
             val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
-            openFiles(fileChooser.selectedFiles.toList(), selectedTool)
+            openFiles(selectedFiles, selectedTool)
         }
     }
 
@@ -69,12 +68,21 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                             name = "Open ${tool.title}",
                         ) {
                             fileChooser.fileFilter = tool.filter
-                            if (fileChooser.showOpenDialog(this@MainPanel) == JFileChooser.APPROVE_OPTION) {
-                                openFiles(fileChooser.selectedFiles.toList(), tool)
+                            fileChooser.chooseFiles(this@MainPanel)?.let { selectedFiles ->
+                                openFiles(selectedFiles, tool)
                             }
                         }
                     )
                 }
+            }
+        )
+        add(
+            JMenu("Debug").apply {
+                add(
+                    Action("UI Inspector") {
+                        FlatUIDefaultsInspector.show()
+                    }
+                )
             }
         )
     }
@@ -182,7 +190,9 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     args.map(::File).let(mainPanel::openFiles)
 
                     if (args.isEmpty()) {
-                        mainPanel.openAction.actionPerformed(ActionEvent(this, -1, null))
+                        mainPanel.fileChooser.chooseFiles(mainPanel)?.let { selectedFiles ->
+                            mainPanel.openFiles(selectedFiles)
+                        }
                     }
 
                     transferHandler = FileTransferHandler(mainPanel::openFiles)
@@ -205,10 +215,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     disableSuddenTermination()
                     setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
                 }
-            }
-
-            if (getBoolean("kindling.debug")) {
-                FlatUIDefaultsInspector.install("ctrl shift Y")
             }
         }
     }

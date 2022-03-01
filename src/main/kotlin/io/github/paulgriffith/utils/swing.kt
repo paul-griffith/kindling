@@ -33,6 +33,7 @@ import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
 import javax.swing.JComponent
+import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPopupMenu
@@ -332,5 +333,13 @@ fun LookAndFeel.display(animate: Boolean = false) {
         FlatLaf.updateUI()
     } finally {
         FlatAnimatedLafChange.hideSnapshotWithAnimation()
+    }
+}
+
+fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
+    return if (showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
+        selectedFiles.toList()
+    } else {
+        null
     }
 }

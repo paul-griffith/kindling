@@ -1,4 +1,4 @@
-name: Commit new version upon tag
+name: Publish new version upon tag commit
 on:
   push:
     tags:
@@ -13,8 +13,8 @@ jobs:
           java-version: 17
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-      - name: Execute Gradle build
-        run: ./gradlew build
+      - name: Execute Gradle build & shadowJar
+        run: ./gradlew build shadowJar
       - name: Setup Node
         uses: actions/setup-node@v2
         with:
@@ -23,7 +23,7 @@ jobs:
           cache: 'npm'
       - name: Install JDeploy
         run: npm install
-      - name: Bump package version
+      - name: Set package version
         run: npm --no-git-tag-version version ${{github.ref_name}}
       - name: JDeploy Publish
         run: npx jdeploy publish
