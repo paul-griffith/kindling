@@ -202,7 +202,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
 
         private fun setupLaf() {
-            println(UIManager.getIcon("SearchField.icon"))
             UIManager.getDefaults().apply {
                 put("ScrollBar.width", 16)
                 put("TabbedPane.showTabSeparators", true)
@@ -212,7 +211,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
             if (THEME_DETECTOR.isDark) DARK_THEME.display() else LIGHT_THEME.display()
-            println(UIManager.getIcon("SearchField.icon"))
 
             Desktop.getDesktop().apply {
                 runCatching {

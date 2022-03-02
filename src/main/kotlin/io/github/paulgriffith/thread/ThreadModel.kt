@@ -37,6 +37,8 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
 
         val Mark by column(
             column = {
+                minWidth = 20
+                maxWidth = 20
                 toolTipText = "Marked Threads"
                 headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
                     FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
@@ -44,21 +46,39 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             },
             value = Thread::marked
         )
-        val Id by column { it.id }
-        val State by column { it.state }
+        val Id by column(
+            column = {
+                cellRenderer = DefaultTableRenderer(Any?::toString)
+            },
+            value = { it.id }
+        )
+        val State by column(
+            column = {
+                minWidth = 105
+                maxWidth = 105
+            },
+            value = { it.state }
+        )
         val Name by column { it.name }
-        val Daemon by column { it.isDaemon }
+        val Daemon by column(
+            column = {
+                minWidth = 55
+                maxWidth = 55
+            },
+            value = { it.isDaemon }
+        )
         val Depth by column { it.stacktrace.size }
         val CPU by column(
             column = {
                 cellRenderer = DefaultTableRenderer { value ->
-                    (value as? Double)?.let { percent.format(it / 100) } ?: "Unknown"
+                    (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
                 }
             },
             value = Thread::cpuUsage
         )
         val System by column(
             column = {
+                minWidth = 75
                 cellRenderer = DefaultTableRenderer { value ->
                     (value as? String) ?: "Unassigned"
                 }
@@ -66,6 +86,11 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             value = Thread::system
         )
         val Blocker by column(
+            column = {
+                cellRenderer = DefaultTableRenderer {
+                    it?.toString().orEmpty()
+                }
+            },
             value = { thread ->
                 thread.blocker?.owner
             }

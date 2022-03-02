@@ -304,11 +304,9 @@ fun FlatLaf.display(animate: Boolean = false) {
         if (animate) {
             FlatAnimatedLafChange.showSnapshot()
         }
-        println(UIManager.getIcon("SearchField.icon"))
         UIManager.setLookAndFeel(this)
         UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
         FlatLaf.updateUI()
-        println(UIManager.getIcon("SearchField.icon"))
     } finally {
         // Will no-op if not animated
         FlatAnimatedLafChange.hideSnapshotWithAnimation()

@@ -83,38 +83,7 @@ class ThreadView(val path: Path) : ToolPanel() {
                     details.events = selectedIndices
                         .map { viewRow -> mainTable.convertRowIndexToModel(viewRow) }
                         .map { modelRow -> mainTable.model.threads[modelRow] }
-                        .map { thread ->
-                            Detail(
-                                title = thread.name,
-                                details = mapOf(
-                                    "id" to thread.id.toString(),
-                                ),
-                                body = buildList {
-                                    if (thread.blocker != null) {
-                                        add("waiting for:")
-                                        add(thread.blocker.toString())
-                                    }
-
-                                    if (thread.lockedMonitors.isNotEmpty()) {
-                                        add("locked monitors:")
-                                        thread.lockedMonitors.forEach { monitor ->
-                                            add(monitor.frame)
-                                            add(monitor.lock)
-                                        }
-                                    }
-
-                                    if (thread.lockedSynchronizers.isNotEmpty()) {
-                                        add("locked synchronizers:")
-                                        addAll(thread.lockedSynchronizers)
-                                    }
-
-                                    if (thread.stacktrace.isNotEmpty()) {
-                                        add("stacktrace:")
-                                        addAll(thread.stacktrace)
-                                    }
-                                },
-                            )
-                        }
+                        .map { thread -> thread.toDetail() }
                 }
             }
         }
@@ -136,22 +105,53 @@ class ThreadView(val path: Path) : ToolPanel() {
         }
 
         add(JLabel("Version: ${threadDump.version}"))
-        add(searchField, "align right, width 25%, wrap")
+        add(searchField, "align right, width 300, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
-                JPanel(MigLayout("ins 0, fill", "[][fill]", "fill")).apply {
-                    add(FlatScrollPane(stateList), "growy")
-                    add(FlatScrollPane(mainTable), "wrap, spany 2, push")
-                    add(FlatScrollPane(systemList), "growy")
+                JPanel(MigLayout("ins 0, fill")).apply {
+                    add(FlatScrollPane(stateList), "push, grow, width 200!")
+                    add(FlatScrollPane(mainTable), "wrap, spany 2, push, grow")
+                    add(FlatScrollPane(systemList), "push, grow, width 200!")
                 },
                 details,
             ).apply {
-                resizeWeight = 0.6
+                resizeWeight = 0.5
             },
-            "dock center, span 3"
+            "push, grow, span"
         )
     }
+
+    private fun Thread.toDetail(): Detail = Detail(
+        title = name,
+        details = mapOf(
+            "id" to id.toString(),
+        ),
+        body = buildList {
+            if (blocker != null) {
+                add("waiting for:")
+                add(blocker.toString())
+            }
+
+            if (lockedMonitors.isNotEmpty()) {
+                add("locked monitors:")
+                lockedMonitors.forEach { monitor ->
+                    add(monitor.frame)
+                    add(monitor.lock)
+                }
+            }
+
+            if (lockedSynchronizers.isNotEmpty()) {
+                add("locked synchronizers:")
+                addAll(lockedSynchronizers)
+            }
+
+            if (stacktrace.isNotEmpty()) {
+                add("stacktrace:")
+                addAll(stacktrace)
+            }
+        },
+    )
 
     override val icon: Icon = Tool.ThreadViewer.icon
 
