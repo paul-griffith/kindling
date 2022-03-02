@@ -59,6 +59,7 @@ tasks {
         archiveBaseName.set("kindling-bundle")
         archiveClassifier.set("")
         archiveVersion.set("")
+        mergeServiceFiles()
     }
     withType<KotlinCompile> {
         kotlinOptions {
