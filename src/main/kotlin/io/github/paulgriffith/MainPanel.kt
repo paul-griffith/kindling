@@ -188,7 +188,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     jMenuBar = mainPanel.menuBar
 
                     if (args.isEmpty()) {
-                        mainPanel.fileChooser.chooseFiles(mainPanel)?.let(mainPanel::openFiles)
+                        mainPanel.fileChooser.chooseFiles(mainPanel)?.let { mainPanel.openFiles(it) }
                     } else {
                         args.map(::File).let(mainPanel::openFiles)
                     }

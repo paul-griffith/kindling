@@ -2,6 +2,7 @@ package io.github.paulgriffith.cache
 
 import io.github.paulgriffith.utils.Column
 import io.github.paulgriffith.utils.ColumnList
+import org.jdesktop.swingx.renderer.DefaultTableRenderer
 import javax.swing.table.AbstractTableModel
 
 class CacheModel(private val entries: List<CacheEntry>) : AbstractTableModel() {
@@ -19,7 +20,12 @@ class CacheModel(private val entries: List<CacheEntry>) : AbstractTableModel() {
 
     @Suppress("unused")
     companion object CacheColumns : ColumnList<CacheEntry>() {
-        val Id by column { it.id }
+        val Id by column(
+            column = {
+                cellRenderer = DefaultTableRenderer(Any?::toString)
+            },
+            value = CacheEntry::id
+        )
         val SchemaId by column { it.schemaId }
         val Timestamp by column { it.timestamp }
         val AttemptCount by column(name = "Attempt Count") { it.attemptCount }

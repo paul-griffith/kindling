@@ -107,6 +107,22 @@ class CacheView(val path: Path) : ToolPanel() {
             when (val obj = ObjectInputStream(data.inputStream()).readObject()) {
                 is BasicHistoricalRecord -> obj.toDetail()
                 is ScanclassHistorySet -> obj.toDetail()
+                is Array<*> -> {
+                    // 2D array
+                    if (obj.firstOrNull()?.javaClass?.isArray == true) {
+                        Detail(
+                            title = "Java 2D Array",
+                            body = obj.map { row ->
+                                (row as Array<*>).contentToString()
+                            },
+                        )
+                    } else {
+                        Detail(
+                            title = "Java Array",
+                            body = obj.map(Any?::toString),
+                        )
+                    }
+                }
                 else -> Detail(
                     title = obj::class.java.name,
                     message = obj.toString(),
