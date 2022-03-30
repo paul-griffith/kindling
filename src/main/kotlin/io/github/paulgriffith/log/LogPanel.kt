@@ -194,18 +194,18 @@ class LogPanel(
     }
 
     inner class GroupingScrollBar : JScrollBar() {
+        private val density = rawData.groupingBy {
+            it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
+        }.eachCount()
+
+        private val rangex = density.values.maxOf { it }
+
         private val customUI = object : FlatScrollBarUI() {
             override fun paintTrack(g: Graphics, c: JComponent, trackBounds: Rectangle) {
                 super.paintTrack(g, c, trackBounds)
                 if (showDensityDisplay) {
                     g as Graphics2D
                     g.color = UIManager.getColor("Actions.Red")
-
-                    val density = rawData.groupingBy {
-                        it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
-                    }.eachCount()
-
-                    val rangex = density.values.maxOf { it }
 
                     val old = g.transform
                     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
