@@ -11,11 +11,13 @@ import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jdesktop.swingx.action.AbstractActionExt
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.RenderingHints
+import java.awt.event.ActionEvent
 import java.awt.geom.AffineTransform
 import java.time.Duration
 import java.time.Instant
@@ -38,10 +40,25 @@ class LogPanel(
     var dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
         .withZone(ZoneId.systemDefault())
 
+    private val densityDisplay = GroupingScrollBar()
+    private var showDensityDisplay: Boolean = true
+
     private val table = run {
         val initialModel = createModel(rawData)
         ReifiedJXTable(initialModel, initialModel.columns).apply {
             setSortOrder("Timestamp", SortOrder.ASCENDING)
+            val densityDisplayAction = object : AbstractActionExt("Display Density") {
+                init {
+                    isSelected = showDensityDisplay
+                    isStateAction = true
+                }
+
+                override fun actionPerformed(e: ActionEvent) {
+                    showDensityDisplay = !showDensityDisplay
+                    densityDisplay.repaint()
+                }
+            }
+            actionMap.put("column.showLogDensity", densityDisplayAction)
         }
     }
 
@@ -115,7 +132,7 @@ class LogPanel(
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     FlatScrollPane(table) {
-                        verticalScrollBar = GroupingScrollBar()
+                        verticalScrollBar = densityDisplay
                     },
                     details,
                 ).apply {
@@ -180,32 +197,34 @@ class LogPanel(
         private val customUI = object : FlatScrollBarUI() {
             override fun paintTrack(g: Graphics, c: JComponent, trackBounds: Rectangle) {
                 super.paintTrack(g, c, trackBounds)
-                g as Graphics2D
-                g.color = UIManager.getColor("Actions.Red")
+                if (showDensityDisplay) {
+                    g as Graphics2D
+                    g.color = UIManager.getColor("Actions.Red")
 
-                val density = rawData.groupingBy {
-                    it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
-                }.eachCount()
+                    val density = rawData.groupingBy {
+                        it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
+                    }.eachCount()
 
-                val rangex = density.values.maxOf { it }
+                    val rangex = density.values.maxOf { it }
 
-                val old = g.transform
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g.transform(
-                    AffineTransform.getScaleInstance(
-                        trackBounds.width / rangex.toDouble(),
-                        trackBounds.height / density.size.toDouble(),
+                    val old = g.transform
+                    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g.transform(
+                        AffineTransform.getScaleInstance(
+                            trackBounds.width / rangex.toDouble(),
+                            trackBounds.height / density.size.toDouble(),
+                        )
                     )
-                )
-                density.values.forEachIndexed { index, count ->
-                    g.drawLine(
-                        trackBounds.x,
-                        trackBounds.y + index,
-                        trackBounds.x + count,
-                        trackBounds.y + index,
-                    )
+                    density.values.forEachIndexed { index, count ->
+                        g.drawLine(
+                            trackBounds.x,
+                            trackBounds.y + index,
+                            trackBounds.x + count,
+                            trackBounds.y + index,
+                        )
+                    }
+                    g.transform = old
                 }
-                g.transform = old
             }
         }
 
@@ -306,7 +325,8 @@ class DurationUnit(private val duration: Duration) : TemporalUnit {
     override fun isTimeBased(): Boolean = duration.seconds < SECONDS_PER_DAY && NANOS_PER_DAY % duration.toNanos() == 0L
 
     @Suppress("UNCHECKED_CAST")
-    override fun <R : Temporal?> addTo(temporal: R, amount: Long): R = duration.multipliedBy(amount).addTo(temporal) as R
+    override fun <R : Temporal?> addTo(temporal: R, amount: Long): R =
+        duration.multipliedBy(amount).addTo(temporal) as R
 
     override fun between(temporal1Inclusive: Temporal, temporal2Exclusive: Temporal): Long {
         return Duration.between(temporal1Inclusive, temporal2Exclusive).dividedBy(duration)
