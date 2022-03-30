@@ -1,5 +1,6 @@
 package io.github.paulgriffith.log
 
+import com.formdev.flatlaf.ui.FlatScrollBarUI
 import io.github.paulgriffith.idb.IdbPanel
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
@@ -10,11 +11,23 @@ import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Rectangle
+import java.awt.RenderingHints
+import java.awt.geom.AffineTransform
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.Temporal
+import java.time.temporal.TemporalUnit
+import javax.swing.JComponent
+import javax.swing.JScrollBar
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import javax.swing.UIManager
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
 class LogPanel(
@@ -101,7 +114,9 @@ class LogPanel(
                 sidebar,
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
-                    FlatScrollPane(table),
+                    FlatScrollPane(table) {
+                        verticalScrollBar = GroupingScrollBar()
+                    },
                     details,
                 ).apply {
                     resizeWeight = 0.6
@@ -158,6 +173,49 @@ class LogPanel(
 
         header.timezone.addActionListener {
             dateFormatter = dateFormatter.withZone(ZoneId.of(header.timezone.selectedItem))
+        }
+    }
+
+    inner class GroupingScrollBar : JScrollBar() {
+        private val customUI = object : FlatScrollBarUI() {
+            override fun paintTrack(g: Graphics, c: JComponent, trackBounds: Rectangle) {
+                super.paintTrack(g, c, trackBounds)
+                g as Graphics2D
+                g.color = UIManager.getColor("Actions.Red")
+
+                val density = rawData.groupingBy {
+                    it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
+                }.eachCount()
+
+                val rangex = density.values.maxOf { it }
+
+                val old = g.transform
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g.transform(
+                    AffineTransform.getScaleInstance(
+                        trackBounds.width / rangex.toDouble(),
+                        trackBounds.height / density.size.toDouble(),
+                    )
+                )
+                density.values.forEachIndexed { index, count ->
+                    g.drawLine(
+                        trackBounds.x,
+                        trackBounds.y + index,
+                        trackBounds.x + count,
+                        trackBounds.y + index,
+                    )
+                }
+                g.transform = old
+            }
+        }
+
+        init {
+            preferredSize = Dimension(30, 100)
+            setUI(customUI)
+        }
+
+        override fun updateUI() {
+            setUI(customUI)
         }
     }
 
@@ -234,5 +292,31 @@ class LogPanel(
             partialEvent.flush()
             return events
         }
+    }
+}
+
+class DurationUnit(private val duration: Duration) : TemporalUnit {
+    init {
+        require(!(duration.isZero || duration.isNegative)) { "Duration may not be zero or negative" }
+    }
+
+    override fun getDuration(): Duration = duration
+    override fun isDurationEstimated(): Boolean = duration.seconds >= SECONDS_PER_DAY
+    override fun isDateBased(): Boolean = duration.nano == 0 && duration.seconds % SECONDS_PER_DAY == 0L
+    override fun isTimeBased(): Boolean = duration.seconds < SECONDS_PER_DAY && NANOS_PER_DAY % duration.toNanos() == 0L
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <R : Temporal?> addTo(temporal: R, amount: Long): R = duration.multipliedBy(amount).addTo(temporal) as R
+
+    override fun between(temporal1Inclusive: Temporal, temporal2Exclusive: Temporal): Long {
+        return Duration.between(temporal1Inclusive, temporal2Exclusive).dividedBy(duration)
+    }
+
+    override fun toString(): String = duration.toString()
+
+    companion object {
+        private const val SECONDS_PER_DAY = 86400
+        private const val NANOS_PER_SECOND = 1000000000L
+        private const val NANOS_PER_DAY = NANOS_PER_SECOND * SECONDS_PER_DAY
     }
 }
