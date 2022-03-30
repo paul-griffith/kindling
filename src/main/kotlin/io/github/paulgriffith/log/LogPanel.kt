@@ -314,6 +314,7 @@ class LogPanel(
     }
 }
 
+// Credit to https://stackoverflow.com/a/66203968
 class DurationUnit(private val duration: Duration) : TemporalUnit {
     init {
         require(!(duration.isZero || duration.isNegative)) { "Duration may not be zero or negative" }
