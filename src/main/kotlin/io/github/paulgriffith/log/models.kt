@@ -26,7 +26,7 @@ class LogsModel<T : LogEvent>(
 }
 
 @Suppress("unused")
-object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
+class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
     val Level by column(
         column = {
             minWidth = 55
@@ -39,7 +39,7 @@ object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
             minWidth = 155
             maxWidth = 155
             cellRenderer = DefaultTableRenderer {
-                LogPanel.DATE_FORMAT.format(it as Instant)
+                panel.dateFormatter.format(it as Instant)
             }
         },
         value = SystemLogsEvent::timestamp
@@ -66,7 +66,7 @@ object SystemLogsColumns : ColumnList<SystemLogsEvent>() {
 }
 
 @Suppress("unused")
-object WrapperLogColumns : ColumnList<WrapperLogEvent>() {
+class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
     val Level by column(
         column = {
             minWidth = 55
@@ -79,7 +79,7 @@ object WrapperLogColumns : ColumnList<WrapperLogEvent>() {
             minWidth = 155
             maxWidth = 155
             cellRenderer = DefaultTableRenderer {
-                LogPanel.DATE_FORMAT.format(it as Instant)
+                panel.dateFormatter.format(it as Instant)
             }
         },
         value = { it.timestamp }

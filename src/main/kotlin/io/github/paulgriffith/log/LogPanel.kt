@@ -1,42 +1,35 @@
 package io.github.paulgriffith.log
 
-import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.idb.IdbPanel
-import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.ReifiedJXTable
-import io.github.paulgriffith.utils.ToolPanel
 import io.github.paulgriffith.utils.getLogger
 import io.github.paulgriffith.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.awt.Desktop
-import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import javax.swing.Icon
-import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
-import javax.swing.JTextPane
 import javax.swing.SortOrder
-import kotlin.io.path.name
-import kotlin.io.path.readLines
-import kotlin.io.path.useLines
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
-class LogPanel<T : LogEvent>(
-    rawData: List<T>,
-    private val modelFn: (List<T>) -> LogsModel<T>,
+class LogPanel(
+    private val rawData: List<LogEvent>,
 ) : IdbPanel() {
-    private val model: LogsModel<T> = modelFn(rawData)
     private val totalRows: Int = rawData.size
-    private val table = ReifiedJXTable(model, model.columns).apply {
-        setSortOrder("Timestamp", SortOrder.ASCENDING)
+
+    var dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
+        .withZone(ZoneId.systemDefault())
+
+    private val table = run {
+        val initialModel = createModel(rawData)
+        ReifiedJXTable(initialModel, initialModel.columns).apply {
+            setSortOrder("Timestamp", SortOrder.ASCENDING)
+        }
     }
 
     private val details = DetailsPane()
@@ -73,9 +66,9 @@ class LogPanel<T : LogEvent>(
                     is WrapperLogEvent -> {
                         text in event.message ||
                             event.logger.contains(text, ignoreCase = true) ||
-                            event.stacktrace?.any { stacktrace ->
+                            event.stacktrace.any { stacktrace ->
                                 stacktrace.contains(text, ignoreCase = true)
-                            } ?: true
+                            }
                     }
                 }
             }
@@ -84,13 +77,20 @@ class LogPanel<T : LogEvent>(
 
     private fun updateData() {
         BACKGROUND.launch {
-            val data = model.data.filter { event ->
+            val filteredData = rawData.filter { event ->
                 filters.all { filter -> filter(event) }
             }
             EDT_SCOPE.launch {
-                table.model = modelFn(data)
+                table.model = createModel(filteredData)
             }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun createModel(rawData: List<LogEvent>) = when (rawData.firstOrNull()) {
+        is WrapperLogEvent -> LogsModel(rawData as List<WrapperLogEvent>, WrapperLogColumns(this))
+        is SystemLogsEvent -> LogsModel(rawData as List<SystemLogsEvent>, SystemLogsColumns(this))
+        else -> LogsModel(rawData as List<WrapperLogEvent>, WrapperLogColumns(this))
     }
 
     init {
@@ -122,17 +122,16 @@ class LogPanel<T : LogEvent>(
                         .map { event ->
                             when (event) {
                                 is SystemLogsEvent -> DetailEvent(
-                                    title = "${DATE_FORMAT.format(event.timestamp)} ${event.thread}",
+                                    title = "${dateFormatter.format(event.timestamp)} ${event.thread}",
                                     message = event.message,
                                     body = event.stacktrace,
                                     details = event.mdc,
                                 )
                                 is WrapperLogEvent -> DetailEvent(
-                                    title = DATE_FORMAT.format(event.timestamp),
+                                    title = dateFormatter.format(event.timestamp),
                                     message = event.message,
-                                    body = event.stacktrace.orEmpty(),
+                                    body = event.stacktrace,
                                 )
-                                else -> throw IllegalStateException("impossible")
                             }
                         }
                 }
@@ -156,20 +155,21 @@ class LogPanel<T : LogEvent>(
         header.search.addActionListener {
             updateData()
         }
+
+        header.timezone.addActionListener {
+            dateFormatter = dateFormatter.withZone(ZoneId.of(header.timezone.selectedItem))
+        }
     }
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
 
-        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
-            .withZone(ZoneId.from(ZoneOffset.UTC))
-
-        val LOGGER = getLogger<LogPanel<*>>()
+        val LOGGER = getLogger<LogPanel>()
 
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
             .withZone(ZoneId.systemDefault())
         private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
-            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] (?<message>.*)| (?<stack>.*))\$".toRegex()
+            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] \\[(?<time>[^]]++)]: (?<message>.*)| (?<stack>.*))\$".toRegex()
 
         fun parseLogs(lines: Sequence<String>): List<WrapperLogEvent> {
             val events = mutableListOf<WrapperLogEvent>()
@@ -180,15 +180,17 @@ class LogPanel<T : LogEvent>(
             fun WrapperLogEvent?.flush() {
                 if (this != null) {
                     // flush our previously built event
-                    events += this.copy(
-                        stacktrace = currentStack.toList(),
-                    )
+                    events += this.copy(stacktrace = currentStack.toList())
                     currentStack.clear()
                     partialEvent = null
                 }
             }
 
-            for (line in lines) {
+            for ((index, line) in lines.withIndex()) {
+                if (line.isBlank()) {
+                    continue
+                }
+
                 val match = DEFAULT_WRAPPER_MESSAGE_FORMAT.matchEntire(line)
                 if (match != null) {
                     val timestamp by match.groups
@@ -208,7 +210,6 @@ class LogPanel<T : LogEvent>(
                             message = message.value.trim(),
                             logger = logger.value.trim(),
                             level = Level.valueOf(level.value.single()),
-                            stacktrace = emptyList(),
                         )
                     } else {
                         val stack by match.groups
@@ -223,59 +224,15 @@ class LogPanel<T : LogEvent>(
                                 timestamp = time,
                                 message = stack.value,
                                 level = Level.INFO,
-                                stacktrace = emptyList(),
                             )
                         }
                     }
                 } else {
-                    throw IllegalArgumentException(line)
+                    throw IllegalArgumentException("Error parsing line $index, unparseable value: $line")
                 }
             }
             partialEvent.flush()
             return events
-        }
-    }
-
-    class LogView(private val paths: List<Path>) : ToolPanel() {
-        init {
-            val toOpen = paths.sorted()
-            name = toOpen.first().name
-            toolTipText = toOpen.first().toString()
-
-            try {
-                val events = toOpen.flatMap { path ->
-                    path.useLines { parseLogs(it) }
-                }
-                add(LogPanel(events) { list -> LogsModel(list, WrapperLogColumns) }, "push, grow")
-            } catch (e: Exception) {
-                LOGGER.info("Unable to parse ${paths.joinToString()} as a wrapper log; opening as a text file", e)
-                add(
-                    FlatScrollPane(
-                        JTextPane().apply {
-                            isEditable = false
-                            text = toOpen.flatMap { path ->
-                                path.readLines()
-                            }.joinToString(separator = "\n")
-                        }
-                    ),
-                    "push, grow"
-                )
-            }
-        }
-
-        override val icon: Icon = FlatSVGIcon("icons/bx-file.svg")
-
-        override fun customizePopupMenu(menu: JPopupMenu) {
-            if (paths.size == 1) {
-                menu.add(
-                    Action(name = "Open in External Editor") {
-                        val desktop = Desktop.getDesktop()
-                        paths.forEach { path ->
-                            desktop.open(path.toFile())
-                        }
-                    }
-                )
-            }
         }
     }
 }

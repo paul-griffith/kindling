@@ -20,7 +20,7 @@ class WrapperLogParsingTests : FunSpec({
             events.single().asClue { event ->
                 event.level shouldBe Level.INFO
                 event.logger shouldBe "t.h.q.PartitionManager"
-                event.message shouldBe "[07:49:25]: Ignition Created Tag history partition sqlt_data_1_20210314"
+                event.message shouldBe "Ignition Created Tag history partition sqlt_data_1_20210314"
                 event.stacktrace.shouldBeEmpty()
             }
         }
@@ -36,7 +36,7 @@ class WrapperLogParsingTests : FunSpec({
             events.single().asClue { event ->
                 event.level shouldBe Level.DEBUG
                 event.logger shouldBe "a.N.V.C.Agent"
-                event.message shouldBe "[22:46:57]: SM z9hG4bKbIiG6tpOB|INVITE [InviteClientTransactionStateInit -> InviteClientTransactionStateCalling] setState"
+                event.message shouldBe "SM z9hG4bKbIiG6tpOB|INVITE [InviteClientTransactionStateInit -> InviteClientTransactionStateCalling] setState"
                 event.stacktrace.shouldBeEmpty()
             }
         }
@@ -62,8 +62,11 @@ class WrapperLogParsingTests : FunSpec({
         ).let { events ->
             events.shouldHaveSize(1)
             events.single().asClue { event ->
-                event.stacktrace.shouldNotBeNull()
-                event.stacktrace?.shouldHaveSize(12)
+                event.message shouldBe "There is a problem checking the tag history database tables during initialization of the store and forward engine which could prevent tag history data from being forwarded properly. Trying again in 60 seconds."
+                event.stacktrace.shouldNotBeNull().shouldHaveSize(12).asClue { stack ->
+                    stack.first() shouldBe "com.inductiveautomation.ignition.gateway.datasource.FaultedDatabaseConnectionException: The database connection 'IgnitionData' is FAULTED. See Gateway Status for details."
+                    stack.last() shouldBe "\tat java.base/java.lang.Thread.run(Unknown Source)"
+                }
             }
         }
     }
@@ -72,7 +75,7 @@ class WrapperLogParsingTests : FunSpec({
         parse(
             """
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | E [c.i.i.g.l.s.SingleConnectionDatasource] [15:00:50]: The following stack successfully received a connection. A new attempt was blocked for over 30000 ms tag-provider=default 
-                INFO   | jvm 1    | 2022/01/26 15:00:50 | java.lang.Throwable: null 
+                INFO   | jvm 1    | 2022/01/26 15:00:50 | java.lang.Throwable: null
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.gateway.localdb.sqlite.SingleConnectionDatasource.getConnection(SingleConnectionDatasource.java:58) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.gateway.localdb.sqlite.SQLiteDBManager${'$'}AutoBackupDaemon.run(SQLiteDBManager.java:666) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.common.execution.impl.BasicExecutionEngine${'$'}TrackedTask.run(BasicExecutionEngine.java:565) 
@@ -82,9 +85,9 @@ class WrapperLogParsingTests : FunSpec({
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at java.util.concurrent.ScheduledThreadPoolExecutor${'$'}ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:294) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at java.util.concurrent.ThreadPoolExecutor${'$'}Worker.run(ThreadPoolExecutor.java:624) 
-                INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at java.lang.Thread.run(Thread.java:748) 
+                INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at java.lang.Thread.run(Thread.java:748)
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | W [T.P.Config                    ] [15:00:50]: Error storing tag values. tag-provider=default 
-                INFO   | jvm 1    | 2022/01/26 15:00:50 | simpleorm.utils.SException${'$'}Jdbc: Opening com.inductiveautomation.ignition.gateway.localdb.sqlite.SingleConnectionDatasource@2fdc4e04 
+                INFO   | jvm 1    | 2022/01/26 15:00:50 | simpleorm.utils.SException${'$'}Jdbc: Opening com.inductiveautomation.ignition.gateway.localdb.sqlite.SingleConnectionDatasource@2fdc4e04
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at simpleorm.sessionjdbc.SSessionJdbc.innerOpen(SSessionJdbc.java:113) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.gateway.localdb.persistence.PersistenceSession.initialize(PersistenceSession.java:31) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.gateway.localdb.PersistenceInterfaceImpl.getSession(PersistenceInterfaceImpl.java:62) 
@@ -107,7 +110,7 @@ class WrapperLogParsingTests : FunSpec({
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | Caused by: java.sql.SQLException: Connection is locked. Datasource only allows one connection at a time. More information was logged to the gateway console. 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at com.inductiveautomation.ignition.gateway.localdb.sqlite.SingleConnectionDatasource.getConnection(SingleConnectionDatasource.java:75) 
                 INFO   | jvm 1    | 2022/01/26 15:00:50 | 	at simpleorm.sessionjdbc.SSessionJdbc.innerOpen(SSessionJdbc.java:111) 
-                INFO   | jvm 1    | 2022/01/26 15:00:50 | 	... 18 common frames omitted 
+                INFO   | jvm 1    | 2022/01/26 15:00:50 | 	... 18 common frames omitted
                 INFO   | jvm 1    | 2022/01/26 15:00:51 | Standard output
             """
         ).let { events ->
@@ -115,16 +118,24 @@ class WrapperLogParsingTests : FunSpec({
             events[0].asClue { event ->
                 event.level shouldBe Level.ERROR
                 event.logger shouldBe "c.i.i.g.l.s.SingleConnectionDatasource"
-                event.stacktrace.shouldNotBeNull().shouldHaveSize(11)
+                event.message shouldBe "The following stack successfully received a connection. A new attempt was blocked for over 30000 ms tag-provider=default"
+                event.stacktrace.shouldHaveSize(11).asClue { stack ->
+                    stack.first() shouldBe "java.lang.Throwable: null"
+                    stack.last() shouldBe "\tat java.lang.Thread.run(Thread.java:748)"
+                }
             }
             events[1].asClue { event ->
                 event.level shouldBe Level.WARN
                 event.logger shouldBe "T.P.Config"
-                event.stacktrace.shouldNotBeNull().shouldHaveSize(24)
+                event.stacktrace.shouldHaveSize(24).asClue { stack ->
+                    stack.first() shouldBe "simpleorm.utils.SException\$Jdbc: Opening com.inductiveautomation.ignition.gateway.localdb.sqlite.SingleConnectionDatasource@2fdc4e04"
+                    stack.last() shouldBe "\t... 18 common frames omitted"
+                }
             }
             events[2].asClue { event ->
                 event.logger shouldBe WrapperLogEvent.STDOUT
                 event.message shouldBe "Standard output"
+                event.stacktrace.shouldBeEmpty()
             }
         }
     }

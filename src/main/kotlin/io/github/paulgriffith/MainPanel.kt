@@ -29,7 +29,6 @@ import java.awt.Image
 import java.awt.Toolkit
 import java.awt.desktop.QuitStrategy
 import java.io.File
-import java.nio.file.Path
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JMenu
@@ -90,14 +89,14 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     private val tabs = TabPanel()
 
     /**
-     * Opens a tool (blocking). In the event of any error, opens an 'Error' tab instead.
+     * Opens a path in a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */
-    private fun openOrError(tool: Tool, paths: List<Path>) {
+    private fun Tool.openOrError(vararg files: File) {
         runCatching {
-            val toolPanel = if (tool is MultiTool) {
-                tool.open(paths.toList())
+            val toolPanel = if (this is MultiTool) {
+                open(files.map(File::toPath))
             } else {
-                tool.open(paths.single())
+                open(files.single().toPath())
             }
             tabs.addTab(
                 toolPanel.name.truncate(),
@@ -106,7 +105,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 toolPanel.toolTipText,
             )
         }.getOrElse { ex ->
-            LOGGER.error("Failed to open ${paths.joinToString()} as a ${tool.title}", ex)
+            LOGGER.error("Failed to open ${files.joinToString()} as a $title", ex)
             tabs.addTab(
                 "ERROR",
                 FlatSVGIcon("icons/bx-error.svg"),
@@ -117,7 +116,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                             if (ex is ToolOpeningException) {
                                 appendLine(ex.message)
                             } else {
-                                appendLine("Error opening ${paths.joinToString()}: ${ex.message}")
+                                appendLine("Error opening ${files.joinToString()}: ${ex.message}")
                             }
                             append(ex.cause?.stackTraceToString().orEmpty())
                         }
@@ -128,20 +127,19 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         tabs.selectedIndex = tabs.tabCount - 1
     }
 
-    fun openFiles(files: List<File>, tool: Tool? = null) {
-        if (tool is MultiTool) {
-            openOrError(
-                tool = tool,
-                paths = files.map(File::toPath)
-            )
-        } else {
-            files.forEach { file ->
-                openOrError(
-                    tool = tool ?: Tool[file],
-                    paths = listOf(file.toPath())
-                )
+    fun openFiles(files: List<File>, tool: Tool? = null) = if (tool is MultiTool) {
+        tool.openOrError(*files.toTypedArray())
+    } else {
+        files.groupBy { tool ?: Tool[it] }
+            .forEach { (tool, filesByTool) ->
+                if (tool is MultiTool) {
+                    tool.openOrError(*filesByTool.toTypedArray())
+                } else {
+                    filesByTool.forEach { file ->
+                        tool.openOrError(file)
+                    }
+                }
             }
-        }
     }
 
     init {

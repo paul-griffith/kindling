@@ -3,8 +3,6 @@ package io.github.paulgriffith.idb
 import io.github.paulgriffith.idb.generic.GenericView
 import io.github.paulgriffith.log.Level
 import io.github.paulgriffith.log.LogPanel
-import io.github.paulgriffith.log.LogsModel
-import io.github.paulgriffith.log.SystemLogsColumns
 import io.github.paulgriffith.log.SystemLogsEvent
 import io.github.paulgriffith.utils.toList
 import java.sql.Connection
@@ -90,7 +88,7 @@ enum class IdbTool {
                     stacktrace = stackTraces[eventId].orEmpty(),
                 )
             }
-            return LogPanel(events) { list -> LogsModel(list, SystemLogsColumns) }
+            return LogPanel(events)
         }
     },
     Generic {

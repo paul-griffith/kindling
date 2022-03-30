@@ -13,7 +13,7 @@ data class WrapperLogEvent(
     override val message: String,
     override val logger: String = STDOUT,
     val level: Level? = null,
-    val stacktrace: List<String>? = null,
+    val stacktrace: List<String> = emptyList(),
 ) : LogEvent {
     companion object {
         const val STDOUT = "STDOUT"

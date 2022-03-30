@@ -11,24 +11,7 @@
         "jdk": false,
         "args": [],
         "javaVersion": "17",
-        "documentTypes": [
-            {
-                "extension": "gwbk",
-                "mimetype": "application/gwbk"
-            },
-            {
-                "extension": "idb",
-                "mimetype": "application/idb"
-            },
-            {
-                "extension": "log",
-                "mimetype": "text/log"
-            },
-            {
-                "extension": "json",
-                "mimetype": "application/json"
-            }
-        ],
+        "documentTypes": [],
         "jar": "build/libs/kindling-bundle.jar",
         "javafx": false,
         "title": "Kindling"

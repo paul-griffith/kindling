@@ -4,7 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.backup.BackupView
 import io.github.paulgriffith.cache.CacheView
 import io.github.paulgriffith.idb.IdbView
-import io.github.paulgriffith.log.LogPanel
+import io.github.paulgriffith.log.LogView
 import io.github.paulgriffith.thread.ThreadView
 import java.io.File
 import java.nio.file.Path
@@ -27,22 +27,6 @@ sealed interface Tool {
     val filter: FileFilter
         get() = FileExtensionFilter(description, extensions)
 
-    companion object {
-        operator fun get(file: File): Tool {
-            return requireNotNull(getOrNull(file)) { "No tool found for $file" }
-        }
-
-        fun getOrNull(file: File): Tool? {
-            return values().firstOrNull { tool ->
-                tool.filter.accept(file)
-            }
-        }
-
-        val byFilter = values().associateBy(Tool::filter)
-
-        fun values(): List<Tool> = listOf(IdbViewer, LogViewer, ThreadViewer, CacheViewer, BackupViewer)
-    }
-
     object IdbViewer : Tool {
         override val title = "Idb File"
         override val description = ".idb (SQLite3) files"
@@ -57,9 +41,7 @@ sealed interface Tool {
         override val icon = FlatSVGIcon("icons/bx-file.svg")
         override val extensions = listOf("log", "1", "2", "3", "4", "5")
         override fun open(path: Path): ToolPanel = open(listOf(path))
-        override fun open(paths: List<Path>): ToolPanel {
-            return LogPanel.LogView(paths)
-        }
+        override fun open(paths: List<Path>): ToolPanel = LogView(paths)
     }
 
     object ThreadViewer : Tool {
@@ -84,5 +66,21 @@ sealed interface Tool {
         override val icon = FlatSVGIcon("icons/bx-archive.svg")
         override val extensions = listOf("gwbk")
         override fun open(path: Path): ToolPanel = BackupView(path)
+    }
+
+    companion object {
+        operator fun get(file: File): Tool {
+            return requireNotNull(getOrNull(file)) { "No tool found for $file" }
+        }
+
+        fun getOrNull(file: File): Tool? {
+            return values().firstOrNull { tool ->
+                tool.filter.accept(file)
+            }
+        }
+
+        val byFilter = values().associateBy(Tool::filter)
+
+        fun values(): List<Tool> = listOf(IdbViewer, LogViewer, ThreadViewer, CacheViewer, BackupViewer)
     }
 }
