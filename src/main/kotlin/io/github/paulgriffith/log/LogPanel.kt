@@ -30,6 +30,7 @@ import javax.swing.JScrollBar
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
 import javax.swing.UIManager
+import kotlin.math.absoluteValue
 import io.github.paulgriffith.utils.Detail as DetailEvent
 
 class LogPanel(
@@ -96,9 +97,7 @@ class LogPanel(
                     is WrapperLogEvent -> {
                         text in event.message ||
                             event.logger.contains(text, ignoreCase = true) ||
-                            event.stacktrace.any { stacktrace ->
-                                stacktrace.contains(text, ignoreCase = true)
-                            }
+                            event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
                     }
                 }
             }
@@ -194,11 +193,22 @@ class LogPanel(
     }
 
     inner class GroupingScrollBar : JScrollBar() {
-        private val density = rawData.groupingBy {
-            it.timestamp.truncatedTo(DurationUnit(Duration.ofMinutes(2)))
-        }.eachCount()
+        private val density: Map<Instant, Int>
+        private val rangex: Int
 
-        private val rangex = density.values.maxOf { it }
+        init {
+            val delta = Duration.between(rawData.first().timestamp, rawData.last().timestamp)
+            val slice = delta.dividedBy(rawData.size.toLong() / 60)
+            val insertionPoint = DURATIONS.binarySearch { it.compareTo(slice) }
+            val aggregate = DURATIONS[insertionPoint.absoluteValue - 1]
+
+            toolTipText = aggregate.toString()
+
+            density = rawData.groupingBy {
+                it.timestamp.truncatedTo(DurationUnit(aggregate))
+            }.eachCount()
+            rangex = density.values.maxOf { it }
+        }
 
         private val customUI = object : FlatScrollBarUI() {
             override fun paintTrack(g: Graphics, c: JComponent, trackBounds: Rectangle) {
@@ -242,6 +252,26 @@ class LogPanel(
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
 
         val LOGGER = getLogger<LogPanel>()
+
+        private val DURATIONS = listOf(
+            Duration.ofMillis(100),
+            Duration.ofMillis(500),
+            Duration.ofSeconds(1),
+            Duration.ofSeconds(5),
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(30),
+            Duration.ofMinutes(1),
+            Duration.ofMinutes(2),
+            Duration.ofMinutes(5),
+            Duration.ofMinutes(10),
+            Duration.ofMinutes(15),
+            Duration.ofMinutes(30),
+            Duration.ofHours(1),
+            Duration.ofHours(2),
+            Duration.ofHours(6),
+            Duration.ofHours(12),
+            Duration.ofDays(1),
+        )
 
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
             .withZone(ZoneId.systemDefault())
