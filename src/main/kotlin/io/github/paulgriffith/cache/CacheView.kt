@@ -46,7 +46,6 @@ class CacheView(val path: Path) : ToolPanel() {
                 append(tempDirectory).append("/").append(dbName).append(";")
                 append("create=").append(false).append(";")
                 append("shutdown=").append(true).append(";")
-                append("readonly=").append(true).append(";")
             }.also { url ->
                 LOGGER.trace("JDBC URL: {}", url)
             }
