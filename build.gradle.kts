@@ -3,6 +3,7 @@ import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
 
 @Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
+    application
     // see gradle/libs.version.toml
     alias(libs.plugins.kotlin)
     alias(libs.plugins.serialization)
@@ -46,6 +47,10 @@ dependencies {
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
+}
+
+application {
+    mainClass.set("io.github.paulgriffith.MainPanel")
 }
 
 tasks {
