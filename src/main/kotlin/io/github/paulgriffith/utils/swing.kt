@@ -306,7 +306,6 @@ fun FlatLaf.display(animate: Boolean = false) {
             FlatAnimatedLafChange.showSnapshot()
         }
         UIManager.setLookAndFeel(this)
-        UIManager.put("TabbedPane.selectedBackground", UIManager.getColor("TabbedPane.highlight"))
         FlatLaf.updateUI()
     } finally {
         // Will no-op if not animated

@@ -44,6 +44,7 @@ class LogView(private val paths: List<Path>) : ToolPanel() {
 
     override fun customizePopupMenu(menu: JPopupMenu) {
         if (paths.size == 1) {
+            menu.addSeparator()
             menu.add(
                 Action(name = "Open in External Editor") {
                     val desktop = Desktop.getDesktop()
