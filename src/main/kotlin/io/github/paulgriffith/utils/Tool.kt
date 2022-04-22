@@ -79,7 +79,7 @@ sealed interface Tool {
             }
         }
 
-        val byFilter = values().associateBy(Tool::filter)
+        val byFilter: Map<FileFilter, Tool> = values().associateBy(Tool::filter)
 
         fun values(): List<Tool> = listOf(IdbViewer, LogViewer, ThreadViewer, CacheViewer, BackupViewer)
     }

@@ -13,6 +13,7 @@ import javax.swing.JPopupMenu
 
 class TabPanel : FlatTabbedPane() {
     init {
+        tabPlacement = LEFT
         tabLayoutPolicy = SCROLL_TAB_LAYOUT
         isTabsClosable = true
         setTabCloseCallback { _, i ->
@@ -41,7 +42,6 @@ class TabPanel : FlatTabbedPane() {
                         setTabClosable(tabIndex, !closable)
                     }
                 )
-                addSeparator()
                 tab.customizePopupMenu(this)
             }
         }

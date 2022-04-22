@@ -6,7 +6,6 @@ import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
-import io.github.paulgriffith.core.ThemeButton
 import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.DARK_THEME
 import io.github.paulgriffith.utils.FileTransferHandler
@@ -28,7 +27,10 @@ import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.desktop.QuitStrategy
+import java.awt.event.ItemEvent
 import java.io.File
+import javax.swing.ButtonGroup
+import javax.swing.JCheckBoxMenuItem
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JMenu
@@ -46,6 +48,12 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.IdbViewer.filter
+
+        UIManager.addPropertyChangeListener { e ->
+            if (e.propertyName == "lookAndFeel") {
+                updateUI()
+            }
+        }
     }
 
     private val openAction = Action(
@@ -73,6 +81,31 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         }
                     )
                 }
+            }
+        )
+        add(
+            JMenu("Theme").apply {
+                val group = ButtonGroup()
+                add(
+                    JCheckBoxMenuItem("Light", !THEME_DETECTOR.isDark).apply {
+                        addItemListener {
+                            if (it.stateChange == ItemEvent.SELECTED) {
+                                LIGHT_THEME.display(true)
+                            }
+                        }
+                        group.add(this)
+                    }
+                )
+                add(
+                    JCheckBoxMenuItem("Dark", THEME_DETECTOR.isDark).apply {
+                        addItemListener {
+                            if (it.stateChange == ItemEvent.SELECTED) {
+                                DARK_THEME.display(true)
+                            }
+                        }
+                        group.add(this)
+                    }
+                )
             }
         )
         add(
@@ -143,17 +176,10 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     }
 
     init {
-        tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
-            add(ThemeButton(THEME_DETECTOR.isDark), "align right")
-        }
+//        tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
+//            add(ThemeButton(THEME_DETECTOR.isDark), "align right")
+//        }
         add(tabs, "dock center")
-    }
-
-    @Suppress("UNNECESSARY_SAFE_CALL") // updateUI is called before our class is constructed
-    override fun updateUI() {
-        super.updateUI()
-        // the file chooser probably won't be visible when the theme is updated, so ensure that it rebuilds
-        fileChooser?.updateUI()
     }
 
     companion object {
@@ -191,6 +217,17 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         args.map(::File).let(mainPanel::openFiles)
                     }
 
+                    Desktop.getDesktop().apply {
+                        // MacOS specific stuff
+                        runCatching {
+                            disableSuddenTermination()
+                            setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+                            setOpenFileHandler { event ->
+                                mainPanel.openFiles(event.files)
+                            }
+                        }
+                    }
+
                     transferHandler = FileTransferHandler(mainPanel::openFiles)
 
                     setLocationRelativeTo(null)
@@ -200,22 +237,16 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
 
         private fun setupLaf() {
+            val osTheme = if (THEME_DETECTOR.isDark) DARK_THEME else LIGHT_THEME
+            osTheme.display()
+
             UIManager.getDefaults().apply {
                 put("ScrollBar.width", 16)
-                put("TabbedPane.showTabSeparators", true)
-                put("TabbedPane.selectedBackground", getColor("TabbedPane.highlight"))
+                put("TabbedPane.tabType", "card")
                 put("MenuItem.minimumIconSize", Dimension()) // https://github.com/JFormDesigner/FlatLaf/issues/328
             }
 
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
-            if (THEME_DETECTOR.isDark) DARK_THEME.display() else LIGHT_THEME.display()
-
-            Desktop.getDesktop().apply {
-                runCatching {
-                    disableSuddenTermination()
-                    setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
-                }
-            }
         }
     }
 }

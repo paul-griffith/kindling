@@ -40,7 +40,7 @@ class IdbView(val path: Path) : ToolPanel() {
                 JOptionPane.ERROR_MESSAGE,
                 FlatSVGIcon("icons/bx-error.svg")
             )
-            LOGGER.error("Unable to swap tool to %s", newValue, e)
+            LOGGER.error("Unable to swap tool to {}", newValue, e)
             false
         }
     }
@@ -55,6 +55,7 @@ class IdbView(val path: Path) : ToolPanel() {
     override val icon = Tool.IdbViewer.icon
 
     override fun customizePopupMenu(menu: JPopupMenu) {
+        menu.addSeparator()
         menu.add(
             JMenu("View As").apply {
                 when (tool) {

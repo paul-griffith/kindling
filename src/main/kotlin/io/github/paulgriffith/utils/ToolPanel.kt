@@ -6,7 +6,7 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 
 abstract class ToolPanel(
-    layoutConstraints: String = "ins 0, fill, hidemode 3",
+    layoutConstraints: String = "ins 6, fill, hidemode 3",
 ) : JPanel(MigLayout(layoutConstraints)) {
     abstract val icon: Icon
 

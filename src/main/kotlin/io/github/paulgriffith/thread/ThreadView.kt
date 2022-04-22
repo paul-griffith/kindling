@@ -105,7 +105,7 @@ class ThreadView(val path: Path) : ToolPanel() {
         }
 
         add(JLabel("Version: ${threadDump.version}"))
-        add(searchField, "align right, width 300, wrap")
+        add(searchField, "align right, wmin 300, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
@@ -156,6 +156,7 @@ class ThreadView(val path: Path) : ToolPanel() {
     override val icon: Icon = Tool.ThreadViewer.icon
 
     override fun customizePopupMenu(menu: JPopupMenu) {
+        menu.addSeparator()
         menu.add(
             Action(name = "Open in External Editor") {
                 Desktop.getDesktop().open(path.toFile())
