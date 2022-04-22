@@ -176,9 +176,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     }
 
     init {
-//        tabs.trailingComponent = JPanel(MigLayout("ins 0, fill")).apply {
-//            add(ThemeButton(THEME_DETECTOR.isDark), "align right")
-//        }
         add(tabs, "dock center")
     }
 
