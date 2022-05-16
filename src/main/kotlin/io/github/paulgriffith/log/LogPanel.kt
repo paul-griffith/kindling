@@ -29,6 +29,7 @@ import javax.swing.JComponent
 import javax.swing.JScrollBar
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import javax.swing.SwingConstants
 import javax.swing.UIManager
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.utils.Detail as DetailEvent
@@ -61,6 +62,10 @@ class LogPanel(
             }
             actionMap.put("column.showLogDensity", densityDisplayAction)
         }
+    }
+
+    private val tableScrollPane = FlatScrollPane(table) {
+        verticalScrollBar = densityDisplay
     }
 
     private val details = DetailsPane()
@@ -130,9 +135,7 @@ class LogPanel(
                 sidebar,
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
-                    FlatScrollPane(table) {
-                        verticalScrollBar = densityDisplay
-                    },
+                    tableScrollPane,
                     details,
                 ).apply {
                     resizeWeight = 0.6
@@ -208,6 +211,14 @@ class LogPanel(
                 it.timestamp.truncatedTo(DurationUnit(aggregate))
             }.eachCount()
             rangex = density.values.maxOf { it }
+        }
+
+        override fun getUnitIncrement(direction: Int): Int {
+            return table.getScrollableUnitIncrement(tableScrollPane.viewport.viewRect, SwingConstants.VERTICAL, direction)
+        }
+
+        override fun getBlockIncrement(direction: Int): Int {
+            return table.getScrollableBlockIncrement(tableScrollPane.viewport.viewRect, SwingConstants.VERTICAL, direction)
         }
 
         private val customUI = object : FlatScrollBarUI() {
