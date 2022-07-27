@@ -47,6 +47,7 @@ dependencies {
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
+    implementation(kotlin("reflect"))
 }
 
 application {

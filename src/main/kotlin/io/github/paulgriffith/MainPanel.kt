@@ -6,18 +6,7 @@ import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.core.CustomIconView
 import io.github.paulgriffith.core.TabPanel
-import io.github.paulgriffith.utils.Action
-import io.github.paulgriffith.utils.DARK_THEME
-import io.github.paulgriffith.utils.FileTransferHandler
-import io.github.paulgriffith.utils.FlatScrollPane
-import io.github.paulgriffith.utils.LIGHT_THEME
-import io.github.paulgriffith.utils.MultiTool
-import io.github.paulgriffith.utils.Tool
-import io.github.paulgriffith.utils.ToolOpeningException
-import io.github.paulgriffith.utils.chooseFiles
-import io.github.paulgriffith.utils.display
-import io.github.paulgriffith.utils.getLogger
-import io.github.paulgriffith.utils.truncate
+import io.github.paulgriffith.utils.*
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
@@ -56,12 +45,35 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         }
     }
 
+    private val exportFileChooser = JFileChooser(homeLocation).apply {
+        isMultiSelectionEnabled = false
+        fileView = CustomIconView()
+        fileSelectionMode = JFileChooser.FILES_ONLY
+
+        fileFilter = FileExtensionFilter(".csv file", listOf(".csv"))
+
+        UIManager.addPropertyChangeListener { e ->
+            if (e.propertyName == "lookAndFeel") {
+                updateUI()
+            }
+        }
+    }
+
     private val openAction = Action(
         name = "Open...",
     ) {
         fileChooser.chooseFiles(this)?.let { selectedFiles ->
             val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
             openFiles(selectedFiles, selectedTool)
+        }
+    }
+
+    private val exportAction = Action(
+        name = "Export as CSV",
+        description = "Export this data in CSV format"
+    ) {
+        exportFileChooser.showSaveDialog(this).let {
+            if (it == JFileChooser.APPROVE_OPTION) exportToFile(exportFileChooser.selectedFile)
         }
     }
 
@@ -81,6 +93,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         }
                     )
                 }
+                add(exportAction)
             }
         )
         add(
@@ -173,6 +186,35 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     }
                 }
             }
+    }
+
+    private fun exportToFile(file: File) {
+        with(tabs.getComponentAt(tabs.selectedIndex) as ToolPanel) {
+            try {
+                exportData(file)
+            } catch (e: java.lang.Exception) {
+                LOGGER.error("Failed to open $file", e)
+                tabs.addTab(
+                    "ERROR",
+                    FlatSVGIcon("icons/bx-error.svg"),
+                    FlatScrollPane(
+                        FlatTextArea().apply {
+                            isEditable = false
+                            text = buildString {
+                                if (e is IllegalArgumentException) {
+                                    appendLine(e.message)
+                                } else {
+                                    appendLine("Error opening $file: ${e.message}")
+                                }
+                                append(e.cause?.stackTraceToString().orEmpty())
+                            }
+                        }
+                    )
+                )
+            }
+
+
+        }
     }
 
     init {
