@@ -50,8 +50,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         fileView = CustomIconView()
         fileSelectionMode = JFileChooser.FILES_ONLY
 
-        fileFilter = FileExtensionFilter(".csv file", listOf(".csv"))
-
         UIManager.addPropertyChangeListener { e ->
             if (e.propertyName == "lookAndFeel") {
                 updateUI()
@@ -65,15 +63,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         fileChooser.chooseFiles(this)?.let { selectedFiles ->
             val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
             openFiles(selectedFiles, selectedTool)
-        }
-    }
-
-    private val exportAction = Action(
-        name = "Export as CSV",
-        description = "Export this data in CSV format"
-    ) {
-        exportFileChooser.showSaveDialog(this).let {
-            if (it == JFileChooser.APPROVE_OPTION) exportToFile(exportFileChooser.selectedFile)
         }
     }
 
@@ -93,7 +82,29 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         }
                     )
                 }
-                add(exportAction)
+            }
+        )
+        add(
+            JMenu("Export").apply {
+                for (format in ExportTool.values()) {
+                    add(
+                        Action(
+                            name = "Export as ${format.ext.uppercase()}",
+                        ) {
+                            exportFileChooser.fileFilter = format.filter
+                            exportFileChooser.showSaveDialog(this).let {
+                                if (it == JFileChooser.APPROVE_OPTION) {
+                                    if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
+                                        exportToFile(File(exportFileChooser.selectedFile.absolutePath+".${format.ext}"))
+                                    } else {
+                                        exportToFile(exportFileChooser.selectedFile)
+                                    }
+                                }
+
+                            }
+                        }
+                    )
+                }
             }
         )
         add(
@@ -192,7 +203,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
         with(tabs.getComponentAt(tabs.selectedIndex) as ToolPanel) {
             try {
                 exportData(file)
-            } catch (e: java.lang.Exception) {
+            } catch (e: Exception) {
                 LOGGER.error("Failed to open $file", e)
                 tabs.addTab(
                     "ERROR",
@@ -211,9 +222,20 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                         }
                     )
                 )
+                tabs.selectedIndex = tabs.tabCount - 1
+            } catch (e: Error) {
+                tabs.addTab(
+                    "ERROR",
+                    FlatSVGIcon("icons/bx-error.svg"),
+                    FlatScrollPane(
+                        FlatTextArea().apply {
+                            isEditable = false
+                            text = e.message
+                        }
+                    )
+                )
+                tabs.selectedIndex = tabs.tabCount - 1
             }
-
-
         }
     }
 

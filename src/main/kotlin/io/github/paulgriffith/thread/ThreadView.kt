@@ -148,7 +148,7 @@ class ThreadView(val path: Path) : ToolPanel() {
     )
 
     init {
-        exportFormats[FileExtension.csv] = ::exportToCSV
+        exportFormats[ExportTool.ExportCSV.ext] = ::exportToCSV
     }
 
     override val icon: Icon = Tool.ThreadViewer.icon
