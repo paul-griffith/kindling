@@ -29,7 +29,6 @@ import javax.swing.UIManager
 import kotlin.io.path.Path
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
-    private val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
     private val fileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
@@ -37,18 +36,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.IdbViewer.filter
-
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                updateUI()
-            }
-        }
-    }
-
-    private val exportFileChooser = JFileChooser(homeLocation).apply {
-        isMultiSelectionEnabled = false
-        fileView = CustomIconView()
-        fileSelectionMode = JFileChooser.FILES_ONLY
 
         UIManager.addPropertyChangeListener { e ->
             if (e.propertyName == "lookAndFeel") {
@@ -78,29 +65,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                             fileChooser.fileFilter = tool.filter
                             fileChooser.chooseFiles(this@MainPanel)?.let { selectedFiles ->
                                 openFiles(selectedFiles, tool)
-                            }
-                        }
-                    )
-                }
-            }
-        )
-        add(
-            JMenu("Export").apply {
-                for (format in ExportTool.values()) {
-                    add(
-                        Action(
-                            name = "Export as ${format.ext.uppercase()}",
-                        ) {
-                            exportFileChooser.fileFilter = format.filter
-                            exportFileChooser.showSaveDialog(this).let {
-                                if (it == JFileChooser.APPROVE_OPTION) {
-                                    if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
-                                        exportToFile(File(exportFileChooser.selectedFile.absolutePath+".${format.ext}"))
-                                    } else {
-                                        exportToFile(exportFileChooser.selectedFile)
-                                    }
-                                }
-
                             }
                         }
                     )
@@ -199,51 +163,14 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             }
     }
 
-    private fun exportToFile(file: File) {
-        with(tabs.getComponentAt(tabs.selectedIndex) as ToolPanel) {
-            try {
-                exportData(file)
-            } catch (e: Exception) {
-                LOGGER.error("Failed to open $file", e)
-                tabs.addTab(
-                    "ERROR",
-                    FlatSVGIcon("icons/bx-error.svg"),
-                    FlatScrollPane(
-                        FlatTextArea().apply {
-                            isEditable = false
-                            text = buildString {
-                                if (e is IllegalArgumentException) {
-                                    appendLine(e.message)
-                                } else {
-                                    appendLine("Error opening $file: ${e.message}")
-                                }
-                                append(e.cause?.stackTraceToString().orEmpty())
-                            }
-                        }
-                    )
-                )
-                tabs.selectedIndex = tabs.tabCount - 1
-            } catch (e: Error) {
-                tabs.addTab(
-                    "ERROR",
-                    FlatSVGIcon("icons/bx-error.svg"),
-                    FlatScrollPane(
-                        FlatTextArea().apply {
-                            isEditable = false
-                            text = e.message
-                        }
-                    )
-                )
-                tabs.selectedIndex = tabs.tabCount - 1
-            }
-        }
-    }
-
     init {
         add(tabs, "dock center")
     }
 
     companion object {
+        // homeLocation needs to be accessible from ToolPanel to show an export prompt
+        val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
+
         val FRAME_ICON: Image = run {
             val toolkit = Toolkit.getDefaultToolkit()
             val mainPanelClass = MainPanel::class.java

@@ -31,7 +31,7 @@ sealed interface ExportTool {
         }
 
         // Add tools to this list to make available on the exports menu
-        fun values(): List<ExportTool> = listOf(ExportCSV)
+        fun values(): List<ExportTool> = listOf(ExportCSV, ExportXLSX, ExportXML)
     }
 
 

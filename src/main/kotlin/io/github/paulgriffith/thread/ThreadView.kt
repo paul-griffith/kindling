@@ -4,6 +4,7 @@ import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.thread.model.Thread
 import io.github.paulgriffith.thread.model.ThreadDump
 import io.github.paulgriffith.utils.*
+import io.github.paulgriffith.utils.Action
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,12 +16,7 @@ import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
 import java.io.File
 import java.nio.file.Path
-import javax.swing.Icon
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JPopupMenu
-import javax.swing.JSplitPane
-import javax.swing.SortOrder
+import javax.swing.*
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
@@ -70,6 +66,9 @@ class ThreadView(val path: Path) : ToolPanel() {
     init {
         name = path.name
         toolTipText = path.toString()
+        exportFormats[ExportTool.ExportCSV] = ::exportToCSV
+//        exportFormats[ExportTool.ExportXLSX] = ::exportToXLSX (Function not implemented)
+//        exportFormats[ExportTool.ExportXML] = ::exportToXML (Function not implemented)
 
         mainTable.selectionModel.apply {
             addListSelectionListener {
@@ -99,6 +98,9 @@ class ThreadView(val path: Path) : ToolPanel() {
         }
 
         add(JLabel("Version: ${threadDump.version}"))
+
+        getMenuBar()?.let { add(it, "align right, gapright 8") }
+
         add(searchField, "align right, wmin 300, wrap")
         add(
             JSplitPane(
@@ -146,10 +148,6 @@ class ThreadView(val path: Path) : ToolPanel() {
             }
         },
     )
-
-    init {
-        exportFormats[ExportTool.ExportCSV.ext] = ::exportToCSV
-    }
 
     override val icon: Icon = Tool.ThreadViewer.icon
 
