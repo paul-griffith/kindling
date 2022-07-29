@@ -3,8 +3,15 @@ package io.github.paulgriffith.thread
 import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.thread.model.Thread
 import io.github.paulgriffith.thread.model.ThreadDump
-import io.github.paulgriffith.utils.*
 import io.github.paulgriffith.utils.Action
+import io.github.paulgriffith.utils.Detail
+import io.github.paulgriffith.utils.DetailsPane
+import io.github.paulgriffith.utils.EDT_SCOPE
+import io.github.paulgriffith.utils.ExportTool
+import io.github.paulgriffith.utils.FlatScrollPane
+import io.github.paulgriffith.utils.ReifiedJXTable
+import io.github.paulgriffith.utils.Tool
+import io.github.paulgriffith.utils.ToolPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -16,7 +23,12 @@ import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
 import java.io.File
 import java.nio.file.Path
-import javax.swing.*
+import javax.swing.Icon
+import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.JPopupMenu
+import javax.swing.JSplitPane
+import javax.swing.SortOrder
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
@@ -161,7 +173,7 @@ class ThreadView(val path: Path) : ToolPanel() {
     }
 
     private fun exportToCSV(file: File) {
-        file.printWriter().use {out ->
+        file.printWriter().use { out ->
             val headers = buildList<String> {
                 (0 until mainTable.columnCount).forEach {
                     add(mainTable.getColumnName(it))
@@ -178,7 +190,6 @@ class ThreadView(val path: Path) : ToolPanel() {
                 }
             }
         }
-
     }
 
     companion object {

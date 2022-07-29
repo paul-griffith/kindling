@@ -10,15 +10,15 @@ sealed interface ExportTool {
     val filter: FileFilter
         get() = FileExtensionFilter(description, listOf(ext))
 
-    object ExportCSV: ExportTool {
+    object ExportCSV : ExportTool {
         override val ext = "csv"
         override val description = ".csv (Comma-separated values)"
     }
-    object ExportXLSX: ExportTool {
+    object ExportXLSX : ExportTool {
         override val ext = "xlsx"
         override val description = ".xlsx (Excel Spreadsheet)"
     }
-    object ExportXML: ExportTool {
+    object ExportXML : ExportTool {
         override val ext = "xml"
         override val description = ".xml (Extended Markup Language)"
     }
@@ -33,6 +33,4 @@ sealed interface ExportTool {
         // Add tools to this list to make available on the exports menu
         fun values(): List<ExportTool> = listOf(ExportCSV, ExportXLSX, ExportXML)
     }
-
-
 }

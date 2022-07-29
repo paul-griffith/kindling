@@ -4,7 +4,13 @@ import io.github.paulgriffith.MainPanel
 import io.github.paulgriffith.core.CustomIconView
 import net.miginfocom.swing.MigLayout
 import java.io.File
-import javax.swing.*
+import javax.swing.Icon
+import javax.swing.JFileChooser
+import javax.swing.JMenu
+import javax.swing.JMenuBar
+import javax.swing.JPanel
+import javax.swing.JPopupMenu
+import javax.swing.UIManager
 
 abstract class ToolPanel(
     layoutConstraints: String = "ins 6, fill, hidemode 3",
@@ -19,7 +25,6 @@ abstract class ToolPanel(
     - If implemented the first export format for a given ToolPanel, add this line of code before the search bar:
       getMenuBar()?.let { add(it, "align right, gapright 8") }
      */
-
 
     private val exportFileChooser = JFileChooser(MainPanel.homeLocation).apply {
         isMultiSelectionEnabled = false
@@ -42,26 +47,28 @@ abstract class ToolPanel(
 
     protected fun getMenuBar(): JMenuBar? {
         return JMenuBar().apply {
-            add(JMenu("Export").apply {
-                for (format in exportFormats.keys) {
-                    add(
-                        Action(
-                            name = "Export as ${format.ext.uppercase()}",
-                        ) {
-                            exportFileChooser.fileFilter = format.filter
-                            exportFileChooser.showSaveDialog(this).let {
-                                if (it == JFileChooser.APPROVE_OPTION) {
-                                    if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
-                                        exportData(File(exportFileChooser.selectedFile.absolutePath + ".${format.ext}"))
-                                    } else {
-                                        exportData(exportFileChooser.selectedFile)
+            add(
+                JMenu("Export").apply {
+                    for (format in exportFormats.keys) {
+                        add(
+                            Action(
+                                name = "Export as ${format.ext.uppercase()}",
+                            ) {
+                                exportFileChooser.fileFilter = format.filter
+                                exportFileChooser.showSaveDialog(this).let {
+                                    if (it == JFileChooser.APPROVE_OPTION) {
+                                        if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
+                                            exportData(File(exportFileChooser.selectedFile.absolutePath + ".${format.ext}"))
+                                        } else {
+                                            exportData(exportFileChooser.selectedFile)
+                                        }
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-            })
+            )
         }.takeIf { it.componentCount > 0 }
     }
 
