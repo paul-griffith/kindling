@@ -164,6 +164,12 @@ class ThreadView(val path: Path) : ToolPanel() {
 
     private fun exportToCSV(file: File) {
         file.printWriter().use {out ->
+            val headers = buildList<String> {
+                (0 until mainTable.columnCount).forEach {
+                    add(mainTable.getColumnName(it))
+                }
+            }
+            out.println(headers.joinToString(","))
             (0 until mainTable.rowCount).forEach { row ->
                 buildList {
                     (0 until mainTable.columnCount).forEach { col ->

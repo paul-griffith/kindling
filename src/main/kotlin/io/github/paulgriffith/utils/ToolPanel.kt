@@ -22,7 +22,7 @@ abstract class ToolPanel(
         }
     }
     fun exportData(file: File) {
-        exportFormats[ExportTool[file].ext]!!.invoke(file)
+        exportFormats[ExportTool[file].ext]!!.invoke(file) // Poor man's reflection
     }
 
     open fun customizePopupMenu(menu: JPopupMenu) = Unit
