@@ -12,17 +12,15 @@ sealed interface ExportTool {
 
     object ExportCSV: ExportTool {
         override val ext = "csv"
-        override val description = ".csv (Comma-separated values)."
+        override val description = ".csv (Comma-separated values)"
     }
-    @Suppress("unused")
     object ExportXLSX: ExportTool {
         override val ext = "xlsx"
         override val description = ".xlsx (Excel Spreadsheet)"
     }
-    @Suppress("unused")
     object ExportXML: ExportTool {
         override val ext = "xml"
-        override val description = ".xml (Extended Markup Language)."
+        override val description = ".xml (Extended Markup Language)"
     }
 
     companion object {
@@ -32,7 +30,8 @@ sealed interface ExportTool {
             } ?: throw java.lang.IllegalArgumentException("${file.extension} is not a valid export format.")
         }
 
-        fun values(): List<ExportTool> = listOf(ExportCSV, ExportXLSX, ExportXML)
+        // Add tools to this list to make available on the exports menu
+        fun values(): List<ExportTool> = listOf(ExportCSV)
     }
 
 
