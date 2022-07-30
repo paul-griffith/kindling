@@ -28,8 +28,8 @@ abstract class ToolPanel(
 
     private val exportFileChooser = JFileChooser(MainPanel.homeLocation).apply {
         isMultiSelectionEnabled = false
+        isAcceptAllFileFilterUsed = false
         fileView = CustomIconView()
-        fileSelectionMode = JFileChooser.FILES_ONLY
 
         UIManager.addPropertyChangeListener { e ->
             if (e.propertyName == "lookAndFeel") {
@@ -54,8 +54,9 @@ abstract class ToolPanel(
                             Action(
                                 name = "Export as ${format.ext.uppercase()}",
                             ) {
+                                exportFileChooser.resetChoosableFileFilters()
                                 exportFileChooser.fileFilter = format.filter
-                                exportFileChooser.showSaveDialog(this).let {
+                                exportFileChooser.showSaveDialog(this.parent.parent).let {
                                     if (it == JFileChooser.APPROVE_OPTION) {
                                         if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
                                             exportData(File(exportFileChooser.selectedFile.absolutePath + ".${format.ext}"))
