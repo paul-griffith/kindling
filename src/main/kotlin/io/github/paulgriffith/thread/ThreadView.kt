@@ -1,5 +1,6 @@
 package io.github.paulgriffith.thread
 
+import io.github.evanrupert.excelkt.workbook
 import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.thread.model.Thread
 import io.github.paulgriffith.thread.model.ThreadDump
@@ -79,7 +80,7 @@ class ThreadView(val path: Path) : ToolPanel() {
         name = path.name
         toolTipText = path.toString()
         exportFormats[ExportTool.ExportCSV] = ::exportToCSV
-//        exportFormats[ExportTool.ExportXLSX] = ::exportToXLSX (Function not implemented)
+        exportFormats[ExportTool.ExportXLSX] = ::exportToXLSX
 //        exportFormats[ExportTool.ExportXML] = ::exportToXML (Function not implemented)
 
         mainTable.selectionModel.apply {
@@ -190,6 +191,28 @@ class ThreadView(val path: Path) : ToolPanel() {
                 }
             }
         }
+    }
+
+    private fun exportToXLSX(file: File) {
+        workbook {
+            sheet("Threads") {
+                // Headers on first now
+                row {
+                    (0 until mainTable.columnCount).forEach { i ->
+                        cell(mainTable.getColumnName(i))
+                    }
+                }
+
+                // Thread data
+                (0 until mainTable.rowCount).forEach { row ->
+                    row {
+                        (0 until mainTable.columnCount).forEach { col ->
+                            cell(mainTable.getValueAt(row, col) ?: "")
+                        }
+                    }
+                }
+            }
+        }.write(file.absolutePath)
     }
 
     companion object {
