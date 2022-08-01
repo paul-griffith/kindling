@@ -1,6 +1,5 @@
 package io.github.paulgriffith.thread
 
-import io.github.evanrupert.excelkt.workbook
 import io.github.paulgriffith.thread.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.thread.model.Thread
 import io.github.paulgriffith.thread.model.ThreadDump
@@ -8,7 +7,6 @@ import io.github.paulgriffith.utils.Action
 import io.github.paulgriffith.utils.Detail
 import io.github.paulgriffith.utils.DetailsPane
 import io.github.paulgriffith.utils.EDT_SCOPE
-import io.github.paulgriffith.utils.ExportTool
 import io.github.paulgriffith.utils.FlatScrollPane
 import io.github.paulgriffith.utils.ReifiedJXTable
 import io.github.paulgriffith.utils.Tool
@@ -22,10 +20,10 @@ import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
-import java.io.File
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JLabel
+import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
@@ -79,9 +77,6 @@ class ThreadView(val path: Path) : ToolPanel() {
     init {
         name = path.name
         toolTipText = path.toString()
-        exportFormats[ExportTool.ExportCSV] = ::exportToCSV
-        exportFormats[ExportTool.ExportXLSX] = ::exportToXLSX
-//        exportFormats[ExportTool.ExportXML] = ::exportToXML (Function not implemented)
 
         mainTable.selectionModel.apply {
             addListSelectionListener {
@@ -112,7 +107,12 @@ class ThreadView(val path: Path) : ToolPanel() {
 
         add(JLabel("Version: ${threadDump.version}"))
 
-        getMenuBar()?.let { add(it, "align right, gapright 8") }
+        add(
+            JMenuBar().apply {
+                add(exportMenu { mainTable.model })
+            },
+            "align right, gapright 8"
+        )
 
         add(searchField, "align right, wmin 300, wrap")
         add(
@@ -171,48 +171,9 @@ class ThreadView(val path: Path) : ToolPanel() {
                 Desktop.getDesktop().open(path.toFile())
             }
         )
-    }
-
-    private fun exportToCSV(file: File) {
-        file.printWriter().use { out ->
-            val headers = buildList<String> {
-                (0 until mainTable.columnCount).forEach {
-                    add(mainTable.getColumnName(it))
-                }
-            }
-            out.println(headers.joinToString(","))
-            (0 until mainTable.rowCount).forEach { row ->
-                buildList {
-                    (0 until mainTable.columnCount).forEach { col ->
-                        add(mainTable.getValueAt(row, col)?.toString() ?: "")
-                    }
-                }.let { rowData ->
-                    out.println(rowData.joinToString(","))
-                }
-            }
-        }
-    }
-
-    private fun exportToXLSX(file: File) {
-        workbook {
-            sheet("Threads") {
-                // Headers on first now
-                row {
-                    (0 until mainTable.columnCount).forEach { i ->
-                        cell(mainTable.getColumnName(i))
-                    }
-                }
-
-                // Thread data
-                (0 until mainTable.rowCount).forEach { row ->
-                    row {
-                        (0 until mainTable.columnCount).forEach { col ->
-                            cell(mainTable.getValueAt(row, col) ?: "")
-                        }
-                    }
-                }
-            }
-        }.write(file.absolutePath)
+        menu.add(
+            exportMenu { mainTable.model }
+        )
     }
 
     companion object {

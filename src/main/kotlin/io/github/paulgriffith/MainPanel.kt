@@ -179,7 +179,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
-        // homeLocation needs to be accessible from ToolPanel to show an export prompt
         val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
         val FRAME_ICON: Image = run {
