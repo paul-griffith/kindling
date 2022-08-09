@@ -41,7 +41,6 @@ import javax.swing.UIManager
 import kotlin.io.path.Path
 
 class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
-    private val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
     private val fileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
@@ -58,7 +57,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     private val openAction = Action(
-        name = "Open..."
+        name = "Open...",
     ) {
         fileChooser.chooseFiles(this)?.let { selectedFiles ->
             val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
@@ -73,7 +72,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 for (tool in Tool.values()) {
                     add(
                         Action(
-                            name = "Open ${tool.title}"
+                            name = "Open ${tool.title}",
                         ) {
                             fileChooser.fileFilter = tool.filter
                             fileChooser.chooseFiles(this@MainPanel)?.let { selectedFiles ->
@@ -136,7 +135,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 toolPanel.name.truncate(),
                 toolPanel.icon,
                 toolPanel,
-                toolPanel.toolTipText
+                toolPanel.toolTipText,
             )
         }.getOrElse { ex ->
             LOGGER.error("Failed to open ${files.joinToString()} as a $title", ex)
@@ -190,6 +189,8 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
+        val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
+
         val FRAME_ICON: Image = run {
             val toolkit = Toolkit.getDefaultToolkit()
             val mainPanelClass = MainPanel::class.java

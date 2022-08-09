@@ -14,6 +14,8 @@ import kotlin.io.path.readLines
 import kotlin.io.path.useLines
 
 class LogView(private val paths: List<Path>) : ToolPanel() {
+    lateinit var logPanel: LogPanel
+
     init {
         val toOpen = paths.sorted()
         name = toOpen.first().name
@@ -23,7 +25,10 @@ class LogView(private val paths: List<Path>) : ToolPanel() {
             val events = toOpen.flatMap { path ->
                 path.useLines { LogPanel.parseLogs(it) }
             }
-            add(LogPanel(events), "push, grow")
+
+            logPanel = LogPanel(events)
+
+            add(logPanel, "push, grow")
         } catch (e: Exception) {
             LogPanel.LOGGER.info("Unable to parse ${paths.joinToString()} as a wrapper log; opening as a text file", e)
             add(
@@ -52,6 +57,9 @@ class LogView(private val paths: List<Path>) : ToolPanel() {
                         desktop.open(path.toFile())
                     }
                 }
+            )
+            menu.add(
+                exportMenu { logPanel.table.model }
             )
         }
     }

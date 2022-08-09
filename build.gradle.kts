@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.logback)
     implementation(libs.svgSalamander)
     implementation(libs.osthemedetector)
+    implementation(libs.excelkt)
     implementation(libs.bundles.coroutines)
     implementation(libs.bundles.flatlaf)
     implementation(libs.bundles.ignition) {
@@ -45,7 +46,6 @@ dependencies {
         isTransitive = false
     }
     runtimeOnly(libs.bundles.ia.transitive)
-
     testImplementation(libs.bundles.kotest)
 }
 
