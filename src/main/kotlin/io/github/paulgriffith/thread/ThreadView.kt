@@ -23,6 +23,7 @@ import java.awt.Desktop
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JLabel
+import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
@@ -105,6 +106,14 @@ class ThreadView(val path: Path) : ToolPanel() {
         }
 
         add(JLabel("Version: ${threadDump.version}"))
+
+        add(
+            JMenuBar().apply {
+                add(exportMenu { mainTable.model })
+            },
+            "align right, gapright 8"
+        )
+
         add(searchField, "align right, wmin 300, wrap")
         add(
             JSplitPane(
@@ -161,6 +170,9 @@ class ThreadView(val path: Path) : ToolPanel() {
             Action(name = "Open in External Editor") {
                 Desktop.getDesktop().open(path.toFile())
             }
+        )
+        menu.add(
+            exportMenu { mainTable.model }
         )
     }
 

@@ -40,7 +40,6 @@ import javax.swing.UIManager
 import kotlin.io.path.Path
 
 class MainPanel : JPanel(MigLayout("ins 6, fill")) {
-    private val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
     private val fileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
@@ -180,6 +179,8 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
+        val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
+
         val FRAME_ICON: Image = run {
             val toolkit = Toolkit.getDefaultToolkit()
             val mainPanelClass = MainPanel::class.java
