@@ -1,9 +1,9 @@
 [versions]
 java = "17"
-kotlin = "1.6.10"
-coroutines = "1.6.0"
-flatlaf = "2.0.2"
-kotest = "5.0.3"
+kotlin = "1.7.10"
+coroutines = "1.6.3"
+flatlaf = "2.4"
+kotest = "5.4.1"
 ignition = "8.1.1"
 
 [plugins]
@@ -21,7 +21,7 @@ xerial-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.36.0.3"
 logback = { group = "ch.qos.logback", name = "logback-classic", version = "1.2.3" }
 hsql = { group = "org.hsqldb", name = "hsqldb", version = "2.6.1" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version = "2.9.1" }
-excelkt = { group ="io.github.evanrupert", name = "excelkt", version = "1.0.2" }
+excelkt = { group = "io.github.evanrupert", name = "excelkt", version = "1.0.2" }
 
 # appearance/swing
 miglayout = { group = "com.miglayout", name = "miglayout-swing", version = "11.0" }

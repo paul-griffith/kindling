@@ -1,8 +1,10 @@
 package io.github.paulgriffith.utils
 
+import io.github.evanrupert.excelkt.workbook
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
+import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.sql.Connection
@@ -11,6 +13,7 @@ import java.sql.JDBCType
 import java.sql.ResultSet
 import java.sql.Time
 import java.sql.Timestamp
+import javax.swing.table.TableModel
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.reflect.KProperty
@@ -94,4 +97,46 @@ fun Long.toFileSizeLabel(): String = when {
 
 operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>): MatchGroup {
     return requireNotNull(get(property.name))
+}
+
+fun TableModel.exportToCSV(file: File) {
+    file.printWriter().use { out ->
+        (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
+            getColumnName(col)
+        }
+        out.println()
+        (0 until rowCount).forEach { row ->
+            (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
+                getValueAt(row, col)?.toString().orEmpty()
+            }
+            out.println()
+        }
+    }
+}
+
+fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
+    workbook {
+        sheet("Sheet 1") { // TODO: Some way to pipe in a more useful sheet name (or multiple sheets?)
+            row {
+                (0 until columnCount).forEach { col ->
+                    cell(getColumnName(col))
+                }
+            }
+            (0 until rowCount).forEach { row ->
+                row {
+                    (0 until columnCount).forEach { col ->
+                        when (val value = getValueAt(row, col)) {
+                            is Double -> cell(
+                                value,
+                                createCellStyle {
+                                    dataFormat = xssfWorkbook.createDataFormat().getFormat("0.00")
+                                }
+                            )
+                            else -> cell(value ?: "")
+                        }
+                    }
+                }
+            }
+        }
+    }.xssfWorkbook.write(fos)
 }

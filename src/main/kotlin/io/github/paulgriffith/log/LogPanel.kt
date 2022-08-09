@@ -45,7 +45,7 @@ class LogPanel(
     private val densityDisplay = GroupingScrollBar()
     private var showDensityDisplay: Boolean = true
 
-    private val table = run {
+    val table = run {
         val initialModel = createModel(rawData)
         ReifiedJXTable(initialModel, initialModel.columns).apply {
             setSortOrder("Timestamp", SortOrder.ASCENDING)

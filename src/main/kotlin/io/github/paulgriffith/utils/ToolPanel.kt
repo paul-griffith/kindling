@@ -7,71 +7,56 @@ import java.io.File
 import javax.swing.Icon
 import javax.swing.JFileChooser
 import javax.swing.JMenu
-import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.UIManager
+import javax.swing.filechooser.FileFilter
+import javax.swing.table.TableModel
 
 abstract class ToolPanel(
     layoutConstraints: String = "ins 6, fill, hidemode 3",
 ) : JPanel(MigLayout(layoutConstraints)) {
     abstract val icon: Icon
 
-    /*
-    The export button (JMenu) will only contain option which are implemented in the respective subclass.
-    To implement a new export format:
-    - Create a function on the desired subclass which exports the desired format.
-    - Add this function to the exportFormats map with its correspond ExportTool
-    - If implemented the first export format for a given ToolPanel, add this line of code before the search bar:
-      getMenuBar()?.let { add(it, "align right, gapright 8") }
-     */
+    open fun customizePopupMenu(menu: JPopupMenu) = Unit
 
-    private val exportFileChooser = JFileChooser(MainPanel.homeLocation).apply {
-        isMultiSelectionEnabled = false
-        isAcceptAllFileFilterUsed = false
-        fileView = CustomIconView()
-
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                updateUI()
-            }
-        }
-    }
-
-    protected var exportFormats: MutableMap<ExportTool, (file: File) -> Unit> = mutableMapOf<ExportTool, (File) -> Unit>()
-
-    private fun exportData(file: File) {
-        // Will throw IllegalArgumentException if somehow a file of type not specified in ExportTool is given.
-        exportFormats[ExportTool[file]]!!.invoke(file)
-    }
-
-    protected fun getMenuBar(): JMenuBar? {
-        return JMenuBar().apply {
+    protected fun exportMenu(modelSupplier: () -> TableModel): JMenu = JMenu("Export").apply {
+        for (format in ExportFormat.values()) {
             add(
-                JMenu("Export").apply {
-                    for (format in exportFormats.keys) {
-                        add(
-                            Action(
-                                name = "Export as ${format.ext.uppercase()}",
-                            ) {
-                                exportFileChooser.resetChoosableFileFilters()
-                                exportFileChooser.fileFilter = format.filter
-                                exportFileChooser.showSaveDialog(this.parent.parent).let {
-                                    if (it == JFileChooser.APPROVE_OPTION) {
-                                        if (!exportFileChooser.selectedFile.absolutePath.endsWith(format.ext)) {
-                                            exportData(File(exportFileChooser.selectedFile.absolutePath + ".${format.ext}"))
-                                        } else {
-                                            exportData(exportFileChooser.selectedFile)
-                                        }
-                                    }
-                                }
-                            }
-                        )
+                Action("Export as ${format.extension.uppercase()}") {
+                    exportFileChooser.resetChoosableFileFilters()
+                    exportFileChooser.fileFilter = format.fileFilter
+                    if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
+                        val selectedFile = if (exportFileChooser.selectedFile.endsWith(format.extension)) {
+                            exportFileChooser.selectedFile
+                        } else {
+                            File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
+                        }
+                        format.action.invoke(modelSupplier(), selectedFile)
                     }
                 }
             )
-        }.takeIf { it.componentCount > 0 }
+        }
     }
 
-    open fun customizePopupMenu(menu: JPopupMenu) = Unit
+    companion object {
+        private val exportFileChooser = JFileChooser(MainPanel.homeLocation).apply {
+            isMultiSelectionEnabled = false
+            isAcceptAllFileFilterUsed = false
+            fileView = CustomIconView()
+
+            UIManager.addPropertyChangeListener { e ->
+                if (e.propertyName == "lookAndFeel") {
+                    updateUI()
+                }
+            }
+        }
+
+        private enum class ExportFormat(description: String, val extension: String, val action: (TableModel, File) -> Unit) {
+            CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
+            EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
+
+            val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
+        }
+    }
 }
