@@ -30,6 +30,7 @@ import java.awt.desktop.QuitStrategy
 import java.awt.event.ItemEvent
 import java.io.File
 import javax.swing.ButtonGroup
+import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
 import javax.swing.JFileChooser
 import javax.swing.JFrame
@@ -39,7 +40,7 @@ import javax.swing.JPanel
 import javax.swing.UIManager
 import kotlin.io.path.Path
 
-class MainPanel : JPanel(MigLayout("ins 6, fill")) {
+class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
 
     private val fileChooser = JFileChooser(homeLocation).apply {
         isMultiSelectionEnabled = true
@@ -175,7 +176,16 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
     }
 
     init {
-        add(tabs, "dock center")
+        if (empty) {
+            val openButton = JButton(openAction)
+            openButton.addActionListener {
+                remove(openButton)
+                add(tabs, "dock center")
+            }
+            add(openButton, "dock center")
+        } else {
+            add(tabs, "dock center")
+        }
     }
 
     companion object {
@@ -204,14 +214,12 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     preferredSize = Dimension(1280, 800)
                     iconImage = FRAME_ICON
 
-                    val mainPanel = MainPanel()
+                    val mainPanel = MainPanel(args.isEmpty())
                     add(mainPanel)
                     pack()
                     jMenuBar = mainPanel.menuBar
 
-                    if (args.isEmpty()) {
-                        mainPanel.fileChooser.chooseFiles(mainPanel)?.let { mainPanel.openFiles(it) }
-                    } else {
+                    if (args.isNotEmpty()) {
                         args.map(::File).let(mainPanel::openFiles)
                     }
 

@@ -69,9 +69,6 @@ tasks {
     withType<KotlinCompile> {
         kotlinOptions {
             jvmTarget = libs.versions.java.get()
-            freeCompilerArgs = listOf(
-                "-opt-in=kotlin.RequiresOptIn"
-            )
         }
     }
     val cleanupJDeploy by registering(Delete::class) {
@@ -89,6 +86,7 @@ java {
 }
 
 ktlint {
+    disabledRules.add("trailing-comma-on-call-site")
     reporters {
         reporter(CHECKSTYLE)
     }
