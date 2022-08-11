@@ -7,7 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -27,8 +27,6 @@ jobs:
           path: |
             build/jpackage/*.deb
             build/jpackage/*.rpm
-            build/jpackage/*.dmg
-            build/jpackage/*.pkg
             build/jpackage/*.exe
             build/jpackage/*.msi
       - name: Upload jar
@@ -44,11 +42,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ubuntu-latest
-          path: artifacts
-      - name: Download MacOS Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: macos-latest
           path: artifacts
       - name: Download Windows Artifacts
         uses: actions/download-artifact@v3
@@ -69,17 +62,17 @@ jobs:
           files: |
             artifacts/*
             kindling-bundle.jar
-#      - name: Setup Node
-#        uses: actions/setup-node@v2
-#        with:
-#          node-version: '17'
-#          registry-url: 'https://registry.npmjs.org'
-#          cache: 'npm'
-#      - name: Install JDeploy
-#        run: npm install
-#      - name: Set package version
-#        run: npm --no-git-tag-version version ${{github.ref_name}}
-#      - name: JDeploy Publish
-#        run: npx jdeploy publish
-#        env:
-#          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '17'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+      - name: Install JDeploy
+        run: npm install
+      - name: Set package version
+        run: npm --no-git-tag-version version ${{github.ref_name}}
+      - name: JDeploy Publish
+        run: npx jdeploy publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
