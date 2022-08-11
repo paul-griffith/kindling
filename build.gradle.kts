@@ -1,6 +1,7 @@
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
+import java.time.LocalDate
 
 @Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
@@ -108,19 +109,14 @@ runtime {
 
     jpackage {
         val currentOs = OperatingSystem.current()
-        val imgType = when {
-            currentOs.isWindows -> "ico"
-            currentOs.isMacOsX -> "icns"
-            else -> "png"
-        }
-        // Reverse the package version because MacOS doesn't like leading zeroes
+        val imgType = if (currentOs.isWindows) "ico" else "png"
         appVersion = System.getenv("TAG_VERSION") ?: "1.0.0"
         imageOptions = listOf("--icon", "src/main/resources/icons/ignition.$imgType")
         @OptIn(ExperimentalStdlibApi::class)
         val options: Map<String, String?> = buildMap {
             put("resource-dir", "src/main/resources")
             put("vendor", "Paul Griffith")
-            put("copyright", "2022")
+            put("copyright", LocalDate.now().year.toString())
             put("description", "A collection of useful tools for troubleshooting Ignition")
 
             when {
@@ -132,7 +128,6 @@ runtime {
                     // random (consistent) UUID makes upgrades smoother
                     put("win-upgrade-uuid", "8e7428c8-bbc6-460a-9995-db6d8b04a690")
                 }
-
                 currentOs.isLinux -> {
                     put("linux-shortcut", null)
                 }
