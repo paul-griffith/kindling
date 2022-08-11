@@ -24,7 +24,13 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}
-          path: build/jpackage/
+          path: |
+            build/jpackage/*.deb
+            build/jpackage/*.rpm
+            build/jpackage/*.dmg
+            build/jpackage/*.pkg
+            build/jpackage/*.exe
+            build/jpackage/*.msi
   create-release:
     runs-on: ubuntu-latest
     needs: [build]
@@ -34,13 +40,13 @@ jobs:
           path: artifacts
       - name: Display structure of downloaded files
         run: ls -R
-#      - name: Create Release
-#        uses: marvinpinto/action-automatic-releases@latest
-#        with:
-#          repo_token: ${{ secrets.GITHUB_TOKEN }}
-#          prerelease: false
-#          files: |
-#            artifacts/*
+      - name: Create Release
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          files: |
+            artifacts/*
 #      - name: Setup Node
 #        uses: actions/setup-node@v2
 #        with:
