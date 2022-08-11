@@ -31,13 +31,34 @@ jobs:
             build/jpackage/*.pkg
             build/jpackage/*.exe
             build/jpackage/*.msi
+      - name: Upload jar
+        uses: actions/upload-artifact@v3
+        with:
+          name: fatjar
+          path: build/libs/kindling-bundle.jar
   create-release:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v3
         with:
+          name: ubuntu-latest
           path: artifacts
+      - name: Download MacOS Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-latest
+          path: artifacts
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-latest
+          path: artifacts
+      - name: Download bundle jar
+        uses: actions/download-artifact@v3
+        with:
+          name: fatjar
       - name: Display structure of downloaded files
         run: ls -R
       - name: Create Release
@@ -47,6 +68,7 @@ jobs:
           prerelease: true
           files: |
             artifacts/*
+            kindling-bundle.jar
 #      - name: Setup Node
 #        uses: actions/setup-node@v2
 #        with:
