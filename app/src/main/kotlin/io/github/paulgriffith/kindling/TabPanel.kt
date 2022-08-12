@@ -14,6 +14,7 @@ class TabPanel : FlatTabbedPane() {
     init {
         tabPlacement = LEFT
         tabLayoutPolicy = SCROLL_TAB_LAYOUT
+        tabAlignment = TabAlignment.leading
         isTabsClosable = true
         setTabCloseCallback { _, i ->
             removeTabAt(i)

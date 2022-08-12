@@ -25,15 +25,15 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: |
-            build/jpackage/*.deb
-            build/jpackage/*.rpm
-            build/jpackage/*.exe
-            build/jpackage/*.msi
+            app/build/jpackage/*.deb
+            app/build/jpackage/*.rpm
+            app/build/jpackage/*.exe
+            app/build/jpackage/*.msi
       - name: Upload jar
         uses: actions/upload-artifact@v3
         with:
           name: fatjar
-          path: build/libs/kindling-bundle.jar
+          path: app/build/libs/kindling-bundle.jar
   create-release:
     runs-on: ubuntu-latest
     needs: [build]
@@ -58,7 +58,7 @@ jobs:
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
+          prerelease: true
           files: |
             artifacts/*
             kindling-bundle.jar
@@ -72,7 +72,7 @@ jobs:
         run: npm install
       - name: Set package version
         run: npm --no-git-tag-version version ${{github.ref_name}}
-      - name: JDeploy Publish
-        run: npx jdeploy publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+#      - name: JDeploy Publish
+#        run: npx jdeploy publish
+#        env:
+#          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

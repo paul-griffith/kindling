@@ -1,9 +1,16 @@
+@Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
     kotlin("jvm")
     alias(libs.plugins.serialization)
 }
 
 dependencies {
-    implementation(project(":core"))
+    implementation(projects.core)
     testImplementation(libs.bundles.kotest)
+}
+
+tasks {
+    test {
+        useJUnitPlatform()
+    }
 }

@@ -34,7 +34,7 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
 @OptIn(ExperimentalSerializationApi::class)
-class ThreadView(val path: Path) : ToolPanel() {
+class ThreadView(private val path: Path) : ToolPanel() {
     private val threadDump = JSON.decodeFromStream<ThreadDump>(path.inputStream())
 
     private val details = DetailsPane()

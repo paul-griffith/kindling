@@ -25,7 +25,7 @@ interface Tool {
         get() = FileExtensionFilter(description, extensions)
 
     companion object {
-        val tools: List<Tool> by lazy { loadService<Tool>().toList() }
+        val tools: List<Tool> by lazy { loadService<Tool>().sortedBy { it.title } }
         val byFilter: Map<FileFilter, Tool> by lazy { tools.associateBy(Tool::filter) }
 
         operator fun get(file: File): Tool {

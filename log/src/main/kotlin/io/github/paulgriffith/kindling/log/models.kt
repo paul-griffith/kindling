@@ -25,7 +25,7 @@ class LogsModel<T : LogEvent>(
     }
 }
 
-@Suppress("unused")
+@Suppress("unused", "PropertyName")
 class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
     val Level by column(
         column = {
@@ -65,7 +65,7 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
     val Message by column { it.message }
 }
 
-@Suppress("unused")
+@Suppress("unused", "PropertyName")
 class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
     val Level by column(
         column = {
