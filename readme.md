@@ -39,14 +39,23 @@ Note: If you encounter any issues with missing classes, please file an issue.
 
 Download the hosted installer from [JDeploy](https://www.jdeploy.com/~ignition-kindling) here. These installers allow
 for auto-updating upon launch.
+If you prefer an offline installation, or to avoid JDeploy, you can also download native installers from the [Releases page](https://github.com/paul-griffith/kindling/releases).
 
 ## Development
 
 Kindling uses Java Swing as a GUI framework, but is written almost exclusively in Kotlin, an alternate JVM language.
 Gradle is used as the build tool, and will automatically download the appropriate Gradle and Java version (via the
 Gradle wrapper). Most IDEs (Eclipse, IntelliJ) should figure out the project structure automatically. You can directly
-run the main class in your IDE ([MainPanel](src/main/kotlin/io/github/paulgriffith/MainPanel.kt)), or you can run the
-application via`./gradlew run` at the command line.
+run the main class in your IDE ([`MainPanel`](app/src/main/kotlin/io/github/paulgriffith/kindling/MainPanel.kt)), or you
+can run the application via`./gradlew run` at the command line.
+
+## Extension
+
+Kindling uses
+the [`ServiceLoader`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceLoader.html)
+mechanism to register tools. Simply provide an implementation
+of [`io.github.paulgriffith.kindling.core.Tool`](core/src/main/kotlin/io/github/paulgriffith/kindling/core/Tool.kt),
+appropriately registered on the classpath, to add tools at runtime.
 
 ## Contribution
 
@@ -54,8 +63,9 @@ Contributions of any kind (additional tools, polish to existing tools) are welco
 
 ## Releases
 
-New tags pushed to Github will automatically trigger an action-based deployment of the given version, which will trigger
-JDeploy to fetch the new version upon next launch.
+New tags pushed to GitHub will automatically trigger an action-based deployment of the given version, which will trigger
+JDeploy to fetch the new version upon next launch. Offline installers (created using jpackage) are also available for
+Windows and Linux.
 
 ## Acknowledgements
 
@@ -67,4 +77,4 @@ JDeploy to fetch the new version upon next launch.
 ## Disclaimer
 
 This is **not** an official Inductive Automation product and is not affiliated with, supported by, maintained by, or
-otherwise associated with Inductive Automation in any way. This software is provided with no warranty.
+otherwise associated with Inductive Automation in any way. This software is provided as-is with no warranty.

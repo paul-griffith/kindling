@@ -25,19 +25,20 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: |
-            build/jpackage/*.deb
-            build/jpackage/*.rpm
-            build/jpackage/*.exe
-            build/jpackage/*.msi
+            app/build/jpackage/*.deb
+            app/build/jpackage/*.rpm
+            app/build/jpackage/*.exe
+            app/build/jpackage/*.msi
       - name: Upload jar
         uses: actions/upload-artifact@v3
         with:
           name: fatjar
-          path: build/libs/kindling-bundle.jar
-  create-release:
+          path: app/build/libs/kindling-bundle.jar
+  release:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
+      - uses: actions/checkout@v2
       - name: Download Linux Artifacts
         uses: actions/download-artifact@v3
         with:
