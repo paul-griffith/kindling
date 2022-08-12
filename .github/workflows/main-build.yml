@@ -59,7 +59,7 @@ jobs:
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
+          prerelease: false
           files: |
             artifacts/*
             kindling-bundle.jar
@@ -73,7 +73,7 @@ jobs:
         run: npm install
       - name: Set package version
         run: npm --no-git-tag-version version ${{github.ref_name}}
-#      - name: JDeploy Publish
-#        run: npx jdeploy publish
-#        env:
-#          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: JDeploy Publish
+        run: npx jdeploy publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
