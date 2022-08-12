@@ -1,3 +1,5 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -5,3 +7,13 @@ pluginManagement {
 }
 
 rootProject.name = "kindling"
+
+include(
+    "core",
+    "idb",
+    "log",
+    "thread",
+    "cache",
+    "backup",
+    "app"
+)
