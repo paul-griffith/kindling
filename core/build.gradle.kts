@@ -22,3 +22,9 @@ dependencies {
     runtimeOnly(libs.bundles.ia.transitive)
     implementation(libs.excelkt)
 }
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
+    }
+}
