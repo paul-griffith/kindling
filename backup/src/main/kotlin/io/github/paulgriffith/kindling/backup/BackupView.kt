@@ -1,10 +1,12 @@
 package io.github.paulgriffith.kindling.backup
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.components.FlatScrollPane
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.idb.generic.GenericView
+import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.SQLiteConnection
 import io.github.paulgriffith.kindling.utils.getLogger
 import net.lingala.zip4j.ZipFile
@@ -17,6 +19,7 @@ import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSplitPane
+import javax.swing.JTextArea
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.div
@@ -26,8 +29,6 @@ class BackupView(val path: Path) : ToolPanel() {
     private val gwbk = ZipFile(path.toFile()).also {
         check(it.isValidZipFile) { "Not a valid zip file" }
     }
-
-    private val projects = ProjectsPanel(gwbk)
 
     private val backupInfo = JLabel().apply {
         val header = gwbk.getFileHeader(BACKUP_INFO)
@@ -50,9 +51,9 @@ class BackupView(val path: Path) : ToolPanel() {
     }
 
     private val tabs = FlatTabbedPane().apply {
-        addTab(GATEWAY_XML, TextDocument(gwbk, GATEWAY_XML))
-        addTab(REDUNDANCY_XML, TextDocument(gwbk, REDUNDANCY_XML))
-        addTab(IGNITION_CONF, TextDocument(gwbk, IGNITION_CONF))
+        addTab(GATEWAY_XML, textDocument(gwbk, GATEWAY_XML))
+        addTab(REDUNDANCY_XML, textDocument(gwbk, REDUNDANCY_XML))
+        addTab(IGNITION_CONF, textDocument(gwbk, IGNITION_CONF))
         addTab(
             DB_BACKUP_SQLITE_IDB,
             JPanel(BorderLayout()).apply {
@@ -75,8 +76,8 @@ class BackupView(val path: Path) : ToolPanel() {
     }
 
     private val sidebar = JPanel(MigLayout("ins 0")).apply {
-        add(JLabel("Projects:"), "wrap, gaptop 12")
-        add(projects, "width 200, growy, pushy")
+//        add(projects, "width 200, growy, pushy")
+        add(FlatScrollPane(ZipFileTree(gwbk)), "wmin 300, push, grow")
     }
 
     init {
@@ -99,6 +100,16 @@ class BackupView(val path: Path) : ToolPanel() {
     }
 
     override val icon: Icon = BackupViewer.icon
+
+    private fun textDocument(zipFile: ZipFile, entry: String): FlatScrollPane {
+        val header = zipFile.getFileHeader(entry)
+        val file = zipFile.getInputStream(header).bufferedReader().readText()
+        return FlatScrollPane(
+            JTextArea(file).apply {
+                isEditable = false
+            }
+        )
+    }
 
     companion object Constants {
         const val BACKUP_INFO = "backupinfo.xml"

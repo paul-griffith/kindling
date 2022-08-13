@@ -4,7 +4,6 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
-import io.github.paulgriffith.kindling.core.CustomIconView
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
@@ -12,11 +11,11 @@ import io.github.paulgriffith.kindling.internal.FileTransferHandler
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.DARK_THEME
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
+import io.github.paulgriffith.kindling.utils.JFileChooser
 import io.github.paulgriffith.kindling.utils.LIGHT_THEME
 import io.github.paulgriffith.kindling.utils.chooseFiles
 import io.github.paulgriffith.kindling.utils.display
 import io.github.paulgriffith.kindling.utils.getLogger
-import io.github.paulgriffith.kindling.utils.homeLocation
 import io.github.paulgriffith.kindling.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -32,7 +31,6 @@ import java.io.File
 import javax.swing.ButtonGroup
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
-import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JMenu
 import javax.swing.JMenuBar
@@ -40,18 +38,11 @@ import javax.swing.JPanel
 import javax.swing.UIManager
 
 class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
-    private val fileChooser = JFileChooser(homeLocation).apply {
+    private val fileChooser = JFileChooser {
         isMultiSelectionEnabled = true
-        fileView = CustomIconView()
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.tools.first().filter
-
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                updateUI()
-            }
-        }
     }
 
     private val openAction = Action(

@@ -7,6 +7,8 @@ import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
 import com.jidesoft.swing.ListSearchable
+import io.github.evanrupert.excelkt.workbook
+import io.github.paulgriffith.kindling.core.CustomIconView
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,8 @@ import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
 import java.awt.Component
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -33,6 +37,7 @@ import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.JMenu
 import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
@@ -109,14 +114,6 @@ fun JTable.selectedRowIndices(): IntArray {
         .filter { isRowSelected(it) }
         .map { convertRowIndexToModel(it) }
         .toIntArray()
-}
-
-fun JTable.selectedOrAllRowIndices(): IntArray {
-    return if (selectionModel.isSelectionEmpty) {
-        IntArray(model.rowCount) { it }
-    } else {
-        selectedRowIndices()
-    }
 }
 
 inline fun <reified T> listCellRenderer(crossinline customize: JLabel.(list: JList<*>, value: T, index: Int, selected: Boolean, focused: Boolean) -> Unit): ListCellRenderer<Any> {
@@ -300,6 +297,17 @@ data class FileExtensionFilter(
     override fun getDescription(): String = description
 }
 
+fun JFileChooser(block: JFileChooser.() -> Unit): JFileChooser = JFileChooser(homeLocation).apply {
+    fileView = CustomIconView()
+    block()
+
+    UIManager.addPropertyChangeListener { e ->
+        if (e.propertyName == "lookAndFeel") {
+            updateUI()
+        }
+    }
+}
+
 val LIGHT_THEME = FlatLightLaf()
 val DARK_THEME = FlatDarkLaf()
 
@@ -322,6 +330,113 @@ fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
     } else {
         null
     }
+}
+
+fun exportMenu(modelSupplier: () -> TableModel): JMenu = JMenu("Export").apply {
+    add(
+        Action("Copy to Clipboard (TSV)") {
+            val model = modelSupplier()
+            val tsv = buildString {
+                (0 until model.columnCount).joinTo(buffer = this, separator = "\t") { col ->
+                    model.getColumnName(col)
+                }
+                appendLine()
+                (0 until model.rowCount).forEach { row ->
+                    (0 until model.columnCount).joinTo(buffer = this, separator = ",") { col ->
+                        when (val value: Any? = model.getValueAt(row, col)) {
+                            is ByteArray -> ""
+                            else -> value.toString()
+                        }
+                    }
+                    appendLine()
+                }
+            }
+
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(StringSelection(tsv), null)
+        }
+    )
+    for (format in ExportFormat.values()) {
+        add(
+            Action("Export as ${format.extension.uppercase()}") {
+                exportFileChooser.resetChoosableFileFilters()
+                exportFileChooser.fileFilter = format.fileFilter
+                if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
+                    val selectedFile = if (exportFileChooser.selectedFile.endsWith(format.extension)) {
+                        exportFileChooser.selectedFile
+                    } else {
+                        File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
+                    }
+                    format.action.invoke(modelSupplier(), selectedFile)
+                }
+            }
+        )
+    }
+}
+
+val exportFileChooser = JFileChooser(homeLocation).apply {
+    isMultiSelectionEnabled = false
+    isAcceptAllFileFilterUsed = false
+    fileView = CustomIconView()
+
+    UIManager.addPropertyChangeListener { e ->
+        if (e.propertyName == "lookAndFeel") {
+            updateUI()
+        }
+    }
+}
+
+private enum class ExportFormat(description: String, val extension: String, val action: (TableModel, File) -> Unit) {
+    CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
+    EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
+
+    val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
+}
+
+fun TableModel.exportToCSV(file: File) {
+    file.printWriter().use { out ->
+        (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
+            getColumnName(col)
+        }
+        out.println()
+        (0 until rowCount).forEach { row ->
+            (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
+                when (val value: Any? = getValueAt(row, col)) {
+                    is ByteArray -> BASE64.encodeToString(value)
+                    else -> value.toString()
+                }
+            }
+            out.println()
+        }
+    }
+}
+
+fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
+    workbook {
+        sheet("Sheet 1") { // TODO: Some way to pipe in a more useful sheet name (or multiple sheets?)
+            row {
+                (0 until columnCount).forEach { col ->
+                    cell(getColumnName(col))
+                }
+            }
+            (0 until rowCount).forEach { row ->
+                row {
+                    (0 until columnCount).forEach { col ->
+                        when (val value = getValueAt(row, col)) {
+                            is Double -> cell(
+                                value,
+                                createCellStyle {
+                                    dataFormat = xssfWorkbook.createDataFormat().getFormat("0.00")
+                                }
+                            )
+
+                            else -> cell(value ?: "")
+                        }
+                    }
+                }
+            }
+        }
+    }.xssfWorkbook.write(fos)
 }
 
 @Suppress("UNCHECKED_CAST")

@@ -13,6 +13,7 @@ import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.exportMenu
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

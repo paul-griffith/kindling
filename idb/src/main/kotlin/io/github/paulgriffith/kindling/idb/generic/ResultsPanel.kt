@@ -1,23 +1,15 @@
 package io.github.paulgriffith.kindling.idb.generic
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.inductiveautomation.ignition.common.util.csv.CSVWriter
-import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
-import io.github.paulgriffith.kindling.utils.selectedOrAllRowIndices
+import io.github.paulgriffith.kindling.utils.exportMenu
 import io.github.paulgriffith.kindling.utils.toFileSizeLabel
 import net.miginfocom.swing.MigLayout
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
-import java.io.File
-import java.util.Base64
-import javax.swing.JButton
-import javax.swing.JFileChooser
 import javax.swing.JLabel
+import javax.swing.JMenuBar
 import javax.swing.JPanel
-import javax.swing.filechooser.FileNameExtensionFilter
 
 class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
     private val table = ReifiedJXTable(QueryResult.Success()).apply {
@@ -39,6 +31,10 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
         isVisible = false
     }
 
+    private val exportMenu = JMenuBar().apply {
+        add(exportMenu { table.model })
+    }
+
     var result: QueryResult? = null
         set(value) {
             when (value) {
@@ -46,8 +42,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
                     table.model = value
                     tableDisplay.isVisible = true
                     errorDisplay.isVisible = false
-                    copy.isEnabled = value.rowCount > 0
-                    save.isEnabled = value.rowCount > 0
+                    exportMenu.isEnabled = value.rowCount > 0
                 }
 
                 is QueryResult.Error -> {
@@ -55,6 +50,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
                     errorDisplay.icon = ERROR_ICON
                     tableDisplay.isVisible = false
                     errorDisplay.isVisible = true
+                    exportMenu.isEnabled = false
                 }
 
                 else -> Unit
@@ -62,68 +58,13 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
             field = value
         }
 
-    private val copy = Action(
-        description = "Copy to Clipboard",
-        icon = FlatSVGIcon("icons/bx-clipboard.svg")
-    ) {
-        val tsv = buildString {
-            table.model.columnNames.joinTo(buffer = this, separator = "\t")
-            appendLine()
-            val rowsToExport = table.selectedOrAllRowIndices()
-            rowsToExport.map { table.model.data[it] }
-                .forEach { line ->
-                    line.joinTo(buffer = this, separator = "\t") { cell ->
-                        when (cell) {
-                            is ByteArray -> BASE64.encodeToString(cell)
-                            else -> cell?.toString().orEmpty()
-                        }
-                    }
-                    appendLine()
-                }
-        }
-
-        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        clipboard.setContents(StringSelection(tsv), null)
-    }
-
-    private val save = Action(
-        description = "Save to File",
-        icon = FlatSVGIcon("icons/bx-save.svg")
-    ) {
-        JFileChooser().apply {
-            fileSelectionMode = JFileChooser.FILES_ONLY
-            fileFilter = FileNameExtensionFilter("CSV File", "csv")
-            selectedFile = File("query results.csv")
-            val save = showSaveDialog(this@ResultsPanel)
-            if (save == JFileChooser.APPROVE_OPTION) {
-                CSVWriter(selectedFile.writer()).use { csv ->
-                    csv.writeNext(table.model.columnNames)
-                    val rowsToExport = table.selectedOrAllRowIndices()
-                    rowsToExport.map { table.model.data[it] }
-                        .forEach { line ->
-                            csv.writeNext(
-                                line.map { cell ->
-                                    when (cell) {
-                                        is ByteArray -> BASE64.encodeToString(cell)
-                                        else -> cell?.toString()
-                                    }
-                                }
-                            )
-                        }
-                }
-            }
-        }
-    }
-
     init {
         add(errorDisplay, "cell 0 0, push, grow")
         add(tableDisplay, "cell 0 0, push, grow")
-        add(JButton(copy), "cell 1 0, top, flowy")
-        add(JButton(save), "cell 1 0")
+        add(exportMenu, "cell 1 0, top, flowy")
     }
 
     companion object {
-        private val BASE64: Base64.Encoder = Base64.getEncoder()
         private val ERROR_ICON = FlatSVGIcon("icons/bx-error.svg").derive(3.0F)
     }
 }
