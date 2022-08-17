@@ -31,12 +31,8 @@ class StateList(data: Map<Thread.State, Int>) :
 
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             text = when (value) {
-                is Thread.State -> {
-                    "$value -  ${data[value]} (${percentages.getValue(value)})"
-                }
-                else -> {
-                    value.toString()
-                }
+                is Thread.State -> "$value -  ${data[value]} (${percentages.getValue(value)})"
+                else -> value.toString()
             }
         }
 

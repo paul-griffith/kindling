@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
@@ -16,7 +17,6 @@ import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.serialization.ExperimentalSerializationApi
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
@@ -28,32 +28,36 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import kotlin.io.path.extension
 import kotlin.io.path.name
 
-@OptIn(ExperimentalSerializationApi::class)
 class ThreadView(private val path: Path) : ToolPanel() {
-    private val threadDump = if (path.toString().lowercase().endsWith(".json")) ThreadDump.parseJSON(path) else ThreadDump.parseLegacy(path)
+    private val threadDump = if (path.extension.equals("json", ignoreCase = true)) {
+        ThreadDump.fromJson(path)
+    } else {
+        ThreadDump.fromString(path)
+    }
 
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
         setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
     }
 
-    private val poolList = PoolList(threadDump.threads.groupingBy(Thread::pool).eachCount())
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
     private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
+    private val poolList = PoolList(threadDump.threads.groupingBy(Thread::pool).eachCount().filterValues { it > 1 })
 
     private val searchField = JXSearchField("Search")
 
     private val filters: List<(thread: Thread) -> Boolean> = buildList {
         add { thread ->
-            thread.pool in poolList.checkBoxListSelectedValues
-        }
-        add { thread ->
             thread.state in stateList.checkBoxListSelectedValues
         }
         add { thread ->
             thread.system in systemList.checkBoxListSelectedValues
+        }
+        add { thread ->
+            thread.pool in poolList.checkBoxListSelectedValues
         }
         add { thread ->
             val query = searchField.text
@@ -92,23 +96,9 @@ class ThreadView(private val path: Path) : ToolPanel() {
             }
         }
 
-        poolList.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
-                updateData()
-            }
-        }
-
-        systemList.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
-                updateData()
-            }
-        }
-
-        stateList.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
-                updateData()
-            }
-        }
+        stateList.checkBoxListSelectionModel.bind()
+        systemList.checkBoxListSelectionModel.bind()
+        poolList.checkBoxListSelectionModel.bind()
 
         searchField.addActionListener {
             updateData()
@@ -128,10 +118,10 @@ class ThreadView(private val path: Path) : ToolPanel() {
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill")).apply {
-                    add(FlatScrollPane(stateList), "growx 100, growy 0, wmin 200, height 100!")
-                    add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
-                    add(FlatScrollPane(systemList), "growx 100, wrap, growy 0, wmin 200, height 100!")
-                    add(FlatScrollPane(poolList), "growx 100, push, grow 1, wmin 200, height 500")
+                    add(FlatScrollPane(stateList), "grow, w 200::25%, hmin 100")
+                    add(FlatScrollPane(mainTable), "push, grow 200, spany 3, wrap")
+                    add(FlatScrollPane(systemList), "grow, w 200::25%, hmin 100, wrap")
+                    add(FlatScrollPane(poolList), "grow, w 200::25%, hmin 100")
                 },
                 details
             ).apply {
@@ -184,6 +174,14 @@ class ThreadView(private val path: Path) : ToolPanel() {
         menu.add(
             exportMenu { mainTable.model }
         )
+    }
+
+    private fun CheckBoxListSelectionModel.bind() {
+        addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) {
+                updateData()
+            }
+        }
     }
 
     companion object {

@@ -19,28 +19,22 @@ data class Thread(
     val lockedSynchronizers: List<String> = emptyList(),
     @SerialName("waitingFor")
     val blocker: Blocker? = null,
-    val stacktrace: List<String> = emptyList(),
+    val stacktrace: List<String> = emptyList()
 ) {
     var marked: Boolean = false
-    val pool: String = with(name) {
-        val temp = name.split("[")[0].split("@")[0].split("-")
-        if (temp.last().all { c: Char -> c.isDigit() }) {
-            temp.subList(0, temp.size - 1).joinToString("-")
-        } else {
-            temp.joinToString("-")
-        }
-    }
+
+    val pool: String = extractPool(name)
 
     @Serializable
     data class Monitors(
         val lock: String,
-        val frame: String,
+        val frame: String
     )
 
     @Serializable
     data class Blocker(
         val lock: String,
-        val owner: Int? = null,
+        val owner: Int? = null
     ) {
         override fun toString(): String = if (owner != null) {
             "$lock (owned by $owner)"
@@ -48,8 +42,9 @@ data class Thread(
             lock
         }
     }
+
     companion object {
-        fun createFromLegacyWebPage(trace: MutableList<String>): Thread {
+        fun fromWeb(trace: MutableList<String>): Thread {
             val threadParts = trace[0].split(" [", "] id=", ", (", ")")
             val isDaemon = threadParts[0] != "Thread"
             val name = threadParts[1]
@@ -60,7 +55,7 @@ data class Thread(
             var blocker: Blocker? = null
             val stacktrace: MutableList<String> = mutableListOf()
             for (i in 1 until trace.size) {
-                when(trace[i].split(":")[0]) {
+                when (trace[i].split(":")[0]) {
                     "waiting for" -> {
                         val waiting = trace[i].split("waiting for: ", " (owned by ", ")")
                         blocker = if (waiting.size > 2) {
@@ -69,20 +64,47 @@ data class Thread(
                             Blocker(lock = waiting[1])
                         }
                     }
+
                     "owns synchronizer" -> lockedSynchronizers.add(trace[i].split("owns synchronizer: ")[1])
                     "owns monitor" -> lockedMonitors.add(Monitors(lock = trace[i].split("owns monitor: ")[1], frame = ""))
                     else -> stacktrace.add(trace[i])
                 }
             }
-            return Thread(id.toInt(), name, State.valueOf(state), isDaemon, null, null, null, lockedMonitors, lockedSynchronizers, blocker, stacktrace)
+            return Thread(
+                id = id.toInt(),
+                name = name,
+                state = State.valueOf(state),
+                isDaemon = isDaemon,
+                lockedMonitors = lockedMonitors,
+                lockedSynchronizers = lockedSynchronizers,
+                blocker = blocker,
+                stacktrace = stacktrace
+            )
         }
 
-        fun createFromLegacyScript(trace: MutableList<String>): Thread {
+        fun fromScript(trace: MutableList<String>): Thread {
             val name = trace[0].replace("\"", "")
             val cpu = trace[1].split("CPU: ", "%")[1].toDouble()
             val state = trace[2].replace("java.lang.Thread.State: ", "")
-            val stacktrace: List<String> = if (trace.size > 3) { trace.slice(3 until trace.size) } else { emptyList() }
-            return Thread(0, name, State.valueOf(state), false, null, null, cpu, emptyList(), emptyList(), null, stacktrace)
+            val stacktrace = if (trace.size > 3) {
+                trace.slice(3 until trace.size)
+            } else {
+                emptyList()
+            }
+            return Thread(
+                id = 0,
+                name = name,
+                state = State.valueOf(state),
+                isDaemon = false,
+                cpuUsage = cpu,
+                stacktrace = stacktrace
+            )
+        }
+
+        private val regex = "-\\d+\$".toPattern()
+
+        internal fun extractPool(name: String): String {
+            return regex.matcher(name).replaceAll("")
         }
     }
 }
