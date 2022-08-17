@@ -17,8 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
@@ -30,24 +28,27 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
-import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
 @OptIn(ExperimentalSerializationApi::class)
 class ThreadView(private val path: Path) : ToolPanel() {
-    private val threadDump = JSON.decodeFromStream<ThreadDump>(path.inputStream())
+    private val threadDump = if (path.toString().lowercase().endsWith(".json")) ThreadDump.parseJSON(path) else ThreadDump.parseLegacy(path)
 
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
         setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
     }
 
+    private val poolList = PoolList(threadDump.threads.groupingBy(Thread::pool).eachCount())
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
     private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
 
     private val searchField = JXSearchField("Search")
 
     private val filters: List<(thread: Thread) -> Boolean> = buildList {
+        add { thread ->
+            thread.pool in poolList.checkBoxListSelectedValues
+        }
         add { thread ->
             thread.state in stateList.checkBoxListSelectedValues
         }
@@ -91,6 +92,12 @@ class ThreadView(private val path: Path) : ToolPanel() {
             }
         }
 
+        poolList.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
+            }
+        }
+
         systemList.checkBoxListSelectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 updateData()
@@ -121,9 +128,10 @@ class ThreadView(private val path: Path) : ToolPanel() {
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill")).apply {
-                    add(FlatScrollPane(stateList), "push, grow, width 200!")
-                    add(FlatScrollPane(mainTable), "wrap, spany 2, push, grow")
-                    add(FlatScrollPane(systemList), "push, grow, width 200!")
+                    add(FlatScrollPane(stateList), "growx 100, growy 0, wmin 200, height 100!")
+                    add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
+                    add(FlatScrollPane(systemList), "growx 100, wrap, growy 0, wmin 200, height 100!")
+                    add(FlatScrollPane(poolList), "growx 100, push, grow 1, wmin 200, height 500")
                 },
                 details
             ).apply {
@@ -180,19 +188,14 @@ class ThreadView(private val path: Path) : ToolPanel() {
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
-
-        internal val JSON = Json {
-            ignoreUnknownKeys = true
-            prettyPrint = true
-        }
     }
 }
 
 object ThreadViewer : Tool {
     override val title = "Thread Dump"
-    override val description = "Thread dump .json files"
+    override val description = "Thread dump .json or .txt files"
     override val icon = FlatSVGIcon("icons/bx-chip.svg")
-    override val extensions = listOf("json")
+    override val extensions = listOf("json", "txt")
     override fun open(path: Path): ToolPanel = ThreadView(path)
 }
 
