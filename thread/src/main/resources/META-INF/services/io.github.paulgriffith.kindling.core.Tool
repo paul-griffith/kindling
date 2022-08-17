@@ -1,1 +1,2 @@
 io.github.paulgriffith.kindling.thread.ThreadViewerProxy
+io.github.paulgriffith.kindling.thread.MultiThreadViewerProxy
