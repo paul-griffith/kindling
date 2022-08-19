@@ -7,12 +7,6 @@ import java.io.File
 import java.nio.file.Path
 import javax.swing.filechooser.FileFilter
 
-class ToolOpeningException(message: String, cause: Throwable) : Exception(message, cause)
-
-interface MultiTool : Tool {
-    fun open(paths: List<Path>): ToolPanel
-}
-
 interface Tool {
     val title: String
     val description: String
@@ -39,3 +33,17 @@ interface Tool {
         }
     }
 }
+
+interface MultiTool : Tool {
+    fun open(paths: List<Path>): ToolPanel
+
+    override fun open(path: Path): ToolPanel = open(listOf(path))
+}
+
+interface ClipboardTool : Tool {
+    fun open(data: String): ToolPanel
+}
+
+interface MultiClipboardTool : MultiTool, ClipboardTool // "union" interface for usage downstream
+
+class ToolOpeningException(message: String, cause: Throwable) : Exception(message, cause)

@@ -1,18 +1,15 @@
 package io.github.paulgriffith.kindling.thread.model
 
+import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
-import java.io.BufferedReader
 import java.io.InputStream
-import java.nio.file.Path
-import kotlin.io.path.inputStream
 import java.lang.Thread.State as ThreadState
 
 @Serializable
-data class ThreadDump(
+data class ThreadDump internal constructor(
     val version: String,
     val threads: List<Thread>
 ) {
@@ -21,32 +18,30 @@ data class ThreadDump(
             ignoreUnknownKeys = true
         }
 
-        fun fromJson(path: Path): ThreadDump = fromModernInputStream(path.inputStream())
-        fun fromString(path: Path): ThreadDump = fromLegacyInputStream(path.inputStream())
+        private val logger = getLogger<ThreadDump>()
 
-        @OptIn(ExperimentalSerializationApi::class)
-        internal fun fromModernInputStream(stream: InputStream): ThreadDump {
-            return JSON.decodeFromStream(serializer(), stream)
-        }
+        fun fromStream(stream: InputStream): ThreadDump? {
+            val text = stream.reader().readText()
+            return try {
+                JSON.decodeFromString(serializer(), text)
+            } catch (ex: SerializationException) {
+                logger.debug("Not a JSON string?", ex)
 
-        private val versionPattern = """[78]\.\d\.\d\d?.*""".toRegex()
+                val lines = text.lines()
+                require(lines.size > 2) { "Not a fully formed thread dump" }
+                val firstLine = lines.first()
 
-        internal fun fromLegacyInputStream(stream: InputStream): ThreadDump {
-            stream.bufferedReader().use { reader ->
-                val firstLine = reader.readLine()
-                val version = versionPattern.find(firstLine)?.value.orEmpty()
-
-                reader.readLine()
-
-                return ThreadDump(
-                    version = version,
+                ThreadDump(
+                    version = versionPattern.find(firstLine)?.value ?: firstLine,
                     threads = when {
-                        firstLine.contains(":") -> parseScript(reader)
-                        else -> parseWebPage(reader)
+                        firstLine.contains(":") -> parseScript(text)
+                        else -> parseWebPage(lines.subList(2, lines.size))
                     }
                 )
             }
         }
+
+        private val versionPattern = """[78]\.\d\.\d\d?.*""".toRegex()
 
         private val scriptThreadRegex = """
             "(?<name>.*)"
@@ -55,8 +50,8 @@ data class ThreadDump(
             \s*(?<stack>[\S\s]+?)[\r\n]*
             """.toRegex(RegexOption.COMMENTS)
 
-        private fun parseScript(reader: BufferedReader): List<Thread> {
-            return scriptThreadRegex.findAll(reader.readText()).map { matcher ->
+        private fun parseScript(dump: String): List<Thread> {
+            return scriptThreadRegex.findAll(dump).map { matcher ->
                 val name by matcher.groups
                 val cpu by matcher.groups
                 val state by matcher.groups
@@ -73,10 +68,13 @@ data class ThreadDump(
             }.toList()
         }
 
-        private fun parseWebPage(reader: BufferedReader): List<Thread> {
+        private fun parseWebPage(lines: List<String>): List<Thread> {
             val threads = mutableListOf<Thread>()
             val buffer = mutableListOf<String>()
-            reader.forEachLine { line ->
+            for (line in lines) {
+                if (line.isEmpty()) {
+                    continue
+                }
                 if ((line.startsWith("Thread") || line.startsWith("Daemon")) && buffer.isNotEmpty()) {
                     threads += Thread.fromWeb(buffer)
                     buffer.clear()

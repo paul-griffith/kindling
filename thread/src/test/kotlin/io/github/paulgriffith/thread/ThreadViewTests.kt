@@ -10,7 +10,7 @@ import io.kotest.matchers.shouldBe
 
 class ThreadViewTests : FunSpec({
     test("Thread JSON deserialization") {
-        ThreadDump.fromModernInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("threadDump.json")))
+        ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("threadDump.json")!!)!!
             .asClue { (version, threads) ->
                 version shouldBe "Dev"
                 threads.size shouldBe 2
@@ -18,14 +18,14 @@ class ThreadViewTests : FunSpec({
     }
     context("Legacy parsing") {
         test("From webpage") {
-            ThreadDump.fromLegacyInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyWebThreadDump.txt")))
+            ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("legacyWebThreadDump.txt")!!)!!
                 .asClue { (version, threads) ->
                     version shouldBe "7.9.14 (b2020042813)"
                     threads.size shouldBe 4
                 }
         }
         test("From scripting") {
-            ThreadDump.fromLegacyInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyScriptThreadDump.txt")))
+            ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("legacyScriptThreadDump.txt")!!)!!
                 .asClue { (version, threads) ->
                     version shouldBe "8.1.1 (b2020120808)"
                     threads.size shouldBe 3

@@ -5,7 +5,6 @@ import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
-import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -205,7 +204,7 @@ class LogPanel(
 
         init {
             val delta = Duration.between(rawData.first().timestamp, rawData.last().timestamp)
-            val slice = delta.dividedBy(rawData.size.toLong() / 60)
+            val slice = delta.dividedBy((rawData.size.toLong() / 60).coerceAtLeast(1))
             val insertionPoint = DURATIONS.binarySearch { it.compareTo(slice) }
             val aggregate = DURATIONS[insertionPoint.absoluteValue - 1]
 
@@ -265,8 +264,6 @@ class LogPanel(
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
-
-        val LOGGER = getLogger<LogPanel>()
 
         private val DURATIONS = listOf(
             Duration.ofMillis(100),

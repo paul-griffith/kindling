@@ -2,9 +2,9 @@ package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxListSelectionModel
+import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
-import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
@@ -20,7 +20,11 @@ import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
+import java.io.File
+import java.io.InputStream
 import java.nio.file.Path
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JMenuBar
@@ -28,15 +32,15 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
-import kotlin.io.path.extension
+import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
-class ThreadView(private val path: Path) : ToolPanel() {
-    private val threadDump = if (path.extension.equals("json", ignoreCase = true)) {
-        ThreadDump.fromJson(path)
-    } else {
-        ThreadDump.fromString(path)
-    }
+class ThreadView(
+    private val tabName: String,
+    data: InputStream,
+    private val fromFile: Boolean
+) : ToolPanel() {
+    private val threadDump: ThreadDump = requireNotNull(ThreadDump.fromStream(data))
 
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
@@ -82,8 +86,8 @@ class ThreadView(private val path: Path) : ToolPanel() {
     }
 
     init {
-        name = path.name
-        toolTipText = path.toString()
+        name = tabName
+        toolTipText = tabName
 
         mainTable.selectionModel.apply {
             addListSelectionListener {
@@ -166,11 +170,13 @@ class ThreadView(private val path: Path) : ToolPanel() {
 
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.addSeparator()
-        menu.add(
-            Action(name = "Open in External Editor") {
-                Desktop.getDesktop().open(path.toFile())
-            }
-        )
+        if (fromFile) {
+            menu.add(
+                Action(name = "Open in External Editor") {
+                    Desktop.getDesktop().open(File(tabName))
+                }
+            )
+        }
         menu.add(
             exportMenu { mainTable.model }
         )
@@ -189,12 +195,27 @@ class ThreadView(private val path: Path) : ToolPanel() {
     }
 }
 
-object ThreadViewer : Tool {
+object ThreadViewer : ClipboardTool {
     override val title = "Thread Dump"
     override val description = "Thread dump .json or .txt files"
     override val icon = FlatSVGIcon("icons/bx-chip.svg")
     override val extensions = listOf("json", "txt")
-    override fun open(path: Path): ToolPanel = ThreadView(path)
+
+    override fun open(path: Path): ToolPanel {
+        return ThreadView(
+            tabName = path.name,
+            data = path.inputStream(),
+            fromFile = true
+        )
+    }
+
+    override fun open(data: String): ToolPanel {
+        return ThreadView(
+            tabName = "Paste at ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))}",
+            data = data.byteInputStream(),
+            fromFile = false
+        )
+    }
 }
 
-class ThreadViewerProxy : Tool by ThreadViewer
+class ThreadViewerProxy : ClipboardTool by ThreadViewer
