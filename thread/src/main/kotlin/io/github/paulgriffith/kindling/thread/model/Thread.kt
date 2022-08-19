@@ -82,25 +82,6 @@ data class Thread(
             )
         }
 
-        fun fromScript(trace: MutableList<String>): Thread {
-            val name = trace[0].replace("\"", "")
-            val cpu = trace[1].split("CPU: ", "%")[1].toDouble()
-            val state = trace[2].replace("java.lang.Thread.State: ", "")
-            val stacktrace = if (trace.size > 3) {
-                trace.slice(3 until trace.size)
-            } else {
-                emptyList()
-            }
-            return Thread(
-                id = 0,
-                name = name,
-                state = State.valueOf(state),
-                isDaemon = false,
-                cpuUsage = cpu,
-                stacktrace = stacktrace
-            )
-        }
-
         private val regex = "-\\d+\$".toPattern()
 
         internal fun extractPool(name: String): String {
