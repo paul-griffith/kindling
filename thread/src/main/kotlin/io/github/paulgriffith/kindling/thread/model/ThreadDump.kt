@@ -29,7 +29,6 @@ data class ThreadDump(
         internal fun fromInputStream(stream: InputStream): ThreadDump {
             stream.bufferedReader().use { reader ->
                 val firstLine = reader.readLine()
-                val threads: List<Thread>
                 val version = Pattern.compile("[78]\\.\\d\\.\\d\\d?.*").matcher(firstLine).run {
                     find()
                     group()
@@ -37,13 +36,12 @@ data class ThreadDump(
 
                 reader.readLine()
 
-                if (firstLine.contains(":")) {
-                    threads = parseScript(reader)
+                val threads: List<Thread> = if (firstLine.contains(":")) {
+                    parseScript(reader)
                 } else {
-                    return parseWebPage(firstLine, reader)
+                    parseWebPage(reader)
                 }
                 return ThreadDump(version, threads)
-
             }
         }
 
@@ -54,14 +52,14 @@ data class ThreadDump(
                                     "CPU:\\s(\\d{1,3}\\.\\d{2})%" +
                                     "[\\s\r\n]*" +
                                     "java\\.lang\\.Thread\\.State:\\s(\\w+_?\\w+)" +
-                                    "\r\n" +
-                                    "(\\s{6}[\\S\\s]+?)\r\n\r\n"
+                                    "[\r\n\\s]*" +
+                                    "([\\S\\s]+?)[\r\n]*"
             val matcher: Matcher = Pattern.compile(scriptThreadRegex).matcher(reader.readText())
             val threads = buildList<Thread> {
                 while (matcher.find()) {
                     add(
                         Thread(
-                            id = 0,
+                            id = matcher.group(1).hashCode(),
                             name = matcher.group(1),
                             cpuUsage = matcher.group(2).toDouble(),
                             state = java.lang.Thread.State.valueOf(matcher.group(3)),
@@ -74,10 +72,7 @@ data class ThreadDump(
             return threads
         }
 
-        private fun parseWebPage(firstLine: String, reader: BufferedReader): ThreadDump {
-            val version: String = firstLine.split("Ignition v")[1]
-            reader.readLine()
-
+        private fun parseWebPage(reader: BufferedReader): List<Thread> {
             val threads = mutableListOf<Thread>()
             val buffer = mutableListOf<String>()
             reader.forEachLine { line ->
@@ -89,7 +84,7 @@ data class ThreadDump(
             }
             threads += Thread.fromWeb(buffer)
 
-            return ThreadDump(version, threads)
+            return threads
         }
     }
 }
