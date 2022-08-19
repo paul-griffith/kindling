@@ -84,6 +84,16 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             },
             value = Thread::system
         )
+        val Pool by column(
+            column = {
+                isVisible = false
+                minWidth = 75
+                cellRenderer = DefaultTableRenderer { value ->
+                    (value as? String?) ?: "(No Pool)"
+                }
+            },
+            value = Thread::pool
+        )
         val Blocker by column(
             column = {
                 cellRenderer = DefaultTableRenderer {

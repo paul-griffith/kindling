@@ -23,7 +23,7 @@ data class Thread(
 ) {
     var marked: Boolean = false
 
-    val pool: String = extractPool(name)
+    val pool: String? = extractPool(name)
 
     @Serializable
     data class Monitors(
@@ -101,10 +101,10 @@ data class Thread(
             )
         }
 
-        private val regex = "-\\d+\$".toPattern()
+        private val regex = "(?<pool>.+)-\\d+\$".toRegex()
 
-        internal fun extractPool(name: String): String {
-            return regex.matcher(name).replaceAll("")
+        internal fun extractPool(name: String): String? {
+            return regex.find(name)?.groups?.get("pool")?.value
         }
     }
 }

@@ -7,19 +7,16 @@ import java.text.DecimalFormat
 import javax.swing.AbstractListModel
 import javax.swing.ListModel
 
-class PoolModel(private val values: List<String>) : AbstractListModel<Any>() {
+class PoolModel(private val values: List<String?>) : AbstractListModel<Any>() {
     override fun getSize(): Int = values.size + 1
-    override fun getElementAt(index: Int): Any {
-        return if (index == 0) {
-            CheckBoxList.ALL_ENTRY
-        } else {
-            values[index - 1]
-        }
+    override fun getElementAt(index: Int): Any? = when (index) {
+        0 -> CheckBoxList.ALL_ENTRY
+        else -> values[index - 1]
     }
 }
 
-class PoolList(data: Map<String, Int>) :
-    CheckBoxList(PoolModel(data.entries.sortedByDescending { it.value }.map { it.key })) {
+class PoolList(data: Map<String?, Int>) :
+    CheckBoxList(PoolModel(data.entries.sortedWith(compareByDescending(nullsFirst()) { it.value }).map { it.key })) {
     init {
         selectionModel = NoSelectionModel()
 
@@ -29,9 +26,10 @@ class PoolList(data: Map<String, Int>) :
             DecimalFormat.getPercentInstance().format(percentage)
         }
 
-        cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
+        cellRenderer = listCellRenderer<Any?> { _, value, _, _, _ ->
             text = when (value) {
                 is String -> "$value - ${data[value]} (${percentages.getValue(value)})"
+                null -> "(No Pool) - ${data[null]} (${percentages.getValue(null)})"
                 else -> value.toString()
             }
         }

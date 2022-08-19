@@ -39,14 +39,14 @@ class ThreadViewTests : FunSpec({
 
     test("Thread Pool Parsing Tests") {
         forAll(
-            row("gateway-logging-sqlite-appender", "gateway-logging-sqlite-appender"),
+            row("gateway-logging-sqlite-appender", null),
             row("gateway-performance-metric-history-1", "gateway-performance-metric-history"),
             row("gateway-performance-metric-history-2", "gateway-performance-metric-history"),
             row("gateway-shared-exec-engine-11", "gateway-shared-exec-engine"),
-            row("gateway-storeforward-pipeline[postgres]-engine[PrimarySFEngine]", "gateway-storeforward-pipeline[postgres]-engine[PrimarySFEngine]"),
+            row("gateway-storeforward-pipeline[postgres]-engine[PrimarySFEngine]", null),
             row("gateway.tags.subscriptionmodel-1", "gateway.tags.subscriptionmodel"),
-            row("HSQLDB Timer @32c91059", "HSQLDB Timer @32c91059"),
-            row("HttpClient-1-SelectorManager", "HttpClient-1-SelectorManager"),
+            row("HSQLDB Timer @32c91059", null),
+            row("HttpClient-1-SelectorManager", null),
             row("HttpClient@25d4330e-1129", "HttpClient@25d4330e"),
             row("HttpClient@25d4330e-1315", "HttpClient@25d4330e"),
             row("milo-netty-event-loop-0", "milo-netty-event-loop"),
@@ -56,7 +56,7 @@ class ThreadViewTests : FunSpec({
             row("webserver-1114", "webserver"),
             row( // maybe someday
                 "webserver-43-acceptor-0@25cd7918-ServerConnector@1d7f7be7{SSL, (ssl, http/1.1)}{0.0.0.0:8060}",
-                "webserver-43-acceptor-0@25cd7918-ServerConnector@1d7f7be7{SSL, (ssl, http/1.1)}{0.0.0.0:8060}"
+                null
             ),
             row("AsyncSocketIOSession[I/O]-1", "AsyncSocketIOSession[I/O]")
         ) { name, pool ->

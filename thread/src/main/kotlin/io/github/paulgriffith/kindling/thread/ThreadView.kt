@@ -45,7 +45,7 @@ class ThreadView(private val path: Path) : ToolPanel() {
 
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
     private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
-    private val poolList = PoolList(threadDump.threads.groupingBy(Thread::pool).eachCount().filterValues { it > 1 })
+    private val poolList = PoolList(threadDump.threads.groupingBy(Thread::pool).eachCount())
 
     private val searchField = JXSearchField("Search")
 
