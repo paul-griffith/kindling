@@ -7,14 +7,10 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.data.blocking.forAll
 import io.kotest.data.row
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.decodeFromStream
 
-@OptIn(ExperimentalSerializationApi::class)
 class ThreadViewTests : FunSpec({
     test("Thread JSON deserialization") {
-        val stream = requireNotNull(ThreadViewTests::class.java.getResourceAsStream("threadDump.json"))
-        ThreadDump.JSON.decodeFromStream(ThreadDump.serializer(), stream)
+        ThreadDump.fromModernInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("threadDump.json")))
             .asClue { (version, threads) ->
                 version shouldBe "Dev"
                 threads.size shouldBe 2
@@ -22,14 +18,14 @@ class ThreadViewTests : FunSpec({
     }
     context("Legacy parsing") {
         test("From webpage") {
-            ThreadDump.fromInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyWebThreadDump.txt")))
+            ThreadDump.fromLegacyInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyWebThreadDump.txt")))
                 .asClue { (version, threads) ->
                     version shouldBe "7.9.14 (b2020042813)"
                     threads.size shouldBe 4
                 }
         }
         test("From scripting") {
-            ThreadDump.fromInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyScriptThreadDump.txt")))
+            ThreadDump.fromLegacyInputStream(requireNotNull(ThreadViewTests::class.java.getResourceAsStream("legacyScriptThreadDump.txt")))
                 .asClue { (version, threads) ->
                     version shouldBe "8.1.1 (b2020120808)"
                     threads.size shouldBe 3

@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.thread.model
 
+import io.github.paulgriffith.kindling.utils.getValue
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -8,8 +9,7 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.inputStream
-import java.util.regex.Matcher
-import java.util.regex.Pattern
+import java.lang.Thread.State as ThreadState
 
 @Serializable
 data class ThreadDump(
@@ -17,59 +17,60 @@ data class ThreadDump(
     val threads: List<Thread>
 ) {
     companion object {
-        val JSON = Json {
+        private val JSON = Json {
             ignoreUnknownKeys = true
-            prettyPrint = true
         }
 
-        @OptIn(ExperimentalSerializationApi::class)
-        fun fromJson(path: Path): ThreadDump = JSON.decodeFromStream(path.inputStream())
-        fun fromString(path: Path): ThreadDump = fromInputStream(path.inputStream())
+        fun fromJson(path: Path): ThreadDump = fromModernInputStream(path.inputStream())
+        fun fromString(path: Path): ThreadDump = fromLegacyInputStream(path.inputStream())
 
-        internal fun fromInputStream(stream: InputStream): ThreadDump {
+        @OptIn(ExperimentalSerializationApi::class)
+        internal fun fromModernInputStream(stream: InputStream): ThreadDump {
+            return JSON.decodeFromStream(serializer(), stream)
+        }
+
+        private val versionPattern = """[78]\.\d\.\d\d?.*""".toRegex()
+
+        internal fun fromLegacyInputStream(stream: InputStream): ThreadDump {
             stream.bufferedReader().use { reader ->
                 val firstLine = reader.readLine()
-                val version = Pattern.compile("[78]\\.\\d\\.\\d\\d?.*").matcher(firstLine).run {
-                    find()
-                    group()
-                }
+                val version = versionPattern.find(firstLine)?.value.orEmpty()
 
                 reader.readLine()
 
-                val threads: List<Thread> = if (firstLine.contains(":")) {
-                    parseScript(reader)
-                } else {
-                    parseWebPage(reader)
-                }
-                return ThreadDump(version, threads)
+                return ThreadDump(
+                    version = version,
+                    threads = when {
+                        firstLine.contains(":") -> parseScript(reader)
+                        else -> parseWebPage(reader)
+                    }
+                )
             }
         }
 
-        // TODO these two functions are very similar, the logic could potentially be combined
+        private val scriptThreadRegex = """
+            "(?<name>.*)"
+            \s*CPU:\s(?<cpu>\d{1,3}\.\d{2})%
+            \s*java\.lang\.Thread\.State:\s(?<state>\w+_?\w+)
+            \s*(?<stack>[\S\s]+?)[\r\n]*
+            """.toRegex(RegexOption.COMMENTS)
+
         private fun parseScript(reader: BufferedReader): List<Thread> {
-            val scriptThreadRegex = "\"(.*)\"" +
-                                    "[\\s\r\n]*" +
-                                    "CPU:\\s(\\d{1,3}\\.\\d{2})%" +
-                                    "[\\s\r\n]*" +
-                                    "java\\.lang\\.Thread\\.State:\\s(\\w+_?\\w+)" +
-                                    "[\r\n\\s]*" +
-                                    "([\\S\\s]+?)[\r\n]*"
-            val matcher: Matcher = Pattern.compile(scriptThreadRegex).matcher(reader.readText())
-            val threads = buildList<Thread> {
-                while (matcher.find()) {
-                    add(
-                        Thread(
-                            id = matcher.group(1).hashCode(),
-                            name = matcher.group(1),
-                            cpuUsage = matcher.group(2).toDouble(),
-                            state = java.lang.Thread.State.valueOf(matcher.group(3)),
-                            isDaemon = false,
-                            stacktrace = matcher.group(4).split("\n").map { line -> line.trim() }
-                        )
-                    )
-                }
-            }
-            return threads
+            return scriptThreadRegex.findAll(reader.readText()).map { matcher ->
+                val name by matcher.groups
+                val cpu by matcher.groups
+                val state by matcher.groups
+                val stack by matcher.groups
+
+                Thread(
+                    id = name.value.hashCode(),
+                    name = name.value,
+                    cpuUsage = cpu.value.toDouble(),
+                    state = ThreadState.valueOf(state.value),
+                    isDaemon = false,
+                    stacktrace = stack.value.lines().map(String::trim)
+                )
+            }.toList()
         }
 
         private fun parseWebPage(reader: BufferedReader): List<Thread> {
