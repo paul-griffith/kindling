@@ -4,10 +4,12 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
+import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
+import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.internal.FileTransferHandler
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.DARK_THEME
@@ -26,6 +28,7 @@ import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.Image
 import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import java.awt.desktop.QuitStrategy
 import java.awt.event.ItemEvent
 import java.io.File
@@ -82,6 +85,27 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
             }
         )
         add(
+            JMenu("Paste").apply {
+                for (clipboardTool in Tool.tools.filterIsInstance<ClipboardTool>()) {
+                    add(
+                        Action(
+                            name = "Paste ${clipboardTool.title}"
+                        ) {
+                            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                            if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
+                                val clipString = clipboard.getData(DataFlavor.stringFlavor) as String
+                                openOrError(clipboardTool.title, "clipboard data") {
+                                    clipboardTool.open(clipString)
+                                }
+                            } else {
+                                println("No string data found on clipboard")
+                            }
+                        }
+                    )
+                }
+            }
+        )
+        add(
             JMenu("Theme").apply {
                 val group = ButtonGroup()
                 add(
@@ -122,13 +146,9 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     /**
      * Opens a path in a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */
-    private fun Tool.openOrError(vararg files: File) {
+    private fun openOrError(title: String, description: String, openFunction: () -> ToolPanel) {
         runCatching {
-            val toolPanel = if (this is MultiTool) {
-                open(files.map(File::toPath))
-            } else {
-                open(files.single().toPath())
-            }
+            val toolPanel = openFunction()
             tabs.addTab(
                 toolPanel.name.truncate(),
                 toolPanel.icon,
@@ -136,7 +156,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 toolPanel.toolTipText
             )
         }.getOrElse { ex ->
-            LOGGER.error("Failed to open ${files.joinToString()} as a $title", ex)
+            LOGGER.error("Failed to open $description as a $title", ex)
             tabs.addTab(
                 "ERROR",
                 FlatSVGIcon("icons/bx-error.svg"),
@@ -147,9 +167,9 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             if (ex is ToolOpeningException) {
                                 appendLine(ex.message)
                             } else {
-                                appendLine("Error opening ${files.joinToString()}: ${ex.message}")
+                                appendLine("Error opening $description: ${ex.message}")
                             }
-                            append(ex.cause?.stackTraceToString().orEmpty())
+                            append((ex.cause ?: ex).stackTraceToString())
                         }
                     }
                 )
@@ -158,19 +178,27 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         tabs.selectedIndex = tabs.tabCount - 1
     }
 
-    fun openFiles(files: List<File>, tool: Tool? = null) = if (tool is MultiTool) {
-        tool.openOrError(*files.toTypedArray())
-    } else {
-        files.groupBy { tool ?: Tool[it] }
-            .forEach { (tool, filesByTool) ->
-                if (tool is MultiTool) {
-                    tool.openOrError(*filesByTool.toTypedArray())
-                } else {
-                    filesByTool.forEach { file ->
-                        tool.openOrError(file)
+    fun openFiles(files: List<File>, tool: Tool? = null) {
+        if (tool is MultiTool) {
+            openOrError(tool.title, files.joinToString()) {
+                tool.open(files.map(File::toPath))
+            }
+        } else {
+            files.groupBy { tool ?: Tool[it] }
+                .forEach { (tool, filesByTool) ->
+                    if (tool is MultiTool) {
+                        openOrError(tool.title, filesByTool.joinToString()) {
+                            tool.open(filesByTool.map(File::toPath))
+                        }
+                    } else {
+                        filesByTool.forEach { file ->
+                            openOrError(tool.title, file.toString()) {
+                                tool.open(file.toPath())
+                            }
+                        }
                     }
                 }
-            }
+        }
     }
 
     init {
