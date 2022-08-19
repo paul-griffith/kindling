@@ -5,6 +5,7 @@ import com.formdev.flatlaf.extras.components.FlatTextPane
 import io.github.paulgriffith.kindling.internal.DetailsIcon
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
+import io.github.paulgriffith.kindling.utils.escapeHtml
 import net.miginfocom.swing.MigLayout
 import java.awt.Component
 import java.awt.EventQueue
@@ -79,10 +80,10 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                 append("</b>")
                 if (event.message != null) {
                     append("<br>")
-                    append(event.message)
+                    append(event.message.escapeHtml())
                 }
                 if (event.body.isNotEmpty()) {
-                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
+                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>", transform = String::escapeHtml)
                 } else {
                     append("<br>")
                 }

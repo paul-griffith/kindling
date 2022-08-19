@@ -146,3 +146,15 @@ fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
 inline fun <reified S> loadService(): ServiceLoader<S> {
     return ServiceLoader.load(S::class.java)
 }
+
+fun String.escapeHtml(): String {
+    return buildString {
+        for (char in this@escapeHtml) {
+            when (char) {
+                '>' -> append("&gt;")
+                '<' -> append("&lt;")
+                else -> append(char)
+            }
+        }
+    }
+}
