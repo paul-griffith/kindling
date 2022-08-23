@@ -66,6 +66,9 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         }
     }
 
+    private val tabs = TabPanel()
+    private val openButton = JButton(openAction)
+
     private val menuBar = JMenuBar().apply {
         add(
             JMenu("File").apply {
@@ -141,12 +144,17 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         )
     }
 
-    private val tabs = TabPanel()
-
     /**
      * Opens a path in a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */
     private fun openOrError(title: String, description: String, openFunction: () -> ToolPanel) {
+        synchronized(treeLock) {
+            val child = getComponent(0)
+            if (child == openButton) {
+                remove(openButton)
+                add(tabs, "dock center")
+            }
+        }
         runCatching {
             val toolPanel = openFunction()
             tabs.addTab(
@@ -203,11 +211,6 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
 
     init {
         if (empty) {
-            val openButton = JButton(openAction)
-            openButton.addActionListener {
-                remove(openButton)
-                add(tabs, "dock center")
-            }
             add(openButton, "dock center")
         } else {
             add(tabs, "dock center")
