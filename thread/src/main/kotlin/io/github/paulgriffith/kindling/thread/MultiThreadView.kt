@@ -2,21 +2,21 @@ package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.MultiTool
+import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.thread.model.MultiThreadModel
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
-import io.github.paulgriffith.kindling.core.ToolPanel
-import io.github.paulgriffith.kindling.thread.model.MultiThreadModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.Desktop
-import java.awt.Dimension
+import java.awt.Rectangle
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JLabel
@@ -32,19 +32,23 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
     // List of thread dumps instead of single thread dump
     private val threadDumps: MutableList<ThreadDump> = mutableListOf<ThreadDump>().apply {
         paths.forEach {
-            add(if (it.toString().lowercase().endsWith(".json")) ThreadDump.parseJSON(it) else ThreadDump.parseLegacy(it))
+            add(
+                if (it.toString().lowercase().endsWith(".json")) {
+                    ThreadDump.fromJson(it)
+                } else {
+                    ThreadDump.fromString(it)
+                }
+            )
         }
     }
 
-    // Map of thread IDs to lists of threads
-    private val groupedList: List<List<Thread?>> = createGroupedThreadList(threadDumps)
+    private val mainTable =
+        ReifiedJXTable(MultiThreadModel(createGroupedThreadList(threadDumps)), MultiThreadModel.ThreadColumns).apply {
+            setSortOrder(MultiThreadModel[MultiThreadModel.Id], SortOrder.ASCENDING)
+        }
 
     // Details pane replaced with comparison pane
-    private val comparison = ThreadComparisonPane()
-
-    private val mainTable = ReifiedJXTable(MultiThreadModel(groupedList), MultiThreadModel.ThreadColumns).apply {
-        setSortOrder(MultiThreadModel[MultiThreadModel.Id], SortOrder.ASCENDING)
-    }
+    private val comparison = ThreadComparisonPane(threadDumps.size)
 
     // TODO: Look into optimizing this so that allThreads doesn't sit in memory forever.
     private val allThreads: List<Thread> = buildList { threadDumps.forEach { addAll(it.threads) } }
@@ -101,9 +105,9 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting && !isSelectionEmpty) {
-                    comparison.threads = selectedIndices[0].let {
-                        mainTable.convertRowIndexToModel(it).let {
-                            mainTable.model.threadData[it]
+                    comparison.threads = selectedIndices[0].let { viewIndex ->
+                        mainTable.convertRowIndexToModel(viewIndex).let { modelIndex ->
+                            mainTable.model.threadData[modelIndex]
                         }
                     }
                 }
@@ -126,6 +130,18 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
             updateData()
         }
 
+        comparison.addBlockSelectedListener { selectedID ->
+            for (i in 0 until mainTable.model.rowCount) {
+                if (selectedID == mainTable.model[i, MultiThreadModel.Id]) {
+                    val rowIndex = mainTable.convertRowIndexToView(i)
+                    mainTable.selectionModel.setSelectionInterval(0, rowIndex)
+                    mainTable.scrollRectToVisible(Rectangle(mainTable.getCellRect(rowIndex, 0, true)))
+                    break
+                }
+            }
+
+        }
+
         add(JLabel("Version: ${threadDumps[0].version}"))
         add(searchField, "align right, wmin 300, wrap")
         add(
@@ -139,7 +155,7 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
                 comparison,
             ).apply {
                 resizeWeight = 0.5
-                this.bottomComponent.minimumSize = Dimension(0, 0)
+                isOneTouchExpandable = true
             },
             "push, grow, span"
         )

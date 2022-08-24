@@ -44,6 +44,10 @@ fun <T> ResultSet.toList(
     }
 }
 
+fun <T> List<T?>.firstNotNull(): T {
+    return checkNotNull(first { it != null })
+}
+
 val JDBCType.javaType: Class<*>
     get() = when (this) {
         JDBCType.BIT -> Boolean::class
