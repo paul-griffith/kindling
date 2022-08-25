@@ -13,14 +13,7 @@ class ScrollableTextPane(private val input: List<String>) : FlatScrollPane() {
                     isEditable = false
                     contentType = "text/html"
                     text = buildString {
-                        append("<html><pre>")
-                        append(
-                            input
-                                .joinToString("\n")
-                                .replace("<", "&lt;")
-                                .replace(">", "&gt;")
-                        )
-                        append("</pre></html>")
+                        append(input.joinToString("\n", "<html><pre>", "</pre></html>", transform = String::escapeHtml))
                     }
                 }
             )
