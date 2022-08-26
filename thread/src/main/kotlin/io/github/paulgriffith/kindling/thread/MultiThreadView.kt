@@ -25,22 +25,17 @@ import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
+import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
-class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
+class MultiThreadView(
+    private val paths: List<Path>
+) : ToolPanel() {
 
     // List of thread dumps instead of single thread dump
-    private val threadDumps: MutableList<ThreadDump> = mutableListOf<ThreadDump>().apply {
-        paths.forEach {
-            add(
-                if (it.toString().lowercase().endsWith(".json")) {
-                    ThreadDump.fromJson(it)
-                } else {
-                    ThreadDump.fromString(it)
-                }
-            )
-        }
-    }
+    private val threadDumps = paths.mapNotNull { path ->
+        ThreadDump.fromStream(path.inputStream())
+    }.toMutableList()
 
     private val mainTable =
         ReifiedJXTable(MultiThreadModel(createGroupedThreadList(threadDumps)), MultiThreadModel.ThreadColumns).apply {
@@ -97,9 +92,8 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
     }
 
     init {
-        val toOpen = paths.sorted()
-        name = toOpen.first().name
-        toolTipText = "Viewing ${threadDumps.size} thread dumps:\n${toOpen.joinToString("\n")}"
+        name = "${threadDumps.size} thread dumps"
+        toolTipText = paths.joinToString("\n") { path -> path.name }
 
         mainTable.selectionMode = ListSelectionModel.SINGLE_SELECTION
         mainTable.selectionModel.apply {
@@ -148,9 +142,9 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill")).apply {
-                    add(FlatScrollPane(stateList), "growx 100, growy 0, wmin 200, height 100!")
+                    add(FlatScrollPane(stateList), "w 200::25%, height 100!")
                     add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
-                    add(FlatScrollPane(poolList), "growx 100, growy 100, push, wmin 200, height 1500")
+                    add(FlatScrollPane(poolList), "growx 100, growy 100, w 200::25%, h 1500")
                 },
                 comparison,
             ).apply {
@@ -180,11 +174,9 @@ class MultiThreadView(private val paths: List<Path>) : ToolPanel() {
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.addSeparator()
         menu.add(
-            Action(name = "Open in External Editor") {
+            Action(name = "Open in External Editors") {
                 val desktop = Desktop.getDesktop()
-                paths.forEach { path ->
-                    desktop.open(path.toFile())
-                }
+                paths.forEach { desktop.open(it.toFile()) }
             }
         )
     }
@@ -200,7 +192,9 @@ object MultiThreadViewer : MultiTool {
     override val icon = FlatSVGIcon("icons/bx-file.svg")
     override val extensions = listOf("json", "txt")
     override fun open(path: Path): ToolPanel = open(listOf(path))
-    override fun open(paths: List<Path>): ToolPanel = MultiThreadView(paths)
+    override fun open(paths: List<Path>): ToolPanel {
+        return MultiThreadView(paths.sorted())
+    }
 }
 
 class MultiThreadViewerProxy : MultiTool by MultiThreadViewer

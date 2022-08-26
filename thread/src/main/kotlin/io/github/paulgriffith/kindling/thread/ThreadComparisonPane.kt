@@ -60,6 +60,9 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
 
     private val expansionMatrix = Array(numThreadDumps) { BooleanArray(3) { true } }
 
+    private val blockedImage: Image =
+        FlatSVGIcon("icons/bx-block.svg").image.getScaledInstance(12, 12, Image.SCALE_REPLICATE)
+
     private fun updateData() {
         removeAll()
 
@@ -79,11 +82,8 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
     private fun buildMerged(threads: List<Thread?>) {
         add(
             JXTaskPaneContainer().apply {
-
-                // Add Panel with Thread Labels
                 add(
                     JPanel(MigLayout("fill")).apply {
-//                        background = Color(0, 0, 0, 0)
                         isOpaque = false
                         threads.forEach {
                             val threadText =
@@ -102,7 +102,6 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
                     JXTaskPane().apply {
                         layout = MigLayout("fill")
                         title = "Locked Monitors"
-//                        add(JPanel(MigLayout("fill")).apply {
                         threads.forEach {
                             add(
                                 ScrollableTextPane(
@@ -160,8 +159,6 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
     }
 
     private fun buildUnmerged(threads: List<Thread?>) {
-        val img: Image = FlatSVGIcon("icons/bx-block.svg").image
-        val newImg = img.getScaledInstance(12, 12, Image.SCALE_REPLICATE)
         threads.forEachIndexed { index, thread ->
             add(
                 JXTaskPaneContainer().apply {
@@ -176,7 +173,7 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
                             if (thread?.blocker?.owner != null) {
                                 add(JButton().apply {
                                     text = thread.blocker.owner.toString()
-                                    icon = ImageIcon(newImg)
+                                    icon = ImageIcon(blockedImage)
                                     addActionListener {
                                         fireBlockerSelectedEvent(text.toInt())
                                     }
