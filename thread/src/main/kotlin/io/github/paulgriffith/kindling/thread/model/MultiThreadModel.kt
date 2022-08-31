@@ -62,10 +62,10 @@ class MultiThreadModel(val threadData: List<List<Thread?>>) : AbstractTableModel
             column = {
                 minWidth = 105
             },
-            value = {
-                with(it) {
-                    filterNotNull().map { thread -> thread.state.toString().first() }.joinToString(" -> ")
-                }
+            value = { threadList ->
+                threadList.map { thread ->
+                    thread?.state?.toString()?.first() ?: "X"
+                }.joinToString(" -> ")
             }
         )
 

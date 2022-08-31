@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.thread.model.MultiThreadModel
@@ -43,12 +44,15 @@ class MultiThreadView(
         }
 
     // Details pane replaced with comparison pane
-    private val comparison = ThreadComparisonPane(threadDumps.size)
+    private var comparison = ThreadComparisonPane(threadDumps.size)
 
     // TODO: Look into optimizing this so that allThreads doesn't sit in memory forever.
     private val allThreads: List<Thread> = buildList { threadDumps.forEach { addAll(it.threads) } }
+
     private var poolList = PoolList(allThreads.groupingBy(Thread::pool).eachCount())
     private var stateList = StateList(allThreads.groupingBy(Thread::state).eachCount())
+
+    private val threadDumpList = ThreadDumpList(paths)
 
     private val searchField = JXSearchField("Search")
 
@@ -62,18 +66,23 @@ class MultiThreadView(
         add { thread ->
             val query = searchField.text
             query != null &&
-                thread.name.contains(query, ignoreCase = true) ||
-                thread.system != null && thread.system.contains(query, ignoreCase = true) ||
-                thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
-                thread.state.name.contains(query, ignoreCase = true) ||
-                thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+                    thread.name.contains(query, ignoreCase = true) ||
+                    thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+                    thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+                    thread.state.name.contains(query, ignoreCase = true) ||
+                    thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
         }
     }
 
+//    private fun threadDumpFilter: Boolean = ()
+
     private fun updateData() {
         BACKGROUND.launch {
+            val selectedThreadDumps = threadDumps.filterIndexed { index, _ ->
+                index + 1 in threadDumpList.checkBoxListSelectedIndices
+            }
             val filteredThreadDumps: List<ThreadDump> = buildList {
-                threadDumps.forEach {
+                selectedThreadDumps.forEach {
                     add(
                         ThreadDump(
                             it.version,
@@ -86,7 +95,29 @@ class MultiThreadView(
             }
             val data = createGroupedThreadList(filteredThreadDumps)
             EDT_SCOPE.launch {
-                mainTable.model = MultiThreadModel(data)
+                if (mainTable.selectionModel.isSelectionEmpty) {
+                    mainTable.model = MultiThreadModel(data)
+                    comparison.removeAll()
+                    comparison.revalidate()
+                } else {
+                    val selectedIndex = mainTable.convertRowIndexToModel(mainTable.selectedRow)
+                    val selectedID = mainTable.model[selectedIndex, MultiThreadModel.Id]
+
+                    mainTable.model = MultiThreadModel(data)
+
+                    val index = mainTable.model.threadData.indexOfFirst { threads ->
+                        selectedID in threads.mapNotNull { thread -> thread?.id }
+                    }
+                    if (index != -1) {
+                        val viewIndex = mainTable.convertRowIndexToView(index)
+                        mainTable.selectionModel.setSelectionInterval(0, viewIndex)
+                        mainTable.scrollRectToVisible(Rectangle(mainTable.getCellRect(viewIndex, 0, true)))
+                    } else {
+                        comparison.removeAll()
+                        comparison.revalidate()
+                        comparison.repaint()
+                    }
+                }
             }
         }
     }
@@ -99,26 +130,16 @@ class MultiThreadView(
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting && !isSelectionEmpty) {
-                    comparison.threads = selectedIndices[0].let { viewIndex ->
-                        mainTable.convertRowIndexToModel(viewIndex).let { modelIndex ->
-                            mainTable.model.threadData[modelIndex]
-                        }
-                    }
+                    val viewIndex = selectedIndices[0]
+                    val modelIndex = mainTable.convertRowIndexToModel(viewIndex)
+                    comparison.threads = mainTable.model.threadData[modelIndex]
                 }
             }
         }
 
-        poolList.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
-                updateData()
-            }
-        }
-
-        stateList.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
-                updateData()
-            }
-        }
+        poolList.checkBoxListSelectionModel.bind()
+        stateList.checkBoxListSelectionModel.bind()
+        threadDumpList.checkBoxListSelectionModel.bind()
 
         searchField.addActionListener {
             updateData()
@@ -137,14 +158,15 @@ class MultiThreadView(
         }
 
         add(JLabel("Version: ${threadDumps[0].version}"))
+        add(threadDumpList, "growx, pushx")
         add(searchField, "align right, wmin 300, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill")).apply {
-                    add(FlatScrollPane(stateList), "w 200::25%, height 100!")
+                    add(FlatScrollPane(stateList), "grow, w 200::25%, height 100!")
                     add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
-                    add(FlatScrollPane(poolList), "growx 100, growy 100, w 200::25%, h 1500")
+                    add(FlatScrollPane(poolList), "grow, w 200::25%, h 1500")
                 },
                 comparison,
             ).apply {
@@ -166,6 +188,8 @@ class MultiThreadView(
                     }
                 }
                 map[it.id]!![index] = it
+                val condition = map[it.id]!!.distinctBy { thread -> thread?.name }.filterNotNull().size == 1
+                require(condition) { "Thread dumps must be from the same gateway and runtime instance." }
             }
         }
         return map.values.toList()
@@ -179,6 +203,14 @@ class MultiThreadView(
                 paths.forEach { desktop.open(it.toFile()) }
             }
         )
+    }
+
+    private fun CheckBoxListSelectionModel.bind() {
+        addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) {
+                updateData()
+            }
+        }
     }
 
     companion object {
