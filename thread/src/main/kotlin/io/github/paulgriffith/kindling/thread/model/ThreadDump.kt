@@ -11,7 +11,8 @@ import java.lang.Thread.State as ThreadState
 @Serializable
 data class ThreadDump internal constructor(
     val version: String,
-    val threads: List<Thread>
+    val threads: List<Thread>,
+    val deadlocks: List<Int>
 ) {
     companion object {
         private val JSON = Json {
@@ -31,17 +32,26 @@ data class ThreadDump internal constructor(
                 require(lines.size > 2) { "Not a fully formed thread dump" }
                 val firstLine = lines.first()
 
+                val deadlocks: MutableList<Int> = mutableListOf()
+                val startingIndex = if (lines[2].contains("Deadlock")) {
+                    deadlocksPattern.findAll(lines[3]).mapTo(deadlocks) { match -> match.value.toInt() }
+                    5
+                } else 2
+
                 ThreadDump(
                     version = versionPattern.find(firstLine)?.value ?: firstLine,
                     threads = when {
                         firstLine.contains(":") -> parseScript(text)
-                        else -> parseWebPage(lines.subList(2, lines.size))
-                    }
+                        else -> parseWebPage(lines.subList(startingIndex, lines.size))
+                    },
+                    deadlocks = deadlocks
                 )
             }
         }
 
         private val versionPattern = """[78]\.\d\.\d\d?.*""".toRegex()
+
+        private val deadlocksPattern = """\d+""".toRegex()
 
         private val scriptThreadRegex = """
             "(?<name>.*)"

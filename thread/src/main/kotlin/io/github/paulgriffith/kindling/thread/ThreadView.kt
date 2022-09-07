@@ -19,6 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
+import org.jdesktop.swingx.decorator.ColorHighlighter
+import java.awt.Color
 import java.awt.Desktop
 import java.io.File
 import java.io.InputStream
@@ -46,6 +48,15 @@ class ThreadView(
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
         setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
     }
+
+    private val highlighter = ColorHighlighter(
+        { _, adapter ->
+            threadDump.deadlocks.contains(adapter.getValue(mainTable.model.findColumn("Id")))
+        },
+        Color.RED,
+        null
+    )
+
 
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
     private val systemList = SystemList(threadDump.threads.groupingBy(Thread::system).eachCount())
@@ -99,6 +110,8 @@ class ThreadView(
                 }
             }
         }
+
+        mainTable.addHighlighter(highlighter)
 
         stateList.checkBoxListSelectionModel.bind()
         systemList.checkBoxListSelectionModel.bind()
