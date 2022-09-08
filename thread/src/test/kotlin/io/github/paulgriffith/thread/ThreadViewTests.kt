@@ -16,12 +16,28 @@ class ThreadViewTests : FunSpec({
                 threads.size shouldBe 2
             }
     }
+    test("Deadlock JSON deserialization") {
+        ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("deadlockThreadDump.json")!!)!!
+            .asClue { (version, threads, deadlockIds) ->
+                version shouldBe "8.1.16.2022040511"
+                threads.size shouldBe 5
+                deadlockIds.size shouldBe 3
+            }
+    }
     context("Legacy parsing") {
         test("From webpage") {
             ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("legacyWebThreadDump.txt")!!)!!
                 .asClue { (version, threads) ->
                     version shouldBe "7.9.14 (b2020042813)"
                     threads.size shouldBe 4
+                }
+        }
+        test("From Auto-Generated Deadlock") {
+            ThreadDump.fromStream(ThreadViewTests::class.java.getResourceAsStream("legacyDeadlockThreadDump.txt")!!)!!
+                .asClue { (version, threads, deadlockIds) ->
+                    version shouldBe "8.1.7 (b2021060314)"
+                    threads.size shouldBe 5
+                    deadlockIds.size shouldBe 3
                 }
         }
         test("From scripting") {

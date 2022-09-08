@@ -2,6 +2,7 @@ package io.github.paulgriffith.kindling.thread.model
 
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -12,7 +13,8 @@ import java.lang.Thread.State as ThreadState
 data class ThreadDump internal constructor(
     val version: String,
     val threads: List<Thread>,
-    val deadlocks: List<Int>
+    @SerialName("deadlocks")
+    val deadlockIds: List<Int> = emptyList()
 ) {
     companion object {
         private val JSON = Json {
@@ -32,11 +34,15 @@ data class ThreadDump internal constructor(
                 require(lines.size > 2) { "Not a fully formed thread dump" }
                 val firstLine = lines.first()
 
-                val deadlocks: MutableList<Int> = mutableListOf()
-                val startingIndex = if (lines[2].contains("Deadlock")) {
-                    deadlocksPattern.findAll(lines[3]).mapTo(deadlocks) { match -> match.value.toInt() }
-                    5
-                } else 2
+                val deadlockIds: List<Int>
+                val startingIndex: Int
+                if (lines[2].contains("Deadlock")) {
+                    deadlockIds = deadlocksPattern.findAll(lines[3]).map { match -> match.value.toInt() }.toList()
+                    startingIndex = 5
+                } else {
+                    deadlockIds = emptyList()
+                    startingIndex = 2
+                }
 
                 ThreadDump(
                     version = versionPattern.find(firstLine)?.value ?: firstLine,
@@ -44,7 +50,7 @@ data class ThreadDump internal constructor(
                         firstLine.contains(":") -> parseScript(text)
                         else -> parseWebPage(lines.subList(startingIndex, lines.size))
                     },
-                    deadlocks = deadlocks
+                    deadlockIds = deadlockIds
                 )
             }
         }
