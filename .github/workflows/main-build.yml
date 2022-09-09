@@ -30,6 +30,7 @@ jobs:
             app/build/jpackage/*.exe
             app/build/jpackage/*.msi
       - name: Upload jar
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v3
         with:
           name: fatjar

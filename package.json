@@ -12,7 +12,7 @@
         "args": [],
         "javaVersion": "17",
         "documentTypes": [],
-        "jar": "build/libs/kindling-bundle.jar",
+        "jar": "kindling-bundle.jar",
         "javafx": false,
         "title": "Kindling"
     },
