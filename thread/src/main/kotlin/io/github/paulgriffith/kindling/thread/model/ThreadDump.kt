@@ -2,6 +2,7 @@ package io.github.paulgriffith.kindling.thread.model
 
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -11,7 +12,9 @@ import java.lang.Thread.State as ThreadState
 @Serializable
 data class ThreadDump internal constructor(
     val version: String,
-    val threads: List<Thread>
+    val threads: List<Thread>,
+    @SerialName("deadlocks")
+    val deadlockIds: List<Int> = emptyList()
 ) {
     companion object {
         private val JSON = Json {
@@ -31,17 +34,30 @@ data class ThreadDump internal constructor(
                 require(lines.size > 2) { "Not a fully formed thread dump" }
                 val firstLine = lines.first()
 
+                val deadlockIds: List<Int>
+                val startingIndex: Int
+                if (lines[2].contains("Deadlock")) {
+                    deadlockIds = deadlocksPattern.findAll(lines[3]).map { match -> match.value.toInt() }.toList()
+                    startingIndex = 5
+                } else {
+                    deadlockIds = emptyList()
+                    startingIndex = 2
+                }
+
                 ThreadDump(
                     version = versionPattern.find(firstLine)?.value ?: firstLine,
                     threads = when {
                         firstLine.contains(":") -> parseScript(text)
-                        else -> parseWebPage(lines.subList(2, lines.size))
-                    }
+                        else -> parseWebPage(lines.subList(startingIndex, lines.size))
+                    },
+                    deadlockIds = deadlockIds
                 )
             }
         }
 
         private val versionPattern = """[78]\.\d\.\d\d?.*""".toRegex()
+
+        private val deadlocksPattern = """\d+""".toRegex()
 
         private val scriptThreadRegex = """
             "(?<name>.*)"

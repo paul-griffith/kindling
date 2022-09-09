@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
+import org.jdesktop.swingx.decorator.ColorHighlighter
 import java.awt.Desktop
 import java.io.File
 import java.io.InputStream
@@ -32,6 +33,7 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
+import javax.swing.UIManager
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
@@ -45,6 +47,15 @@ class ThreadView(
     private val details = DetailsPane()
     private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
         setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
+        addHighlighter(
+            ColorHighlighter(
+                { _, adapter ->
+                    threadDump.deadlockIds.contains(adapter.getValue(ThreadModel.ThreadColumns[Id]))
+                },
+                UIManager.getColor("Actions.Red"),
+                null
+            )
+        )
     }
 
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
