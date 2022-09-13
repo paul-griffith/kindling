@@ -160,7 +160,9 @@ class ThreadView(
             if (lockedMonitors.isNotEmpty()) {
                 add("locked monitors:")
                 lockedMonitors.forEach { monitor ->
-                    add(monitor.frame)
+                    if (monitor.frame != null) {
+                        add(monitor.frame)
+                    }
                     add(monitor.lock)
                 }
             }
