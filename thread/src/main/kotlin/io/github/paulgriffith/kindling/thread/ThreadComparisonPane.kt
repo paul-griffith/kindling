@@ -3,6 +3,7 @@ package io.github.paulgriffith.kindling.thread
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatTextPane
 import io.github.paulgriffith.kindling.thread.model.Thread
+import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ScrollableTextPane
 import io.github.paulgriffith.kindling.utils.add
 import io.github.paulgriffith.kindling.utils.firstNotNull
@@ -18,6 +19,7 @@ import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JScrollPane
 import javax.swing.SwingConstants
 import javax.swing.event.EventListenerList
 import javax.swing.text.html.HTMLEditorKit
@@ -159,85 +161,95 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
     }
 
     private fun buildUnmerged(threads: List<Thread?>) {
-        threads.forEachIndexed { index, thread ->
-            add(
-                JXTaskPaneContainer().apply {
-                    val threadText =
-                        "<b>${thread?.state ?: "NO THREAD"}</b> - ${percent.format((thread?.cpuUsage ?: 0.0) / 100.0)}"
-                    add(
-                        JPanel(MigLayout("fill")).apply {
-                            add(
-                                JLabel("<html><div>$threadText</div></html>"),
-                                "push, grow, height 22"
-                            )
-                            if (thread?.blocker?.owner != null) {
-                                add(JButton().apply {
-                                    text = thread.blocker.owner.toString()
-                                    icon = ImageIcon(blockedImage)
-                                    addActionListener {
-                                        fireBlockerSelectedEvent(text.toInt())
-                                    }
-                                }, "grow, shrink")
-                            }
-                        }
-                    )
 
-                    add(
-                        JXTaskPane().apply {
-                            val threadPropIndex = 0
-                            val size = thread?.lockedMonitors?.size ?: 0
-                            title = "Locked Monitors ($size)"
-                            if (size > 0) {
+        val panel = JPanel(MigLayout("fill"))
+        panel.apply {
+            threads.forEachIndexed { index, thread ->
+                add(
+                    JXTaskPaneContainer().apply {
+                        val threadText =
+                            "<b>${thread?.state ?: "NO THREAD"}</b> - ${percent.format((thread?.cpuUsage ?: 0.0) / 100.0)}"
+                        add(
+                            JPanel(MigLayout("fill")).apply {
                                 add(
-                                    ScrollableTextPane(
-                                        buildList {
-                                            thread?.lockedMonitors?.forEach {
-                                                add("lock: ${it.lock}")
-                                                add("frame: ${it.frame}")
-                                            }
-                                        }
-                                    )
+                                    JLabel("<html><div>$threadText</div></html>"),
+                                    "push, grow, height 22"
                                 )
+                                if (thread?.blocker?.owner != null) {
+                                    add(JButton().apply {
+                                        text = thread.blocker.owner.toString()
+                                        icon = ImageIcon(blockedImage)
+                                        addActionListener {
+                                            fireBlockerSelectedEvent(text.toInt())
+                                        }
+                                    }, "grow, shrink")
+                                }
                             }
-                            isCollapsed = expansionMatrix[index][threadPropIndex]
-                            addPropertyChangeListener("collapsed") { event ->
-                                expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
-                            }
-                        },
-                        "span"
-                    )
+                        )
 
-                    add(
-                        JXTaskPane().apply {
-                            val threadPropIndex = 1
-                            val size = thread?.lockedSynchronizers?.size ?: 0
-                            title = "Locked Synchronizers ($size)"
-                            if (size > 0) add(ScrollableTextPane(thread!!.lockedSynchronizers))
-                            isCollapsed = expansionMatrix[index][threadPropIndex]
-                            addPropertyChangeListener("collapsed") { event ->
-                                expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
-                            }
-                        },
-                        "span"
-                    )
+                        add(
+                            JXTaskPane().apply {
+                                val threadPropIndex = 0
+                                val size = thread?.lockedMonitors?.size ?: 0
+                                title = "Locked Monitors ($size)"
+                                if (size > 0) {
+                                    add(
+                                        ScrollableTextPane(
+                                            buildList {
+                                                thread?.lockedMonitors?.forEach {
+                                                    add("lock: ${it.lock}")
+                                                    add("frame: ${it.frame}")
+                                                }
+                                            }
+                                        )
+                                    )
+                                }
+                                isCollapsed = expansionMatrix[index][threadPropIndex]
+                                addPropertyChangeListener("collapsed") { event ->
+                                    expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
+                                }
+                            },
+                            "span"
+                        )
 
-                    add(
-                        JXTaskPane().apply {
-                            val threadPropIndex = 2
-                            val size = thread?.stacktrace?.size ?: 0
-                            title = "Stack Trace (${thread?.stacktrace?.size ?: 0})"
-                            if (size > 0) add(ScrollableTextPane(thread!!.stacktrace))
-                            isCollapsed = expansionMatrix[index][threadPropIndex]
-                            addPropertyChangeListener("collapsed") { event ->
-                                expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
-                            }
-                        },
-                        "span"
-                    )
-                },
-                "push, grow, sizegroup"
-            )
+                        add(
+                            JXTaskPane().apply {
+                                val threadPropIndex = 1
+                                val size = thread?.lockedSynchronizers?.size ?: 0
+                                title = "Synchronizers ($size)"
+                                if (size > 0) add(ScrollableTextPane(thread!!.lockedSynchronizers))
+                                isCollapsed = expansionMatrix[index][threadPropIndex]
+                                addPropertyChangeListener("collapsed") { event ->
+                                    expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
+                                }
+                            },
+                            "span"
+                        )
+
+                        add(
+                            JXTaskPane().apply {
+                                val threadPropIndex = 2
+                                val size = thread?.stacktrace?.size ?: 0
+                                title = "Stack Trace (${thread?.stacktrace?.size ?: 0})"
+                                if (size > 0) add(ScrollableTextPane(thread!!.stacktrace))
+                                isCollapsed = expansionMatrix[index][threadPropIndex]
+                                addPropertyChangeListener("collapsed") { event ->
+                                    expansionMatrix[index][threadPropIndex] = event.newValue as Boolean
+                                }
+                            },
+                            "span"
+                        )
+                    },
+                    "push, grow, sizegroup"
+                )
+            }
         }
+
+        add(
+            FlatScrollPane(panel).apply {
+                verticalScrollBarPolicy = JScrollPane.VERTICAL_SCROLLBAR_NEVER
+            }, "grow, pushy"
+        )
     }
 
     private fun getHeaderString(thread: Thread): String {
