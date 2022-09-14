@@ -28,7 +28,7 @@ data class Thread(
     @Serializable
     data class Monitors(
         val lock: String,
-        val frame: String?
+        val frame: String? = null
     )
 
     @Serializable
