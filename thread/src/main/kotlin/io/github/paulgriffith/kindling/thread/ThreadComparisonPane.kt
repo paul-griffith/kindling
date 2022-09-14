@@ -110,7 +110,9 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
                                     buildList {
                                         it?.lockedMonitors?.forEach {
                                             add("lock: ${it.lock}")
-                                            add("frame: ${it.frame}")
+                                            if (it.frame != null) {
+                                                add("frame: ${it.frame}")
+                                            }
                                         }
                                     }
                                 ),
@@ -198,7 +200,9 @@ class ThreadComparisonPane(numThreadDumps: Int) : JPanel(MigLayout("fill")) {
                                             buildList {
                                                 thread?.lockedMonitors?.forEach {
                                                     add("lock: ${it.lock}")
-                                                    add("frame: ${it.frame}")
+                                                    if (it.frame != null) {
+                                                        add("frame: ${it.frame}")
+                                                    }
                                                 }
                                             }
                                         )
