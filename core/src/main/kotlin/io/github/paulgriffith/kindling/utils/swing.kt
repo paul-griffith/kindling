@@ -25,11 +25,9 @@ import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
-import javax.swing.AbstractButton
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
-import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JLabel
@@ -323,15 +321,4 @@ fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
     } else {
         null
     }
-}
-
-@Suppress("UNCHECKED_CAST")
-class TypeSafeJComboBox<E>(items: Array<E>) : JComboBox<E>(items) {
-    override fun getSelectedItem(): E? {
-        return super.getSelectedItem() as? E
-    }
-}
-
-fun <T : AbstractButton> T.onActionPerformed(callback: (Boolean) -> Unit): T = this.apply {
-    addActionListener { callback(isSelected) }
 }

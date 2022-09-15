@@ -3,7 +3,6 @@ package io.github.paulgriffith.kindling.log
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.JideButton
 import com.jidesoft.swing.JidePopupMenu
-import io.github.paulgriffith.kindling.utils.onActionPerformed
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import java.awt.event.MouseAdapter
@@ -36,8 +35,10 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
 
     private val settingsMenu = JidePopupMenu().apply {
         add(
-            JCheckBoxMenuItem("Show Full Logger Names").onActionPerformed {
-                isShowFullLoggerName = !isShowFullLoggerName
+            JCheckBoxMenuItem("Show Full Logger Names").apply {
+                addActionListener {
+                    isShowFullLoggerName = !isShowFullLoggerName
+                }
             }
         )
 
@@ -45,10 +46,9 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         add(
             JMenu("Timezone").apply {
                 for (timezone in ZoneRulesProvider.getAvailableZoneIds().sorted()) {
-                    add(JCheckBoxMenuItem(timezone, timezone == selectedTimeZone)).also {
-                        tzGroup.add(it)
-                        it.onActionPerformed {
-                            println("setting timezone to $timezone")
+                    add(JCheckBoxMenuItem(timezone, timezone == selectedTimeZone)).also { timezoneItem ->
+                        tzGroup.add(timezoneItem)
+                        timezoneItem.addActionListener {
                             selectedTimeZone = timezone
                         }
                     }
@@ -60,9 +60,9 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         add(
             JMenu("Minimum Level").apply {
                 for (level in Level.values()) {
-                    add(JCheckBoxMenuItem(level.toString(), level == minimumLevel)).also {
-                        levelGroup.add(it)
-                        it.onActionPerformed {
+                    add(JCheckBoxMenuItem(level.toString(), level == minimumLevel)).also { levelItem ->
+                        levelGroup.add(levelItem)
+                        levelItem.addActionListener {
                             minimumLevel = level
                         }
                     }
