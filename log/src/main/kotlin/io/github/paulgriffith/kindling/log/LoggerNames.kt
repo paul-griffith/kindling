@@ -31,6 +31,23 @@ class LoggerNamesModel(val data: List<LoggerName>) : AbstractListModel<Any>() {
 }
 
 class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
+    var isShowFullLoggerName = false
+        set(value) {
+            field = value
+            repaint()
+        }
+
+    private fun displayValue(value: Any?): String {
+        return when (value) {
+            is LoggerName -> if (!isShowFullLoggerName) {
+                value.name.substringAfterLast('.')
+            } else {
+                value.name
+            }
+            else -> value.toString()
+        }
+    }
+
     init {
         installSearchable(
             setup = {
@@ -38,19 +55,13 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
                 isRepeats = true
                 isCountMatch = true
             },
-            conversion = { element ->
-                if (element is LoggerName) {
-                    element.name.substringAfterLast('.')
-                } else {
-                    element.toString()
-                }
-            }
+            conversion = ::displayValue
         )
         selectionModel = NoSelectionModel()
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             when (value) {
                 is LoggerName -> {
-                    text = "${value.name.substringAfterLast(".")} - [${value.eventCount}]"
+                    text = "${displayValue(value)} - [${value.eventCount}]"
                     toolTipText = value.name
                 }
 

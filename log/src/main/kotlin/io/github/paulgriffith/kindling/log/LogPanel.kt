@@ -45,6 +45,8 @@ class LogPanel(
     private val densityDisplay = GroupingScrollBar()
     private var showDensityDisplay: Boolean = true
 
+    val header = Header(totalRows)
+
     val table = run {
         val initialModel = createModel(rawData)
         ReifiedJXTable(initialModel, initialModel.columns).apply {
@@ -69,7 +71,6 @@ class LogPanel(
     }
 
     private val details = DetailsPane()
-    private val header = Header(totalRows)
     private val sidebar = LoggerNamesPanel(rawData)
 
     private val filters: List<(LogEvent) -> Boolean> = buildList {
@@ -82,7 +83,7 @@ class LogPanel(
         add { event ->
             when (event) {
                 is SystemLogsEvent -> {
-                    event.level >= header.levels.selectedItem as Level
+                    event.level >= header.minimumLevel
                 }
 
                 is WrapperLogEvent -> true
@@ -185,16 +186,19 @@ class LogPanel(
             }
         }
 
-        header.levels.addActionListener {
+        header.addPropertyChangeListener("minimumLevel") {
             updateData()
         }
+        header.search.addActionListener { updateData() }
 
-        header.search.addActionListener {
-            updateData()
+        header.addPropertyChangeListener("selectedTimeZone") {
+            dateFormatter = dateFormatter.withZone(ZoneId.of(it.newValue as String))
+            table.model.fireTableDataChanged()
         }
 
-        header.timezone.addActionListener {
-            dateFormatter = dateFormatter.withZone(ZoneId.of(header.timezone.selectedItem))
+        header.addPropertyChangeListener("isShowFullLoggerName") {
+            table.model.fireTableDataChanged()
+            sidebar.list.isShowFullLoggerName = it.newValue as Boolean
         }
     }
 

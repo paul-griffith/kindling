@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.log // ktlint-disable filename
 
+import com.jidesoft.comparator.AlphanumComparator
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.ColumnList
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider
@@ -53,15 +54,26 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
     val Logger by column(
         column = {
             minWidth = 50
+
+            val valueExtractor: (String?) -> String? = {
+                if (panel.header.isShowFullLoggerName) {
+                    it
+                } else {
+                    it?.substringAfterLast('.')
+                }
+            }
+
             cellRenderer = DefaultTableRenderer(
-                ReifiedLabelProvider<String>(
-                    getText = { it?.substringAfterLast('.') },
+                ReifiedLabelProvider(
+                    getText = valueExtractor,
                     getTooltip = { it }
                 )
             )
+            comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
         value = SystemLogsEvent::logger
     )
+
     val Message by column { it.message }
 }
 
@@ -87,12 +99,22 @@ class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
     val Logger by column(
         column = {
             minWidth = 50
+
+            val valueExtractor: (String?) -> String? = {
+                if (panel.header.isShowFullLoggerName) {
+                    it
+                } else {
+                    it?.substringAfterLast('.')
+                }
+            }
+
             cellRenderer = DefaultTableRenderer(
-                ReifiedLabelProvider<String>(
-                    getText = { it?.substringAfterLast('.') },
+                ReifiedLabelProvider(
+                    getText = valueExtractor,
                     getTooltip = { it }
                 )
             )
+            comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
         value = { it.logger }
     )
