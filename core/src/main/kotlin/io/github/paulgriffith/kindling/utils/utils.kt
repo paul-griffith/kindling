@@ -13,7 +13,7 @@ import java.sql.JDBCType
 import java.sql.ResultSet
 import java.sql.Time
 import java.sql.Timestamp
-import java.util.*
+import java.util.ServiceLoader
 import javax.swing.table.TableModel
 import kotlin.math.log2
 import kotlin.math.pow
