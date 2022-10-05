@@ -7,13 +7,9 @@ import org.sqlite.SQLiteDataSource
 import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Path
-import java.sql.Connection
+import java.sql.*
 import java.sql.Date
-import java.sql.JDBCType
-import java.sql.ResultSet
-import java.sql.Time
-import java.sql.Timestamp
-import java.util.ServiceLoader
+import java.util.*
 import javax.swing.table.TableModel
 import kotlin.math.log2
 import kotlin.math.pow
@@ -108,7 +104,7 @@ fun TableModel.exportToCSV(file: File) {
         out.println()
         (0 until rowCount).forEach { row ->
             (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
-                getValueAt(row, col)?.toString().orEmpty()
+                "\"" + getValueAt(row, col)?.toString().orEmpty() + "\""
             }
             out.println()
         }

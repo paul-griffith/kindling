@@ -1,18 +1,10 @@
 package io.github.paulgriffith.kindling.core
 
+import io.github.paulgriffith.kindling.utils.*
 import io.github.paulgriffith.kindling.utils.Action
-import io.github.paulgriffith.kindling.utils.FileExtensionFilter
-import io.github.paulgriffith.kindling.utils.exportToCSV
-import io.github.paulgriffith.kindling.utils.exportToXLSX
-import io.github.paulgriffith.kindling.utils.homeLocation
 import net.miginfocom.swing.MigLayout
 import java.io.File
-import javax.swing.Icon
-import javax.swing.JFileChooser
-import javax.swing.JMenu
-import javax.swing.JPanel
-import javax.swing.JPopupMenu
-import javax.swing.UIManager
+import javax.swing.*
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 
@@ -23,31 +15,36 @@ abstract class ToolPanel(
 
     open fun customizePopupMenu(menu: JPopupMenu) = Unit
 
-    protected fun exportMenu(modelSupplier: () -> TableModel): JMenu = JMenu("Export").apply {
-        for (format in ExportFormat.values()) {
-            add(
-                Action("Export as ${format.extension.uppercase()}") {
-                    exportFileChooser.resetChoosableFileFilters()
-                    exportFileChooser.fileFilter = format.fileFilter
-                    if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
-                        val selectedFile = if (exportFileChooser.selectedFile.endsWith(format.extension)) {
-                            exportFileChooser.selectedFile
-                        } else {
-                            File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
+    protected fun exportMenu(defaultFileName: String = "", modelSupplier: () -> TableModel): JMenu =
+        JMenu("Export").apply {
+            for (format in ExportFormat.values()) {
+                add(
+                    Action("Export as ${format.extension.uppercase()}") {
+                        exportFileChooser.selectedFile = File(defaultFileName)
+                        exportFileChooser.resetChoosableFileFilters()
+                        exportFileChooser.fileFilter = format.fileFilter
+                        if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
+                            val selectedFile =
+                                if (exportFileChooser.selectedFile.absolutePath.endsWith(format.extension)) {
+                                    exportFileChooser.selectedFile
+                                } else {
+                                    File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
+                                }
+                            format.action.invoke(modelSupplier(), selectedFile)
                         }
-                        format.action.invoke(modelSupplier(), selectedFile)
                     }
-                }
-            )
+                )
+            }
         }
-    }
+
+//    protected lateinit var defaultFileName : String
 
     companion object {
-        private val exportFileChooser = JFileChooser(homeLocation).apply {
+        val exportFileChooser = JFileChooser(homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileView = CustomIconView()
-
+            this.selectedFile
             UIManager.addPropertyChangeListener { e ->
                 if (e.propertyName == "lookAndFeel") {
                     updateUI()

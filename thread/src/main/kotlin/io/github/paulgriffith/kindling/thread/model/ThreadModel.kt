@@ -104,5 +104,17 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                 thread.blocker?.owner
             }
         )
+        val StackTrace by column(
+            column = {
+                isVisible = false
+                minWidth = 75
+                cellRenderer = DefaultTableRenderer { value ->
+                    (value as? String?) ?: "No Trace"
+                }
+            },
+            value = { thread ->
+                thread.stacktrace.joinToString()
+            }
+        )
     }
 }

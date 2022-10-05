@@ -26,14 +26,7 @@ import java.io.InputStream
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import javax.swing.Icon
-import javax.swing.JLabel
-import javax.swing.JMenuBar
-import javax.swing.JPanel
-import javax.swing.JPopupMenu
-import javax.swing.JSplitPane
-import javax.swing.SortOrder
-import javax.swing.UIManager
+import javax.swing.*
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
@@ -123,7 +116,8 @@ class ThreadView(
 
         add(
             JMenuBar().apply {
-                add(exportMenu { mainTable.model })
+                val fileName = "threaddump_${threadDump.version}_${threadDump.hashCode()}"
+                add(exportMenu(fileName) { mainTable.model })
             },
             "align right, gapright 8"
         )
