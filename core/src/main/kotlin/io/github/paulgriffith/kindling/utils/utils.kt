@@ -13,7 +13,7 @@ import java.sql.JDBCType
 import java.sql.ResultSet
 import java.sql.Time
 import java.sql.Timestamp
-import java.util.ServiceLoader
+import java.util.*
 import javax.swing.table.TableModel
 import kotlin.math.log2
 import kotlin.math.pow
@@ -157,4 +157,8 @@ fun String.escapeHtml(): String {
             }
         }
     }
+}
+
+fun String.toHtmlLink(href: String): String {
+    return """<a href="$href">$this</a>"""
 }

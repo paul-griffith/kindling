@@ -8,6 +8,7 @@ import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import net.miginfocom.swing.MigLayout
 import java.awt.Component
+import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Rectangle
 import java.awt.Toolkit
@@ -15,6 +16,7 @@ import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JPanel
+import javax.swing.event.HyperlinkEvent
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.ComponentView
 import javax.swing.text.Element
@@ -36,6 +38,12 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     private val textPane = FlatTextPane().apply {
         isEditable = false
         editorKit = DetailsEditorKit()
+        addHyperlinkListener { event ->
+            if (event.eventType == HyperlinkEvent.EventType.ACTIVATED) {
+                val desktop = Desktop.getDesktop()
+                desktop.browse(event.url.toURI())
+            }
+        }
     }
 
     private val copy = Action(
@@ -83,7 +91,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                     append(event.message.escapeHtml())
                 }
                 if (event.body.isNotEmpty()) {
-                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>", transform = String::escapeHtml)
+                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
                 } else {
                     append("<br>")
                 }

@@ -14,6 +14,7 @@ import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.escapeHtml
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -163,18 +164,18 @@ class ThreadView(
                     if (monitor.frame != null) {
                         add(monitor.frame)
                     }
-                    add(monitor.lock)
+                    add(monitor.lock.escapeHtml())
                 }
             }
 
             if (lockedSynchronizers.isNotEmpty()) {
                 add("locked synchronizers:")
-                addAll(lockedSynchronizers)
+                addAll(lockedSynchronizers.map { it.escapeHtml() })
             }
 
             if (stacktrace.isNotEmpty()) {
                 add("stacktrace:")
-                addAll(stacktrace)
+                addAll(linkifyStackTrace(stacktrace, threadDump.version))
             }
         }
     )

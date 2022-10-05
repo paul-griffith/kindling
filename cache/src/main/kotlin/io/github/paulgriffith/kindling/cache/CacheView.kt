@@ -9,6 +9,7 @@ import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
@@ -135,7 +136,7 @@ class CacheView(val path: Path) : ToolPanel() {
 
             Detail(
                 title = "Serialization dump of ${data.size} bytes:",
-                body = serializationDumper.parseStream().lines()
+                body = serializationDumper.parseStream().lines().map { line -> line.escapeHtml() }
             )
         }
     }

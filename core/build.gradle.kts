@@ -21,6 +21,7 @@ dependencies {
     }
     runtimeOnly(libs.bundles.ia.transitive)
     implementation(libs.excelkt)
+    implementation(libs.jsoup)
 }
 
 java {
