@@ -19,7 +19,7 @@ data class Thread(
     val lockedSynchronizers: List<String> = emptyList(),
     @SerialName("waitingFor")
     val blocker: Blocker? = null,
-    val stacktrace: List<String> = emptyList()
+    val stacktrace: Stacktrace = Stacktrace()
 ) {
     var marked: Boolean = false
 
@@ -53,7 +53,7 @@ data class Thread(
             val lockedMonitors: MutableList<Monitors> = mutableListOf()
             val lockedSynchronizers: MutableList<String> = mutableListOf()
             var blocker: Blocker? = null
-            val stacktrace: MutableList<String> = mutableListOf()
+            val stack: MutableList<String> = mutableListOf()
             for (i in 1 until trace.size) {
                 when (trace[i].split(":")[0]) {
                     "waiting for" -> {
@@ -67,7 +67,7 @@ data class Thread(
 
                     "owns synchronizer" -> lockedSynchronizers.add(trace[i].split("owns synchronizer: ")[1])
                     "owns monitor" -> lockedMonitors.add(Monitors(lock = trace[i].split("owns monitor: ")[1], frame = ""))
-                    else -> stacktrace.add(trace[i])
+                    else -> stack.add(trace[i])
                 }
             }
             return Thread(
@@ -78,14 +78,14 @@ data class Thread(
                 lockedMonitors = lockedMonitors,
                 lockedSynchronizers = lockedSynchronizers,
                 blocker = blocker,
-                stacktrace = stacktrace
+                stacktrace = Stacktrace(stack)
             )
         }
 
-        private val regex = "(?<pool>.+)-\\d+\$".toRegex()
+        private val threadPoolRegex = "(?<pool>.+)-\\d+\$".toRegex()
 
         internal fun extractPool(name: String): String? {
-            return regex.find(name)?.groups?.get("pool")?.value
+            return threadPoolRegex.find(name)?.groups?.get("pool")?.value
         }
     }
 }

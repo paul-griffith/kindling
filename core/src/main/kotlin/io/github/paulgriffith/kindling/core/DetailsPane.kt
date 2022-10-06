@@ -30,6 +30,7 @@ import kotlin.properties.Delegates
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
         textPane.text = newValue.toDisplayFormat()
+        println(textPane.text)
         EventQueue.invokeLater {
             textPane.scrollRectToVisible(Rectangle(0, 0, 0, 0))
         }

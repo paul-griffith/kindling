@@ -64,7 +64,7 @@ data class ThreadDump internal constructor(
             \s*CPU:\s(?<cpu>\d{1,3}\.\d{2})%
             \s*java\.lang\.Thread\.State:\s(?<state>\w+_?\w+)
             \s*(?<stack>[\S\s]+?)[\r\n]*
-            """.toRegex(RegexOption.COMMENTS)
+        """.trimIndent().toRegex(RegexOption.COMMENTS)
 
         private fun parseScript(dump: String): List<Thread> {
             return scriptThreadRegex.findAll(dump).map { matcher ->
@@ -79,7 +79,7 @@ data class ThreadDump internal constructor(
                     cpuUsage = cpu.value.toDouble(),
                     state = ThreadState.valueOf(state.value),
                     isDaemon = false,
-                    stacktrace = stack.value.lines().map(String::trim)
+                    stacktrace = stack.value.lines().map(String::trim).let(::Stacktrace)
                 )
             }.toList()
         }
