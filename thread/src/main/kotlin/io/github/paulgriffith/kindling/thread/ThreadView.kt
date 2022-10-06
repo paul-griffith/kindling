@@ -127,7 +127,8 @@ class ThreadView(
 
         add(
             JMenuBar().apply {
-                add(exportMenu { mainTable.model })
+                val fileName = "threaddump_${threadDump.version}_${threadDump.hashCode()}"
+                add(exportMenu(fileName) { mainTable.model })
             },
             "align right, gapright 8",
         )

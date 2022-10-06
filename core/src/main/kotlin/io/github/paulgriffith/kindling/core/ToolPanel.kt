@@ -24,31 +24,35 @@ abstract class ToolPanel(
 
     open fun customizePopupMenu(menu: JPopupMenu) = Unit
 
-    protected fun exportMenu(modelSupplier: () -> TableModel): JMenu = JMenu("Export").apply {
-        for (format in ExportFormat.values()) {
-            add(
-                Action("Export as ${format.extension.uppercase()}") {
-                    exportFileChooser.resetChoosableFileFilters()
-                    exportFileChooser.fileFilter = format.fileFilter
-                    if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
-                        val selectedFile = if (exportFileChooser.selectedFile.endsWith(format.extension)) {
-                            exportFileChooser.selectedFile
-                        } else {
-                            File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
-                        }
-                        format.action.invoke(modelSupplier(), selectedFile)
+    protected fun exportMenu(defaultFileName: String = "", modelSupplier: () -> TableModel): JMenu =
+        JMenu("Export").apply {
+            for (format in ExportFormat.values()) {
+                add(
+                    Action("Export as ${format.extension.uppercase()}") {
+                        exportFileChooser.apply {
+                            selectedFile = File(defaultFileName)
+                            resetChoosableFileFilters()
+                            fileFilter = format.fileFilter
+                            if (showSaveDialog(this@ToolPanel) == JFileChooser.APPROVE_OPTION) {
+                                val selectedFile =
+                                    if (selectedFile.absolutePath.endsWith(format.extension)) {
+                                        selectedFile
+                                    } else {
+                                        File(selectedFile.absolutePath + ".${format.extension}")
+                                    }
+                                format.action.invoke(modelSupplier(), selectedFile)
+                            }
+                        },
                     }
-                },
-            )
+                )
+            }
         }
-    }
 
     companion object {
-        private val exportFileChooser = JFileChooser(homeLocation).apply {
+        val exportFileChooser = JFileChooser(homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileView = CustomIconView()
-
             UIManager.addPropertyChangeListener { e ->
                 if (e.propertyName == "lookAndFeel") {
                     updateUI()
