@@ -5,6 +5,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
 import java.io.File
+import java.io.InputStream
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.sql.Connection
@@ -13,6 +14,7 @@ import java.sql.JDBCType
 import java.sql.ResultSet
 import java.sql.Time
 import java.sql.Timestamp
+import java.util.Properties
 import java.util.ServiceLoader
 import javax.swing.table.TableModel
 import kotlin.math.log2
@@ -80,6 +82,8 @@ fun SQLiteConnection(path: Path): Connection {
         setReadOnly(true)
     }.connection
 }
+
+fun Properties(inputStream: InputStream): Properties = Properties().apply { load(inputStream) }
 
 private val prefix = arrayOf("", "k", "m", "g", "t", "p", "e", "z", "y")
 
@@ -157,4 +161,8 @@ fun String.escapeHtml(): String {
             }
         }
     }
+}
+
+fun String.toHtmlLink(href: String): String {
+    return """<a href="$href">$this</a>"""
 }

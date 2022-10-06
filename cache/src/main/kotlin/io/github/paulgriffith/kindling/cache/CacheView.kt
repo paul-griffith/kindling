@@ -26,7 +26,7 @@ import javax.swing.SwingConstants
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
-class CacheView(val path: Path) : ToolPanel() {
+class CacheView(private val path: Path) : ToolPanel() {
     private val tempDirectory: Path = Files.createTempDirectory(path.nameWithoutExtension)
 
     private val dbName: String = run {

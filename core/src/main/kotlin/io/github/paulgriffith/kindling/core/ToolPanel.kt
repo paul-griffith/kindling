@@ -2,6 +2,7 @@ package io.github.paulgriffith.kindling.core
 
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FileExtensionFilter
+import io.github.paulgriffith.kindling.utils.Properties
 import io.github.paulgriffith.kindling.utils.exportToCSV
 import io.github.paulgriffith.kindling.utils.exportToXLSX
 import io.github.paulgriffith.kindling.utils.homeLocation
@@ -17,7 +18,7 @@ import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 
 abstract class ToolPanel(
-    layoutConstraints: String = "ins 6, fill, hidemode 3"
+    layoutConstraints: String = "ins 6, fill, hidemode 3",
 ) : JPanel(MigLayout(layoutConstraints)) {
     abstract val icon: Icon
 
@@ -42,7 +43,7 @@ abstract class ToolPanel(
                                 format.action.invoke(modelSupplier(), selectedFile)
                             }
                         }
-                    }
+                    },
                 )
             }
         }
@@ -59,11 +60,22 @@ abstract class ToolPanel(
             }
         }
 
-        private enum class ExportFormat(description: String, val extension: String, val action: (TableModel, File) -> Unit) {
+        private enum class ExportFormat(
+            description: String,
+            val extension: String,
+            val action: (TableModel, File) -> Unit,
+        ) {
             CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
             EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
 
             val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
+        }
+
+        val classMapsByVersion by lazy {
+            val versions = requireNotNull(this::class.java.getResourceAsStream("/javadocs")).reader().readLines()
+            versions.associateWith { version ->
+                Properties(requireNotNull(this::class.java.getResourceAsStream("/javadocs/$version/links.properties")))
+            }
         }
     }
 }

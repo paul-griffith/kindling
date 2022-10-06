@@ -2,6 +2,10 @@ plugins {
     kotlin("jvm")
 }
 
+apply {
+    plugin<DownloadJavadocsPlugin>()
+}
+
 dependencies {
     // see gradle/libs.version.toml
     api(libs.serialization.json)

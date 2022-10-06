@@ -8,6 +8,7 @@ import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import net.miginfocom.swing.MigLayout
 import java.awt.Component
+import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Rectangle
 import java.awt.Toolkit
@@ -15,6 +16,7 @@ import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JPanel
+import javax.swing.event.HyperlinkEvent
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.ComponentView
 import javax.swing.text.Element
@@ -36,11 +38,17 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     private val textPane = FlatTextPane().apply {
         isEditable = false
         editorKit = DetailsEditorKit()
+        addHyperlinkListener { event ->
+            if (event.eventType == HyperlinkEvent.EventType.ACTIVATED) {
+                val desktop = Desktop.getDesktop()
+                desktop.browse(event.url.toURI())
+            }
+        }
     }
 
     private val copy = Action(
         description = "Copy to Clipboard",
-        icon = FlatSVGIcon("icons/bx-clipboard.svg")
+        icon = FlatSVGIcon("icons/bx-clipboard.svg"),
     ) {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         clipboard.setContents(StringSelection(events.toClipboardFormat()), null)
@@ -48,7 +56,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
 
     private val save = Action(
         description = "Save to File",
-        icon = FlatSVGIcon("icons/bx-save.svg")
+        icon = FlatSVGIcon("icons/bx-save.svg"),
     ) {
         JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_ONLY
@@ -83,7 +91,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                     append(event.message.escapeHtml())
                 }
                 if (event.body.isNotEmpty()) {
-                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>", transform = String::escapeHtml)
+                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
                 } else {
                     append("<br>")
                 }
@@ -119,7 +127,7 @@ class DetailsEditorKit : HTMLEditorKit() {
                 object { 
                     padding-left: 16px; 
                 }
-                """.trimIndent()
+                """.trimIndent(),
             )
         }
     }
