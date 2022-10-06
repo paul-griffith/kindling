@@ -28,31 +28,30 @@ abstract class ToolPanel(
             for (format in ExportFormat.values()) {
                 add(
                     Action("Export as ${format.extension.uppercase()}") {
-                        exportFileChooser.selectedFile = File(defaultFileName)
-                        exportFileChooser.resetChoosableFileFilters()
-                        exportFileChooser.fileFilter = format.fileFilter
-                        if (exportFileChooser.showSaveDialog(this.parent.parent) == JFileChooser.APPROVE_OPTION) {
-                            val selectedFile =
-                                if (exportFileChooser.selectedFile.absolutePath.endsWith(format.extension)) {
-                                    exportFileChooser.selectedFile
-                                } else {
-                                    File(exportFileChooser.selectedFile.absolutePath + ".${format.extension}")
-                                }
-                            format.action.invoke(modelSupplier(), selectedFile)
+                        exportFileChooser.apply {
+                            selectedFile = File(defaultFileName)
+                            resetChoosableFileFilters()
+                            fileFilter = format.fileFilter
+                            if (showSaveDialog(this@ToolPanel) == JFileChooser.APPROVE_OPTION) {
+                                val selectedFile =
+                                    if (selectedFile.absolutePath.endsWith(format.extension)) {
+                                        selectedFile
+                                    } else {
+                                        File(selectedFile.absolutePath + ".${format.extension}")
+                                    }
+                                format.action.invoke(modelSupplier(), selectedFile)
+                            }
                         }
                     }
                 )
             }
         }
 
-//    protected lateinit var defaultFileName : String
-
     companion object {
         val exportFileChooser = JFileChooser(homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileView = CustomIconView()
-            this.selectedFile
             UIManager.addPropertyChangeListener { e ->
                 if (e.propertyName == "lookAndFeel") {
                     updateUI()

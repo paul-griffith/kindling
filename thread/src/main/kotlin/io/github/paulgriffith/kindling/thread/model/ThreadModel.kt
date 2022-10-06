@@ -104,7 +104,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                 thread.blocker?.owner
             }
         )
-        val StackTrace by column(
+        val Stacktrace by column(
             column = {
                 isVisible = false
                 minWidth = 75
