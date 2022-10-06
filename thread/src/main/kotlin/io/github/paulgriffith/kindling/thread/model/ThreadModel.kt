@@ -116,5 +116,16 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                 thread.stacktrace.joinToString()
             }
         )
+        val Scope by column(
+            column = {
+                isVisible = false
+                cellRenderer = DefaultTableRenderer { value ->
+                    (value as? String?) ?: "Unknown"
+                }
+            },
+            value = { thread ->
+                thread.scope
+            }
+        )
     }
 }
