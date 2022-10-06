@@ -108,7 +108,7 @@ fun TableModel.exportToCSV(file: File) {
         out.println()
         (0 until rowCount).forEach { row ->
             (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
-                getValueAt(row, col)?.toString().orEmpty()
+                """"${getValueAt(row, col)?.toString().orEmpty()}""""
             }
             out.println()
         }
