@@ -847,8 +847,12 @@ public class SerializationDumper {
 
         //Contents
         for (int i = 0; i < len; ++i) {
-            var b1 = data.get();
-            content.append((char) b1);
+            var nextChar = (char) data.get();
+            switch (nextChar) {
+                case '>' -> content.append("&gt;");
+                case '<' -> content.append("&lt;");
+                default -> content.append(nextChar);
+            }
         }
         print("Value - " + content);
 

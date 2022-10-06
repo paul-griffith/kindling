@@ -6,6 +6,7 @@ import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.thread.model.ThreadModel
@@ -15,6 +16,8 @@ import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.escapeHtml
+import io.github.paulgriffith.kindling.utils.getValue
+import io.github.paulgriffith.kindling.utils.toHtmlLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,7 +44,7 @@ import kotlin.io.path.name
 class ThreadView(
     private val tabName: String,
     data: InputStream,
-    private val fromFile: Boolean
+    private val fromFile: Boolean,
 ) : ToolPanel() {
     private val threadDump: ThreadDump = requireNotNull(ThreadDump.fromStream(data))
 
@@ -54,8 +57,8 @@ class ThreadView(
                     threadDump.deadlockIds.contains(adapter.getValue(ThreadModel.ThreadColumns[Id]))
                 },
                 UIManager.getColor("Actions.Red"),
-                null
-            )
+                null,
+            ),
         )
     }
 
@@ -126,7 +129,7 @@ class ThreadView(
             JMenuBar().apply {
                 add(exportMenu { mainTable.model })
             },
-            "align right, gapright 8"
+            "align right, gapright 8",
         )
 
         add(searchField, "align right, wmin 300, wrap")
@@ -139,18 +142,18 @@ class ThreadView(
                     add(FlatScrollPane(systemList), "grow, w 200::25%, hmin 100, wrap")
                     add(FlatScrollPane(poolList), "grow, w 200::25%, hmin 100")
                 },
-                details
+                details,
             ).apply {
                 resizeWeight = 0.5
             },
-            "push, grow, span"
+            "push, grow, span",
         )
     }
 
     private fun Thread.toDetail(): Detail = Detail(
         title = name,
         details = mapOf(
-            "id" to id.toString()
+            "id" to id.toString(),
         ),
         body = buildList {
             if (blocker != null) {
@@ -175,9 +178,9 @@ class ThreadView(
 
             if (stacktrace.isNotEmpty()) {
                 add("stacktrace:")
-                addAll(linkifyStackTrace(stacktrace, threadDump.version))
+                addAll(stacktrace.linkify(threadDump.version))
             }
-        }
+        },
     )
 
     override val icon: Icon = ThreadViewer.icon
@@ -188,11 +191,11 @@ class ThreadView(
             menu.add(
                 Action(name = "Open in External Editor") {
                     Desktop.getDesktop().open(File(tabName))
-                }
+                },
             )
         }
         menu.add(
-            exportMenu { mainTable.model }
+            exportMenu { mainTable.model },
         )
     }
 
@@ -206,6 +209,28 @@ class ThreadView(
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
+
+        private val classnameRegex = """(.*/)?(?<path>.*)\..*\(.*\)""".toRegex()
+
+        private fun Stacktrace.linkify(version: String): Stacktrace {
+            val foundEntry = classMapsByVersion.entries.find { (classMapVersion, _) ->
+                classMapVersion in version
+            } ?: return this
+
+            return stack.map { line ->
+                val escapedLine = line.escapeHtml()
+                val matchResult = classnameRegex.find(line)
+
+                if (matchResult != null) {
+                    val path by matchResult.groups
+                    val url = foundEntry.value[path.value] as String?
+                    if (url != null) {
+                        return@map escapedLine.toHtmlLink(url)
+                    }
+                }
+                escapedLine
+            }.let(::Stacktrace)
+        }
     }
 }
 
@@ -219,7 +244,7 @@ object ThreadViewer : ClipboardTool {
         return ThreadView(
             tabName = path.name,
             data = path.inputStream(),
-            fromFile = true
+            fromFile = true,
         )
     }
 
@@ -227,7 +252,7 @@ object ThreadViewer : ClipboardTool {
         return ThreadView(
             tabName = "Paste at ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))}",
             data = data.byteInputStream(),
-            fromFile = false
+            fromFile = false,
         )
     }
 }

@@ -2,6 +2,10 @@ plugins {
     kotlin("jvm")
 }
 
+apply {
+    plugin<DownloadJavadocsPlugin>()
+}
+
 dependencies {
     // see gradle/libs.version.toml
     api(libs.serialization.json)
@@ -21,7 +25,6 @@ dependencies {
     }
     runtimeOnly(libs.bundles.ia.transitive)
     implementation(libs.excelkt)
-    implementation(libs.jsoup)
 }
 
 java {
