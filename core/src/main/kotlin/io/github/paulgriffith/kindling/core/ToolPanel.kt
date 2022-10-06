@@ -42,8 +42,8 @@ abstract class ToolPanel(
                                     }
                                 format.action.invoke(modelSupplier(), selectedFile)
                             }
-                        },
-                    }
+                        }
+                    },
                 )
             }
         }
