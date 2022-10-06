@@ -8,8 +8,6 @@ import io.github.paulgriffith.kindling.utils.exportToXLSX
 import io.github.paulgriffith.kindling.utils.homeLocation
 import net.miginfocom.swing.MigLayout
 import java.io.File
-import java.io.InputStream
-import java.util.Properties
 import javax.swing.Icon
 import javax.swing.JFileChooser
 import javax.swing.JMenu
@@ -69,15 +67,11 @@ abstract class ToolPanel(
             val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
         }
 
-        val classMapsByVersion = this::class.java.getResourceAsStream("/javadocs")!!
-            .reader()
-            .readLines()
-            .associateWith { version ->
-                requireNotNull(this::class.java.getResourceAsStream("/javadocs/$version/links.properties")).parseClassLinks()
+        val classMapsByVersion by lazy {
+            val versions = requireNotNull(this::class.java.getResourceAsStream("/javadocs")).reader().readLines()
+            versions.associateWith { version ->
+                Properties(requireNotNull(this::class.java.getResourceAsStream("/javadocs/$version/links.properties")))
             }
-
-        private fun InputStream.parseClassLinks(): Properties {
-            return Properties(this)
         }
     }
 }

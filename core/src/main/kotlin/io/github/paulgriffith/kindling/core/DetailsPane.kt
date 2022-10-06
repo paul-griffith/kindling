@@ -30,7 +30,6 @@ import kotlin.properties.Delegates
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
         textPane.text = newValue.toDisplayFormat()
-        println(textPane.text)
         EventQueue.invokeLater {
             textPane.scrollRectToVisible(Rectangle(0, 0, 0, 0))
         }
@@ -49,7 +48,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
 
     private val copy = Action(
         description = "Copy to Clipboard",
-        icon = FlatSVGIcon("icons/bx-clipboard.svg")
+        icon = FlatSVGIcon("icons/bx-clipboard.svg"),
     ) {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         clipboard.setContents(StringSelection(events.toClipboardFormat()), null)
@@ -57,7 +56,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
 
     private val save = Action(
         description = "Save to File",
-        icon = FlatSVGIcon("icons/bx-save.svg")
+        icon = FlatSVGIcon("icons/bx-save.svg"),
     ) {
         JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_ONLY
@@ -128,7 +127,7 @@ class DetailsEditorKit : HTMLEditorKit() {
                 object { 
                     padding-left: 16px; 
                 }
-                """.trimIndent()
+                """.trimIndent(),
             )
         }
     }
