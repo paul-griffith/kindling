@@ -38,6 +38,13 @@ class DownloadJavadocsPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         val downloadJavadocs = target.tasks.register("downloadJavadocs", Task::class.java) {
             val javadocsDir = temporaryDir.resolve("javadocs")
+
+            javadocsDir.resolve("versions.txt").printWriter().use { writer ->
+                for (version in toDownload.keys) {
+                    writer.println(version)
+                }
+            }
+
             for ((version, urls) in toDownload) {
                 javadocsDir.resolve(version).apply {
                     mkdirs()

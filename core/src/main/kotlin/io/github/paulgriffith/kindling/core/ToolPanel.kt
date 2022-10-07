@@ -72,7 +72,7 @@ abstract class ToolPanel(
         }
 
         val classMapsByVersion by lazy {
-            val versions = requireNotNull(this::class.java.getResourceAsStream("/javadocs")).reader().readLines()
+            val versions = requireNotNull(this::class.java.getResourceAsStream("/javadocs/versions.txt")).reader().readLines()
             versions.associateWith { version ->
                 Properties(requireNotNull(this::class.java.getResourceAsStream("/javadocs/$version/links.properties")))
             }
