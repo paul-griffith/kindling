@@ -39,12 +39,6 @@ class DownloadJavadocsPlugin : Plugin<Project> {
         val downloadJavadocs = target.tasks.register("downloadJavadocs", Task::class.java) {
             val javadocsDir = temporaryDir.resolve("javadocs")
 
-            javadocsDir.resolve("versions.txt").printWriter().use { writer ->
-                for (version in toDownload.keys) {
-                    writer.println(version)
-                }
-            }
-
             for ((version, urls) in toDownload) {
                 javadocsDir.resolve(version).apply {
                     mkdirs()
@@ -65,6 +59,12 @@ class DownloadJavadocsPlugin : Plugin<Project> {
                             }
                         }
                     }
+                }
+            }
+
+            javadocsDir.resolve("versions.txt").printWriter().use { writer ->
+                for (version in toDownload.keys) {
+                    writer.println(version)
                 }
             }
 
