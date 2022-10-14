@@ -50,8 +50,8 @@ runtime {
             "java.sql",
             "java.logging",
             "java.naming",
-            "java.xml"
-        )
+            "java.xml",
+        ),
     )
 
     jpackage {
