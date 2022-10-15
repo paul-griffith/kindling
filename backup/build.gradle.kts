@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(projects.core)
     implementation(projects.idb)
+    implementation(libs.rsyntaxtextarea)
 }
 
 java {
