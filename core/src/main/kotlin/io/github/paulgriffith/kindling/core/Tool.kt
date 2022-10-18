@@ -1,7 +1,7 @@
 package io.github.paulgriffith.kindling.core
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.utils.PathExtensionFilter
+import io.github.paulgriffith.kindling.utils.FileExtensionFilter
 import io.github.paulgriffith.kindling.utils.loadService
 import java.io.File
 import java.nio.file.Path
@@ -15,8 +15,8 @@ interface Tool {
 
     fun open(path: Path): ToolPanel
 
-    val filter: PathExtensionFilter
-        get() = PathExtensionFilter(description, extensions.toSet())
+    val filter: FileExtensionFilter
+        get() = FileExtensionFilter(description, extensions)
 
     companion object {
         val tools: List<Tool> by lazy { loadService<Tool>().sortedBy { it.title } }

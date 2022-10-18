@@ -1,12 +1,12 @@
 package io.github.paulgriffith.kindling.backup.views
 
+import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.paulgriffith.kindling.backup.PathView
 import io.github.paulgriffith.kindling.utils.homeLocation
-import net.miginfocom.swing.MigLayout
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.JButton
 import javax.swing.JFileChooser
-import javax.swing.JPanel
 import javax.swing.UIManager
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.PathWalkOption
@@ -18,7 +18,7 @@ import kotlin.io.path.relativeTo
 import kotlin.io.path.walk
 
 @OptIn(ExperimentalPathApi::class)
-class ProjectView(provider: FileSystemProvider, private val path: Path) : JPanel(MigLayout("ins 0, fill")) {
+class ProjectView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
     private val exportButton = JButton("Export Project")
 
     init {
@@ -41,7 +41,7 @@ class ProjectView(provider: FileSystemProvider, private val path: Path) : JPanel
         add(TextFileView(provider, path / "project.json"), "push, grow")
     }
 
-    override fun toString(): String = "ProjectView(${path.name})"
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg")
 
     companion object {
         val exportDirectoryChooser = JFileChooser(homeLocation).apply {
@@ -54,5 +54,7 @@ class ProjectView(provider: FileSystemProvider, private val path: Path) : JPanel
                 }
             }
         }
+
+        fun isProjectDirectory(path: Path) = path.parent?.name == "projects"
     }
 }

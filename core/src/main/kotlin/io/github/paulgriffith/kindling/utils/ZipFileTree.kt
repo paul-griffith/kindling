@@ -1,22 +1,20 @@
-@file:OptIn(ExperimentalPathApi::class)
 
 package io.github.paulgriffith.kindling.utils
 
-import io.github.paulgriffith.kindling.core.Tool
-import org.jdesktop.swingx.JXTree
 import java.nio.file.FileSystem
 import java.nio.file.Path
+import javax.swing.JTree
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeModel
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.PathWalkOption.INCLUDE_DIRECTORIES
 import kotlin.io.path.div
-import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 import kotlin.io.path.walk
 
 data class PathNode(override val userObject: Path) : TypedTreeNode<Path>()
 
+@OptIn(ExperimentalPathApi::class)
 class RootNode(zipFile: FileSystem) : AbstractTreeNode() {
     init {
         val pathComparator = compareBy<Path> { it.isDirectory() }.thenBy { it.fileName }
@@ -30,7 +28,7 @@ class RootNode(zipFile: FileSystem) : AbstractTreeNode() {
             var currentDepth = zipFile.getPath("/")
             for (part in path) {
                 currentDepth /= part
-                val next = seen.getOrPut(part) {
+                val next = seen.getOrPut(currentDepth) {
                     val newChild = PathNode(currentDepth)
                     lastSeen.children.add(newChild)
                     newChild
@@ -43,16 +41,16 @@ class RootNode(zipFile: FileSystem) : AbstractTreeNode() {
 
 class ZipFileModel(fileSystem: FileSystem) : DefaultTreeModel(RootNode(fileSystem))
 
-class ZipFileTree(fileSystem: FileSystem) : JXTree(ZipFileModel(fileSystem)) {
+class ZipFileTree(fileSystem: FileSystem) : JTree(ZipFileModel(fileSystem)) {
     init {
         isRootVisible = false
+        setShowsRootHandles(true)
 
         setCellRenderer(
-            treeCellRenderer { tree, value, selected, expanded, leaf, row, hasFocus ->
+            treeCellRenderer { _, value, _, _, _, _, _ ->
                 if (value is PathNode) {
                     val path = value.userObject
-                    icon = Tool.byExtension[path.extension]?.icon?.derive(16, 16) ?: icon
-                    toolTipText = Tool.byExtension[path.extension]?.description
+                    toolTipText = path.toString()
                     text = path.last().toString()
                 }
                 this

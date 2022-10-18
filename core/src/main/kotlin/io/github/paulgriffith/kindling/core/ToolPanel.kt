@@ -1,7 +1,7 @@
 package io.github.paulgriffith.kindling.core
 
 import io.github.paulgriffith.kindling.utils.Action
-import io.github.paulgriffith.kindling.utils.PathExtensionFilter
+import io.github.paulgriffith.kindling.utils.FileExtensionFilter
 import io.github.paulgriffith.kindling.utils.Properties
 import io.github.paulgriffith.kindling.utils.exportToCSV
 import io.github.paulgriffith.kindling.utils.exportToXLSX
@@ -68,7 +68,7 @@ abstract class ToolPanel(
             CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
             EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
 
-            val fileFilter: FileFilter = PathExtensionFilter(description, setOf(extension))
+            val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
         }
 
         val classMapsByVersion by lazy {

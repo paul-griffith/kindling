@@ -25,7 +25,6 @@ import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
-import java.nio.file.Path
 import java.util.Collections
 import java.util.Enumeration
 import javax.swing.DefaultListCellRenderer
@@ -47,8 +46,6 @@ import javax.swing.tree.DefaultTreeCellRenderer
 import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreeNode
 import kotlin.io.path.Path
-import kotlin.io.path.extension
-import kotlin.io.path.isDirectory
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 
@@ -298,16 +295,12 @@ class ReifiedJXTable<T : TableModel>(
 /**
  * Like FileNameExtensionFilter, but with a useful equals and hashcode.
  */
-data class PathExtensionFilter(
+data class FileExtensionFilter(
     private val description: String,
-    private val extensions: Set<String>,
+    private val extensions: List<String>,
 ) : FileFilter() {
     override fun accept(f: File): Boolean {
-        return accept(f.toPath())
-    }
-
-    fun accept(path: Path): Boolean {
-        return path.isDirectory() || path.extension in extensions
+        return f.isDirectory || f.extension in extensions
     }
 
     override fun getDescription(): String = description
