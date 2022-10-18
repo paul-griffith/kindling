@@ -4,7 +4,6 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.backup.PathView
 import io.github.paulgriffith.kindling.idb.generic.GenericView
 import io.github.paulgriffith.kindling.utils.SQLiteConnection
-import java.awt.BorderLayout
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -25,7 +24,7 @@ class IdbView(override val provider: FileSystemProvider, override val path: Path
             val idbView = GenericView(connection)
             add(idbView, "push, grow")
         } catch (e: ZipException) {
-            add(JLabel("Unable to open $path; ${e.message}"), BorderLayout.CENTER)
+            add(JLabel("Unable to open $path; ${e.message}"), "push, grow")
         }
     }
 

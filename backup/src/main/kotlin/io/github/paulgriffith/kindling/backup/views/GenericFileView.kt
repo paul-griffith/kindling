@@ -15,34 +15,36 @@ class GenericFileView(override val provider: FileSystemProvider, override val pa
 
     init {
         provider.newInputStream(path).use { file ->
+            val windowSize = 16
             textArea.text = sequence {
-                val window = 16
-                val buffer = ByteArray(window)
-                var offset = 0
-                var read: Int
+                val buffer = ByteArray(windowSize)
+                var numberOfBytesRead: Int
                 do {
-                    read = file.readNBytes(buffer, 0, window)
+                    numberOfBytesRead = file.readNBytes(buffer, 0, windowSize)
 
                     // the last read might not be complete, so there could be stale data in the buffer
-                    val toRead = buffer.sliceArray(0 until read)
+                    val toRead = buffer.sliceArray(0 until numberOfBytesRead)
                     val hexBytes = HEX_FORMAT.formatHex(toRead)
-                    val decodedBytes = String(
-                        CharArray(toRead.size) { i ->
-                            val byte = buffer[i]
-                            if (byte >= 0 && !Character.isISOControl(byte.toInt())) {
-                                Char(byte.toUShort())
-                            } else {
-                                '.'
-                            }
-                        },
-                    )
+                    val decodedBytes = decodeBytes(toRead)
                     yield("${hexBytes.padEnd(47)}  $decodedBytes")
-                    offset += window
-                } while (read == window)
+                } while (numberOfBytesRead == windowSize)
             }.joinToString(separator = "\n")
         }
 
         add(FlatScrollPane(textArea), "push, grow")
+    }
+
+    private fun decodeBytes(toRead: ByteArray): String {
+        return String(
+            CharArray(toRead.size) { i ->
+                val byte = toRead[i]
+                if (byte >= 0 && !Character.isISOControl(byte.toInt())) {
+                    Char(byte.toUShort())
+                } else {
+                    '.'
+                }
+            },
+        )
     }
 
     companion object {

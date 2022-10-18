@@ -25,6 +25,7 @@ class ImageView(override val provider: FileSystemProvider, override val path: Pa
                 verticalAlignment = CENTER
                 icon = ImageIcon(image)
             },
+            "center",
         )
     }
 

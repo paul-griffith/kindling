@@ -128,9 +128,18 @@ class BackupView(path: Path) : ToolPanel() {
         }
 
         init {
-            add(JLabel("${path.toString().substring(1)} - ${attributes.size().toFileSizeLabel()}"), "pushx, growx")
-            add(saveAs, "ax 100%, wrap")
-            add(pathView, "push, grow, span")
+            val header = buildString {
+                append(path.toString().substring(1))
+                if (path.isRegularFile()) {
+                    append(" - ")
+                    append(attributes.size().toFileSizeLabel())
+                }
+            }
+            add(JLabel(header), "pushx, growx")
+            if (path.isRegularFile()) {
+                add(saveAs, "ax 100%")
+            }
+            add(pathView, "newline, push, grow, span")
         }
     }
 
