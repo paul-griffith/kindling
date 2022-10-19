@@ -15,5 +15,5 @@ include(
     "thread",
     "cache",
     "backup",
-    "app"
+    "app",
 )

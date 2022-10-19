@@ -12,6 +12,9 @@ plugins {
 repositories {
     maven {
         url = uri("https://jitpack.io")
+        content {
+            includeGroup("com.github.Dansoftowner")
+        }
     }
 }
 
@@ -50,8 +53,8 @@ runtime {
             "java.sql",
             "java.logging",
             "java.naming",
-            "java.xml"
-        )
+            "java.xml",
+        ),
     )
 
     jpackage {

@@ -2,36 +2,48 @@ package io.github.paulgriffith.kindling.backup
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
+import com.formdev.flatlaf.extras.components.FlatTabbedPane.WRAP_TAB_LAYOUT
+import io.github.paulgriffith.kindling.backup.views.GenericFileView
+import io.github.paulgriffith.kindling.backup.views.IdbView
+import io.github.paulgriffith.kindling.backup.views.ImageView
+import io.github.paulgriffith.kindling.backup.views.ProjectView
+import io.github.paulgriffith.kindling.backup.views.TextFileView
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
-import io.github.paulgriffith.kindling.idb.generic.GenericView
-import io.github.paulgriffith.kindling.utils.SQLiteConnection
-import io.github.paulgriffith.kindling.utils.getLogger
-import net.lingala.zip4j.ZipFile
-import net.lingala.zip4j.exception.ZipException
+import io.github.paulgriffith.kindling.utils.FlatScrollPane
+import io.github.paulgriffith.kindling.utils.PathNode
+import io.github.paulgriffith.kindling.utils.ZipFileTree
+import io.github.paulgriffith.kindling.utils.toFileSizeLabel
 import net.miginfocom.swing.MigLayout
-import java.awt.BorderLayout
-import java.nio.file.Files
+import java.io.File
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.spi.FileSystemProvider
+import java.util.function.BiConsumer
 import javax.swing.Icon
+import javax.swing.JButton
+import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JSplitPane
+import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.io.path.div
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
+import kotlin.io.path.outputStream
 
-class BackupView(val path: Path) : ToolPanel() {
-    private val gwbk = ZipFile(path.toFile()).also {
-        check(it.isValidZipFile) { "Not a valid zip file" }
+class BackupView(path: Path) : ToolPanel() {
+    private val gwbk: FileSystem = FileSystems.newFileSystem(path)
+    private val provider: FileSystemProvider = gwbk.provider()
+
+    private val files = ZipFileTree(gwbk).apply {
+        selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
     }
 
-    private val projects = ProjectsPanel(gwbk)
-
     private val backupInfo = JLabel().apply {
-        val header = gwbk.getFileHeader(BACKUP_INFO)
-        val file = XML_FACTORY.newDocumentBuilder().parse(gwbk.getInputStream(header).buffered()).apply {
+        val file = XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(gwbk.getPath(BACKUP_INFO))).apply {
             normalizeDocument()
         }
         val version = file.getElementsByTagName("version").item(0).textContent
@@ -49,49 +61,86 @@ class BackupView(val path: Path) : ToolPanel() {
         }
     }
 
-    private val tabs = FlatTabbedPane().apply {
-        addTab(GATEWAY_XML, TextDocument(gwbk, GATEWAY_XML))
-        addTab(REDUNDANCY_XML, TextDocument(gwbk, REDUNDANCY_XML))
-        addTab(IGNITION_CONF, TextDocument(gwbk, IGNITION_CONF))
-        addTab(
-            DB_BACKUP_SQLITE_IDB,
-            JPanel(BorderLayout()).apply {
-                addHierarchyListener {
-                    if (this.isShowing && componentCount == 0) {
-                        val dbTempFile = Files.createTempDirectory("kindling")
-                        try {
-                            gwbk.extractFile(gwbk.getFileHeader(DB_BACKUP_SQLITE_IDB), dbTempFile.toString())
-                            val connection = SQLiteConnection(dbTempFile / DB_BACKUP_SQLITE_IDB)
-                            val idbView = GenericView(connection)
-                            add(idbView, BorderLayout.CENTER)
-                        } catch (e: ZipException) {
-                            LOGGER.error("Error extracting $DB_BACKUP_SQLITE_IDB from $path", e)
-                            add(JLabel("Unable to open $DB_BACKUP_SQLITE_IDB; ${e.message}"), BorderLayout.CENTER)
-                        }
-                    }
-                }
-            }
-        )
+    private val tabbedPane = FlatTabbedPane().apply {
+        tabLayoutPolicy = WRAP_TAB_LAYOUT
+
+        isTabsClosable = true
+        tabCloseCallback = BiConsumer { _, i ->
+            removeTabAt(i)
+        }
     }
 
-    private val sidebar = JPanel(MigLayout("ins 0")).apply {
-        add(JLabel("Projects:"), "wrap, gaptop 12")
-        add(projects, "width 200, growy, pushy")
-    }
+    private val FlatTabbedPane.tabs: Sequence<TabWrapper>
+        get() = sequence {
+            for (i in 0 until tabCount) {
+                yield(getComponentAt(i) as TabWrapper)
+            }
+        }
+
+    private val sidebar = FlatScrollPane(files)
 
     init {
         name = path.name
         toolTipText = path.toString()
 
-        add(backupInfo, "north")
-        add(
-            JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT,
-                sidebar,
-                tabs
-            ),
-            "push, grow"
-        )
+        files.addTreeSelectionListener {
+            val pathNode = it.path.lastPathComponent as PathNode
+            val actualPath = pathNode.userObject
+
+            val existingTab = tabbedPane.tabs.find { tab -> tab.path == actualPath }
+            if (existingTab == null) {
+                val fileView = BackupViewer.createView(actualPath, provider)
+                if (fileView != null) {
+                    val attributes = provider.readAttributes(actualPath, BasicFileAttributes::class.java)
+                    val tab = TabWrapper(actualPath, fileView, attributes)
+                    tabbedPane.addTab(
+                        actualPath.name,
+                        fileView.icon?.derive(16, 16),
+                        tab,
+                        actualPath.toString(),
+                    )
+                    tabbedPane.selectedIndex = tabbedPane.tabCount - 1
+                }
+            } else {
+                tabbedPane.selectedComponent = existingTab
+            }
+        }
+
+        add(backupInfo, "north, pad 6 6 6 6")
+        add(sidebar, "west, width 300!, pad 6 6 6 6")
+        add(tabbedPane, "dock center")
+    }
+
+    class TabWrapper(
+        val path: Path,
+        pathView: PathView,
+        attributes: BasicFileAttributes,
+    ) : JPanel(MigLayout("ins 6")) {
+        private val saveAs = JButton("Save As").apply {
+            addActionListener {
+                exportFileChooser.selectedFile = File(path.last().toString())
+                if (exportFileChooser.showSaveDialog(this@TabWrapper) == JFileChooser.APPROVE_OPTION) {
+                    pathView.provider.newInputStream(path).use { file ->
+                        exportFileChooser.selectedFile.toPath().outputStream().use(file::copyTo)
+                    }
+                }
+            }
+        }
+
+        init {
+            val header = buildString {
+                append(path.toString().substring(1))
+                if (path.isRegularFile()) {
+                    append(" - ")
+                    append(attributes.size().toFileSizeLabel())
+                }
+            }
+            add(JLabel(header), "pushx, growx")
+            if (path.isRegularFile()) {
+                add(saveAs, "ax 100%")
+            }
+            add(pathView, "newline, push, grow, span")
+        }
     }
 
     override fun removeNotify() = super.removeNotify().also {
@@ -102,17 +151,26 @@ class BackupView(val path: Path) : ToolPanel() {
 
     companion object Constants {
         const val BACKUP_INFO = "backupinfo.xml"
-        const val GATEWAY_XML = "gateway.xml"
-        const val REDUNDANCY_XML = "redundancy.xml"
-        const val IGNITION_CONF = "ignition.conf"
-        const val DB_BACKUP_SQLITE_IDB = "db_backup_sqlite.idb"
 
         private val XML_FACTORY = DocumentBuilderFactory.newDefaultInstance().apply {
             setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            isXIncludeAware = false
+            isExpandEntityReferences = false
         }
-
-        private val LOGGER = getLogger<BackupView>()
     }
+}
+
+typealias PathPredicate = (Path) -> Boolean
+
+typealias PathViewProvider = (FileSystemProvider, Path) -> PathView
+
+abstract class PathView : JPanel(MigLayout("ins 0, fill")) {
+    abstract val provider: FileSystemProvider
+    abstract val path: Path
+
+    open val icon: FlatSVGIcon? = null
+
+    override fun toString(): String = "${this::class.simpleName}(path=$path)"
 }
 
 object BackupViewer : Tool {
@@ -121,6 +179,23 @@ object BackupViewer : Tool {
     override val icon = FlatSVGIcon("icons/bx-archive.svg")
     override val extensions = listOf("gwbk")
     override fun open(path: Path): ToolPanel = BackupView(path)
+
+    private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
+        put(TextFileView::isTextFile, ::TextFileView)
+        put(ImageView::isImageFile, ::ImageView)
+        put(IdbView::isIdbFile, ::IdbView)
+        put(ProjectView::isProjectDirectory, ::ProjectView)
+    }
+
+    fun createView(path: Path, fileSystemProvider: FileSystemProvider): PathView? {
+        val matchEntry = handlers.entries.firstOrNull { (predicate, _) -> predicate(path) }
+        val fileView = matchEntry?.value?.invoke(fileSystemProvider, path)
+        return when {
+            fileView != null -> fileView
+            path.isRegularFile() -> GenericFileView(fileSystemProvider, path)
+            else -> null
+        }
+    }
 }
 
 class BackupViewerProxy : Tool by BackupViewer
