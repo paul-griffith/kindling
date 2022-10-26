@@ -18,11 +18,12 @@ class IdbView(path: Path) : ToolPanel() {
 
     private val tables: List<String> = connection.metaData.getTables("", "", "", null).toList { rs ->
         rs.getString(3)
-    }
+    }.onEach { LOGGER.debug(it) }
 
     private var tool: IdbTool by Delegates.vetoable(
         when {
             "logging_event" in tables -> IdbTool.Log
+            "SYSTEM_METRICS" in tables -> IdbTool.Metrics
             else -> IdbTool.Generic
         }
     ) { _, _, newValue ->
@@ -63,11 +64,23 @@ class IdbView(path: Path) : ToolPanel() {
                             tool = IdbTool.Generic
                         }
                     )
-                    IdbTool.Generic -> add(
-                        Action(name = "Log View") {
-                            tool = IdbTool.Log
+                    IdbTool.Metrics -> add(
+                        Action(name = "Generic View") {
+                            tool = IdbTool.Generic
                         }
                     )
+                    IdbTool.Generic -> {
+                        add(
+                            Action(name = "Log View") {
+                                tool = IdbTool.Log
+                            }
+                        )
+                        add(
+                            Action(name = "Metrics View") {
+                                tool = IdbTool.Metrics
+                            }
+                        )
+                    }
                 }
             }
         )

@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.idb.generic.GenericView
+import io.github.paulgriffith.kindling.idb.metrics.MetricsView
 import io.github.paulgriffith.kindling.log.Level
 import io.github.paulgriffith.kindling.log.LogPanel
 import io.github.paulgriffith.kindling.log.SystemLogsEvent
@@ -11,6 +12,7 @@ import io.github.paulgriffith.kindling.utils.toList
 import java.nio.file.Path
 import java.sql.Connection
 import java.time.Instant
+import javax.swing.JLabel
 import javax.swing.JPanel
 
 enum class IdbTool {
@@ -98,6 +100,10 @@ enum class IdbTool {
     },
     Generic {
         override fun openPanel(connection: Connection): JPanel = GenericView(connection)
+    },
+    Metrics {
+        override fun openPanel(connection: Connection): JPanel = MetricsView(connection)
+
     };
 
     abstract fun openPanel(connection: Connection): JPanel
