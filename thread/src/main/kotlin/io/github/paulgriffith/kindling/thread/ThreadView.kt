@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
@@ -12,6 +13,7 @@ import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.thread.model.ThreadModel
 import io.github.paulgriffith.kindling.thread.model.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.kindling.utils.Action
+import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
@@ -32,6 +34,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import javax.swing.Icon
 import javax.swing.JLabel
+import javax.swing.JMenu
 import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
@@ -60,6 +63,19 @@ class ThreadView(
                 null,
             ),
         )
+        componentPopupMenu = FlatPopupMenu().apply {
+            add(
+                JMenu("Mark all with same...").apply {
+                    ThreadModel.ThreadColumns.forEach {col ->
+                        add(
+                            Action(col.header) {
+                                markAllWithSameValue(col)
+                            }
+                        )
+                    }
+                }
+            )
+        }
     }
 
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
@@ -81,11 +97,28 @@ class ThreadView(
         add { thread ->
             val query = searchField.text
             query != null &&
-                thread.name.contains(query, ignoreCase = true) ||
-                thread.system != null && thread.system.contains(query, ignoreCase = true) ||
-                thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
-                thread.state.name.contains(query, ignoreCase = true) ||
-                thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+                    thread.id.toString().contains(query) ||
+                    thread.name.contains(query, ignoreCase = true) ||
+                    thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+                    thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+                    thread.state.name.contains(query, ignoreCase = true) ||
+                    thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+        }
+    }
+
+    private fun ReifiedJXTable<ThreadModel>.markAllWithSameValue(property: Column<Thread, *>) {
+        val selectedPropertyValues = buildList {
+            selectionModel.selectedIndices.forEach {
+                val modelIndex = convertRowIndexToModel(it)
+                add(model[modelIndex, property])
+            }
+        }.distinct()
+
+        (0 until model.rowCount).forEach {
+            val currentRowValue = model[it, property]
+            if (currentRowValue in selectedPropertyValues) {
+                model.setValueAt(true, it, ThreadModel.ThreadColumns[ThreadModel.Mark])
+            }
         }
     }
 
