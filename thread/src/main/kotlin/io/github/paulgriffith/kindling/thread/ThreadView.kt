@@ -12,11 +12,14 @@ import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.thread.model.ThreadModel
 import io.github.paulgriffith.kindling.thread.model.ThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.kindling.utils.Action
+import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getValue
+import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toHtmlLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +27,7 @@ import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
+import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Desktop
 import java.io.File
 import java.io.InputStream
@@ -32,6 +36,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import javax.swing.Icon
 import javax.swing.JLabel
+import javax.swing.JMenu
 import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
@@ -60,6 +65,80 @@ class ThreadView(
                 null,
             ),
         )
+
+        fun markAllWithSameValue(property: Column<Thread, *>) {
+            val selectedPropertyValue = model[selectedRowIndices().first(), property]
+
+            for (thread in model.threads) {
+                if (property.getValue(thread) == selectedPropertyValue) {
+                    thread.marked = true
+                }
+            }
+
+            model.fireTableDataChanged()
+        }
+
+        fun filterAllWithSameValue(property: Column<Thread, *>) {
+            val firstRow = selectedRowIndices().first()
+            when (property) {
+                ThreadModel.State -> {
+                    val state = model[firstRow, ThreadModel.State]
+                    stateList.select(state)
+                }
+
+                ThreadModel.System -> {
+                    val system = model[firstRow, ThreadModel.System]
+                    if (system != null) {
+                        systemList.select(system)
+                    }
+                }
+
+                ThreadModel.Pool -> {
+                    val pool = model[firstRow, ThreadModel.Pool]
+                    if (pool != null) {
+                        poolList.select(pool)
+                    }
+                }
+            }
+        }
+
+        actionMap.put(
+            "${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks",
+            Action(name = "Clear All Marks") {
+                for (thread in model.threads) {
+                    thread.marked = false
+                }
+            },
+        )
+
+        attachPopupMenu { event ->
+            val rowAtPoint = rowAtPoint(event.point)
+            selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
+            JPopupMenu().apply {
+                add(
+                    JMenu("Filter all with same...").apply {
+                        for (column in ThreadModel.filterableColumns) {
+                            add(
+                                Action(column.header) {
+                                    filterAllWithSameValue(column)
+                                },
+                            )
+                        }
+                    },
+                )
+                add(
+                    JMenu("Mark all with same...").apply {
+                        for (column in ThreadModel.markableColumns) {
+                            add(
+                                Action(column.header) {
+                                    markAllWithSameValue(column)
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+        }
     }
 
     private val stateList = StateList(threadDump.threads.groupingBy(Thread::state).eachCount())
@@ -79,13 +158,16 @@ class ThreadView(
             thread.pool in poolList.checkBoxListSelectedValues
         }
         add { thread ->
-            val query = searchField.text
-            query != null &&
-                thread.name.contains(query, ignoreCase = true) ||
-                thread.system != null && thread.system.contains(query, ignoreCase = true) ||
-                thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
-                thread.state.name.contains(query, ignoreCase = true) ||
-                thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+            val query = searchField.text ?: return@add true
+
+            val idMatches = thread.id.toString().contains(query)
+            val nameMatches = thread.name.contains(query, ignoreCase = true)
+            val systemMatches = thread.system != null && thread.system.contains(query, ignoreCase = true)
+            val scopeMatches = thread.scope != null && thread.scope.contains(query, ignoreCase = true)
+            val stateMatches = thread.state.name.contains(query, ignoreCase = true)
+            val stackMatches = thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+
+            idMatches || nameMatches || systemMatches || scopeMatches || stateMatches || stackMatches
         }
     }
 

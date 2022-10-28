@@ -30,7 +30,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
         }
     }
 
-    @Suppress("unused")
+    @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object ThreadColumns : ColumnList<Thread>() {
         private val percent = DecimalFormat("0.00%")
 
@@ -43,20 +43,20 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                     FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
                 }
             },
-            value = Thread::marked
+            value = Thread::marked,
         )
         val Id by column(
             column = {
                 cellRenderer = DefaultTableRenderer(Any?::toString)
             },
-            value = { it.id }
+            value = { it.id },
         )
         val State by column(
             column = {
                 minWidth = 105
                 maxWidth = 105
             },
-            value = { it.state }
+            value = { it.state },
         )
         val Name by column { it.name }
         val Daemon by column(
@@ -64,7 +64,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                 minWidth = 55
                 maxWidth = 55
             },
-            value = { it.isDaemon }
+            value = { it.isDaemon },
         )
         val Depth by column { it.stacktrace.size }
         val CPU by column(
@@ -73,7 +73,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                     (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
                 }
             },
-            value = Thread::cpuUsage
+            value = Thread::cpuUsage,
         )
         val System by column(
             column = {
@@ -82,7 +82,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                     (value as? String) ?: "Unassigned"
                 }
             },
-            value = Thread::system
+            value = Thread::system,
         )
         val Pool by column(
             column = {
@@ -92,7 +92,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
                     (value as? String?) ?: "(No Pool)"
                 }
             },
-            value = Thread::pool
+            value = Thread::pool,
         )
         val Blocker by column(
             column = {
@@ -102,7 +102,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             },
             value = { thread ->
                 thread.blocker?.owner
-            }
+            },
         )
         val Stacktrace by column(
             column = {
@@ -114,7 +114,7 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             },
             value = { thread ->
                 thread.stacktrace.joinToString()
-            }
+            },
         )
         val Scope by column(
             column = {
@@ -125,7 +125,21 @@ class ThreadModel(val threads: List<Thread>) : AbstractTableModel() {
             },
             value = { thread ->
                 thread.scope
-            }
+            },
+        )
+
+        val filterableColumns = listOf(
+            State,
+            System,
+            Pool,
+        )
+
+        val markableColumns = listOf(
+            State,
+            System,
+            Pool,
+            Blocker,
+            Stacktrace,
         )
     }
 }

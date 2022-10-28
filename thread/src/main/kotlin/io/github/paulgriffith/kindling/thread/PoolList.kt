@@ -13,6 +13,15 @@ class PoolModel(private val values: List<String?>) : AbstractListModel<Any>() {
         0 -> CheckBoxList.ALL_ENTRY
         else -> values[index - 1]
     }
+
+    fun indexOf(pool: String): Int {
+        val indexOf = values.indexOf(pool)
+        return if (indexOf >= 0) {
+            indexOf + 1
+        } else {
+            -1
+        }
+    }
 }
 
 class PoolList(data: Map<String?, Int>) :
@@ -35,6 +44,11 @@ class PoolList(data: Map<String?, Int>) :
         }
 
         selectAll()
+    }
+
+    fun select(pool: String) {
+        val rowToSelect = model.indexOf(pool)
+        checkBoxListSelectionModel.setSelectionInterval(rowToSelect, rowToSelect)
     }
 
     override fun getModel(): PoolModel = super.getModel() as PoolModel
