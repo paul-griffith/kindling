@@ -67,17 +67,15 @@ class ThreadView(
         )
 
         fun markAllWithSameValue(property: Column<Thread, *>) {
-            val selectedPropertyValues = selectedRowIndices()
-                .map { index -> model[index, property] }
-                .filterNotNull()
-                .toSet()
+            val selectedPropertyValue = model[selectedRowIndices().first(), property]
 
-            for (row in 0 until model.rowCount) {
-                val currentRowValue = model[row, property]
-                if (currentRowValue in selectedPropertyValues) {
-                    model.setValueAt(true, row, ThreadModel[ThreadModel.Mark])
+            for (thread in model.threads) {
+                if (property.getValue(thread) == selectedPropertyValue) {
+                    thread.marked = true
                 }
             }
+
+            model.fireTableDataChanged()
         }
 
         fun filterAllWithSameValue(property: Column<Thread, *>) {
