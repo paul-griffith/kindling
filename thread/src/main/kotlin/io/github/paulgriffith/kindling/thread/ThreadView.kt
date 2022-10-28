@@ -1,7 +1,6 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
@@ -17,8 +16,10 @@ import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getValue
+import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toHtmlLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
+import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Desktop
 import java.io.File
 import java.io.InputStream
@@ -63,18 +65,81 @@ class ThreadView(
                 null,
             ),
         )
-        componentPopupMenu = FlatPopupMenu().apply {
-            add(
-                JMenu("Mark all with same...").apply {
-                    ThreadModel.ThreadColumns.forEach {col ->
-                        add(
-                            Action(col.header) {
-                                markAllWithSameValue(col)
-                            }
-                        )
+
+        fun markAllWithSameValue(property: Column<Thread, *>) {
+            val selectedPropertyValues = selectedRowIndices()
+                .map { index -> model[index, property] }
+                .filterNotNull()
+                .toSet()
+
+            for (row in 0 until model.rowCount) {
+                val currentRowValue = model[row, property]
+                if (currentRowValue in selectedPropertyValues) {
+                    model.setValueAt(true, row, ThreadModel[ThreadModel.Mark])
+                }
+            }
+        }
+
+        fun filterAllWithSameValue(property: Column<Thread, *>) {
+            val firstRow = selectedRowIndices().first()
+            when (property) {
+                ThreadModel.State -> {
+                    val state = model[firstRow, ThreadModel.State]
+                    stateList.select(state)
+                }
+
+                ThreadModel.System -> {
+                    val system = model[firstRow, ThreadModel.System]
+                    if (system != null) {
+                        systemList.select(system)
                     }
                 }
-            )
+
+                ThreadModel.Pool -> {
+                    val pool = model[firstRow, ThreadModel.Pool]
+                    if (pool != null) {
+                        poolList.select(pool)
+                    }
+                }
+            }
+        }
+
+        actionMap.put(
+            "${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks",
+            Action(name = "Clear All Marks") {
+                for (thread in model.threads) {
+                    thread.marked = false
+                }
+            },
+        )
+
+        attachPopupMenu { event ->
+            val rowAtPoint = rowAtPoint(event.point)
+            selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
+            JPopupMenu().apply {
+                add(
+                    JMenu("Filter all with same...").apply {
+                        for (column in ThreadModel.filterableColumns) {
+                            add(
+                                Action(column.header) {
+                                    filterAllWithSameValue(column)
+                                },
+                            )
+                        }
+                    },
+                )
+                add(
+                    JMenu("Mark all with same...").apply {
+                        for (column in ThreadModel.markableColumns) {
+                            add(
+                                Action(column.header) {
+                                    markAllWithSameValue(column)
+                                },
+                            )
+                        }
+                    },
+                )
+            }
         }
     }
 
@@ -95,30 +160,16 @@ class ThreadView(
             thread.pool in poolList.checkBoxListSelectedValues
         }
         add { thread ->
-            val query = searchField.text
-            query != null &&
-                    thread.id.toString().contains(query) ||
-                    thread.name.contains(query, ignoreCase = true) ||
-                    thread.system != null && thread.system.contains(query, ignoreCase = true) ||
-                    thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
-                    thread.state.name.contains(query, ignoreCase = true) ||
-                    thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
-        }
-    }
+            val query = searchField.text ?: return@add true
 
-    private fun ReifiedJXTable<ThreadModel>.markAllWithSameValue(property: Column<Thread, *>) {
-        val selectedPropertyValues = buildList {
-            selectionModel.selectedIndices.forEach {
-                val modelIndex = convertRowIndexToModel(it)
-                add(model[modelIndex, property])
-            }
-        }.distinct()
+            val idMatches = thread.id.toString().contains(query)
+            val nameMatches = thread.name.contains(query, ignoreCase = true)
+            val systemMatches = thread.system != null && thread.system.contains(query, ignoreCase = true)
+            val scopeMatches = thread.scope != null && thread.scope.contains(query, ignoreCase = true)
+            val stateMatches = thread.state.name.contains(query, ignoreCase = true)
+            val stackMatches = thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
 
-        (0 until model.rowCount).forEach {
-            val currentRowValue = model[it, property]
-            if (currentRowValue in selectedPropertyValues) {
-                model.setValueAt(true, it, ThreadModel.ThreadColumns[ThreadModel.Mark])
-            }
+            idMatches || nameMatches || systemMatches || scopeMatches || stateMatches || stackMatches
         }
     }
 

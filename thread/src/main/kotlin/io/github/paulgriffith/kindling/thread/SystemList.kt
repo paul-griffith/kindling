@@ -16,6 +16,15 @@ class SystemModel(private val values: List<String?>) : AbstractListModel<Any>() 
             values[index - 1]
         }
     }
+
+    fun indexOf(system: String): Int {
+        val indexOf = values.indexOf(system)
+        return if (indexOf >= 0) {
+            indexOf + 1
+        } else {
+            -1
+        }
+    }
 }
 
 class SystemList(data: Map<String?, Int>) :
@@ -41,6 +50,11 @@ class SystemList(data: Map<String?, Int>) :
         }
 
         selectAll()
+    }
+
+    fun select(system: String) {
+        val rowToSelect = model.indexOf(system)
+        checkBoxListSelectionModel.setSelectionInterval(rowToSelect, rowToSelect)
     }
 
     override fun getModel(): SystemModel = super.getModel() as SystemModel
