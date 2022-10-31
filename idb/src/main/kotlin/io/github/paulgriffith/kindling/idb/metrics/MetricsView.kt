@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
+import com.jidesoft.swing.CheckBoxTree
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.idb.IdbPanel
 import io.github.paulgriffith.kindling.idb.IdbViewer
@@ -26,55 +27,54 @@ import javax.swing.JTable
 import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableModel
 import javax.swing.table.TableModel
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.TreeNode
 
 class MetricsView(connection: Connection) : IdbPanel() {
 
-    private val metricCards: List<MetricCard> = connection.prepareStatement(
-            """
+    private val metrics: List<Metric> = connection.prepareStatement(
+        """
             SELECT DISTINCT METRIC_NAME FROM SYSTEM_METRICS
             ORDER BY METRIC_NAME
-            """.trimIndent()).executeQuery().toList { rs -> MetricCard(rs.getString(1), connection) }
+            """.trimIndent(),
+    ).executeQuery().toList { rs -> Metric(rs.getString(1)) }
 
-    private val nameModel = ReifiedListModel(metricCards.map { it.metricName })
-    private val nameList = JList(nameModel).apply {
-        selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
-    }
+    // Create a tree to hold all metric choices
 
     private val cardPanel = JPanel(MigLayout("fill, wrap 3"))
 
 
     init {
-        cardPanel.addAll(metricCards)
-        add(
-            JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT,
-                FlatScrollPane(nameList),
-                cardPanel
-            ).apply {
-                resizeWeight = 0.5
-            },
-            "push, grow"
-        )
-
-        nameList.addListSelectionListener {event ->
-            if (!event.valueIsAdjusting) {
-                updateData()
-            }
+        val m = Metric("gateway.performance.cpu")
+        val root = DefaultMutableTreeNode("ROOT").apply {
+            add(
+                DefaultMutableTreeNode("Modern").apply {
+                    add(
+                        DefaultMutableTreeNode("ignition").apply {
+                            add(
+                                DefaultMutableTreeNode("performance").apply {
+                                    add(DefaultMutableTreeNode("cpu"))
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+            add(
+                DefaultMutableTreeNode("Legacy").apply {
+                    add(
+                        DefaultMutableTreeNode("PerformanceMonitor"),
+                    )
+                },
+            )
         }
-    }
-
-    private fun updateData() {
-        CoroutineScope(Dispatchers.Default).launch {
-            val cards = metricCards.filter {
-                it.metricName in nameList.selectedValuesList
-            }
-            EDT_SCOPE.launch {
-                cardPanel.removeAll()
-                cardPanel.addAll(cards)
-                this@MetricsView.revalidate()
-                this@MetricsView.repaint()
-            }
+        val tree = CheckBoxTree(root).apply {
+            isRootVisible = false
         }
-    }
 
+        cardPanel.addAll(metrics.map { MetricCard(it, connection) })
+        add(FlatScrollPane(tree), "grow, w 200!")
+        add(FlatScrollPane(cardPanel), "push, grow")
+
+    }
 }

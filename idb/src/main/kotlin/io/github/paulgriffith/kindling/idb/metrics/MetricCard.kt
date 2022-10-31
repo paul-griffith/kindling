@@ -8,9 +8,10 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 
-class MetricCard(val metricName: String, connection: Connection) : JPanel(MigLayout("fill")) {
+class MetricCard(val metric: Metric, connection: Connection) : JPanel(MigLayout("fill")) {
 
-    private val data = connection.prepareStatement("SELECT VALUE, TIMESTAMP FROM SYSTEM_METRICS WHERE METRIC_NAME = '$metricName'")
+    private val data = connection
+        .prepareStatement("SELECT VALUE, TIMESTAMP FROM SYSTEM_METRICS WHERE METRIC_NAME = '${metric.name}'")
         .executeQuery()
         .toList { rs ->
             Pair(rs.getDouble(1), rs.getLong(2))
@@ -21,18 +22,10 @@ class MetricCard(val metricName: String, connection: Connection) : JPanel(MigLay
     private val max = data.maxOf { it.first }
 
     init {
-        add(JLabel(metricName, SwingConstants.CENTER), "span")
+        add(JLabel(metric.name, SwingConstants.CENTER), "span")
         add(JLabel("Avg: $avg", SwingConstants.CENTER), "wrap")
         add(JLabel("Min: $min", SwingConstants.CENTER))
         add(JLabel("Max: $max", SwingConstants.CENTER), "wrap")
         add(JLabel("Sparkline", SwingConstants.CENTER), "span")
-    }
-
-    val isLegacy: Boolean = legacyMetrics.any { it in metricName }
-
-    companion object {
-        val legacyMetrics = listOf("PerformanceMonitor", "Gateway.Datasource")
-        val newMetrics = listOf("databases.connection", "redundancy", "ignition.performance")
-        const val GET_DATA = """SELECT VALUE, TIMESTAMP FROM SYSTEM_METRICS WHERE METRIC_NAME = """
     }
 }
