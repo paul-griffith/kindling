@@ -22,7 +22,7 @@ class MetricCard(val metric: Metric, connection: Connection) : JPanel(MigLayout(
     private val max = data.maxOf { it.first }
 
     init {
-        add(JLabel(metric.name, SwingConstants.CENTER), "span")
+        add(JLabel(metric.name, SwingConstants.CENTER), "wrap")
         add(JLabel("Avg: $avg", SwingConstants.CENTER), "wrap")
         add(JLabel("Min: $min", SwingConstants.CENTER))
         add(JLabel("Max: $max", SwingConstants.CENTER), "wrap")

@@ -36,45 +36,17 @@ class MetricsView(connection: Connection) : IdbPanel() {
         """
             SELECT DISTINCT METRIC_NAME FROM SYSTEM_METRICS
             ORDER BY METRIC_NAME
-            """.trimIndent(),
+        """.trimIndent(),
     ).executeQuery().toList { rs -> Metric(rs.getString(1)) }
-
-    // Create a tree to hold all metric choices
 
     private val cardPanel = JPanel(MigLayout("fill, wrap 3"))
 
 
     init {
-        val m = Metric("gateway.performance.cpu")
-        val root = DefaultMutableTreeNode("ROOT").apply {
-            add(
-                DefaultMutableTreeNode("Modern").apply {
-                    add(
-                        DefaultMutableTreeNode("ignition").apply {
-                            add(
-                                DefaultMutableTreeNode("performance").apply {
-                                    add(DefaultMutableTreeNode("cpu"))
-                                },
-                            )
-                        },
-                    )
-                },
-            )
-            add(
-                DefaultMutableTreeNode("Legacy").apply {
-                    add(
-                        DefaultMutableTreeNode("PerformanceMonitor"),
-                    )
-                },
-            )
-        }
-        val tree = CheckBoxTree(root).apply {
-            isRootVisible = false
-        }
+        val tree = MetricTree(metrics)
 
         cardPanel.addAll(metrics.map { MetricCard(it, connection) })
-        add(FlatScrollPane(tree), "grow, w 200!")
+        add(FlatScrollPane(tree), "grow, w 200::20%")
         add(FlatScrollPane(cardPanel), "push, grow")
-
     }
 }
