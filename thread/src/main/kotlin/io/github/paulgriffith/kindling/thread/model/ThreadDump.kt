@@ -63,14 +63,14 @@ data class ThreadDump internal constructor(
         """.trimIndent().toRegex(RegexOption.COMMENTS)
 
         private val webThreadRegex = """
-        (?<isDaemon>Daemon )?Thread \[(?<name>.*)] id=(?<id>\d*), \((?<state>\w*)\)
-        ?(?<stack>\s{4}[\S\s]+?)?
-        ?(?=(?:Daemon )?Thread |")
+            (?<isDaemon>Daemon )?Thread \[(?<name>.*)] id=(?<id>\d*), \((?<state>\w*)\)\s*(?:\(native\))?\s*
+            ?(?<stack>\s{4}[\S\s]+?)?
+            ?(?=(?:Daemon )?Thread |")
         """.trimIndent().toRegex()
-        private val webThreadMonitorRegex = """owns monitor: (?<monitor>.*)""".toRegex()
-        private val webThreadSynchronizerRegex = """owns synchronizer: (?<synchronizer>.*)""".toRegex()
-        private val webThreadBlockerRegex = """waiting for: (?<lock>[^\s]+)(?: \(owned by (?<owner>\d*))?""".toRegex()
-        private val webThreadStackRegex = """^(?<line>(?!waiting |owns ).*)$""".toRegex(RegexOption.MULTILINE)
+        private val webThreadMonitorRegex = "owns monitor: (?<monitor>.*)".toRegex()
+        private val webThreadSynchronizerRegex = "owns synchronizer: (?<synchronizer>.*)".toRegex()
+        private val webThreadBlockerRegex = "waiting for: (?<lock>[^\\s]+)(?: \\(owned by (?<owner>\\d*))?".toRegex()
+        private val webThreadStackRegex = "^(?<line>(?!waiting |owns ).*)$".toRegex(RegexOption.MULTILINE)
 
         private fun parseScript(dump: String): List<Thread> {
             return scriptThreadRegex.findAll(dump).map { matcher ->
