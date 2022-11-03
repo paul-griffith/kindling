@@ -34,23 +34,19 @@ data class ThreadDump internal constructor(
                 require(lines.size > 2) { "Not a fully formed thread dump" }
                 val firstLine = lines.first()
 
-                val deadlockIds: List<Int>
-                val startingIndex: Int
-                if (lines[2].contains("Deadlock")) {
-                    deadlockIds = deadlocksPattern.findAll(lines[3]).map { match -> match.value.toInt() }.toList()
-                    startingIndex = 5
+                val deadlockIds = if (lines[2].contains("Deadlock")) {
+                    deadlocksPattern.findAll(lines[3]).map { match -> match.value.toInt() }.toList()
                 } else {
-                    deadlockIds = emptyList()
-                    startingIndex = 2
+                    emptyList()
                 }
 
                 ThreadDump(
                     version = versionPattern.find(firstLine)?.value ?: firstLine,
                     threads = when {
                         firstLine.contains(":") -> parseScript(text)
-                        else -> parseWebPage(lines.subList(startingIndex, lines.size))
+                        else -> parseWebPage(text)
                     },
-                    deadlockIds = deadlockIds
+                    deadlockIds = deadlockIds,
                 )
             }
         }
@@ -63,8 +59,18 @@ data class ThreadDump internal constructor(
             "(?<name>.*)"
             \s*CPU:\s(?<cpu>\d{1,3}\.\d{2})%
             \s*java\.lang\.Thread\.State:\s(?<state>\w+_?\w+)
-            \s*(?<stack>[\S\s]+?)[\r\n]*
+            \s*(?<stack>[\S\s]+?)[\r\n][\r\n]
         """.trimIndent().toRegex(RegexOption.COMMENTS)
+
+        private val webThreadRegex = """
+        (?<isDaemon>Daemon )?Thread \[(?<name>.*)] id=(?<id>\d*), \((?<state>\w*)\)
+        ?(?<stack>\s{4}[\S\s]+?)?
+        ?(?=(?:Daemon )?Thread |")
+        """.trimIndent().toRegex()
+        private val webThreadMonitorRegex = """owns monitor: (?<monitor>.*)""".toRegex()
+        private val webThreadSynchronizerRegex = """owns synchronizer: (?<synchronizer>.*)""".toRegex()
+        private val webThreadBlockerRegex = """waiting for: (?<lock>[^\s]+)(?: \(owned by (?<owner>\d*))?""".toRegex()
+        private val webThreadStackRegex = """^(?<line>(?!waiting |owns ).*)$""".toRegex(RegexOption.MULTILINE)
 
         private fun parseScript(dump: String): List<Thread> {
             return scriptThreadRegex.findAll(dump).map { matcher ->
@@ -79,27 +85,43 @@ data class ThreadDump internal constructor(
                     cpuUsage = cpu.value.toDouble(),
                     state = ThreadState.valueOf(state.value),
                     isDaemon = false,
-                    stacktrace = stack.value.lines().map(String::trim).let(::Stacktrace)
+                    stacktrace = stack.value.lines().map(String::trim).let(::Stacktrace),
                 )
             }.toList()
         }
 
-        private fun parseWebPage(lines: List<String>): List<Thread> {
-            val threads = mutableListOf<Thread>()
-            val buffer = mutableListOf<String>()
-            for (line in lines) {
-                if (line.isEmpty()) {
-                    continue
+        private fun parseWebPage(dump: String): List<Thread> {
+            return webThreadRegex.findAll(dump).map { matcher ->
+                val isDaemon = matcher.groups["isDaemon"]?.value != null
+                val name by matcher.groups
+                val id by matcher.groups
+                val state by matcher.groups
+                val stack = matcher.groups["stack"]?.value?.trimIndent() ?: ""
+                val monitors = webThreadMonitorRegex.findAll(stack).mapNotNull { monitorMatcher ->
+                    monitorMatcher.groups["monitor"]?.value?.let {
+                        Thread.Monitors(it)
+                    }
+                }.toList()
+                val synchronizers = webThreadSynchronizerRegex.findAll(stack).mapNotNull { synchronizerMatcher ->
+                    synchronizerMatcher.groups["synchronizer"]?.value
+                }.toList()
+                val blocker = webThreadBlockerRegex.find(stack)?.groups?.let { blockerMatcher ->
+                    Thread.Blocker(blockerMatcher["lock"]!!.value, blockerMatcher["owner"]?.value?.toIntOrNull())
                 }
-                if ((line.startsWith("Thread") || line.startsWith("Daemon")) && buffer.isNotEmpty()) {
-                    threads += Thread.fromWeb(buffer)
-                    buffer.clear()
-                }
-                buffer += line.replace("\t", "")
-            }
-            threads += Thread.fromWeb(buffer)
-
-            return threads
+                val parsedStack = webThreadStackRegex.findAll(stack).mapNotNull { stackMatcher ->
+                    stackMatcher.groups["line"]?.value
+                }.toList()
+                Thread(
+                    id = id.value.toInt(),
+                    name = name.value,
+                    state = ThreadState.valueOf(state.value),
+                    isDaemon = isDaemon,
+                    blocker = blocker,
+                    lockedMonitors = monitors,
+                    lockedSynchronizers = synchronizers,
+                    stacktrace = Stacktrace(parsedStack),
+                )
+            }.toList()
         }
     }
 }
