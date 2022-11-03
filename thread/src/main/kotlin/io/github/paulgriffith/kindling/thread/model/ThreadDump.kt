@@ -59,7 +59,7 @@ data class ThreadDump internal constructor(
             "(?<name>.*)"
             \s*CPU:\s(?<cpu>\d{1,3}\.\d{2})%
             \s*java\.lang\.Thread\.State:\s(?<state>\w+_?\w+)
-            \s*(?<stack>[\S\s]+?)[\r\n][\r\n]
+            \s*(?<stack>[\S\s]+?)[\r\n]{2,}
         """.trimIndent().toRegex(RegexOption.COMMENTS)
 
         private val webThreadRegex = """
