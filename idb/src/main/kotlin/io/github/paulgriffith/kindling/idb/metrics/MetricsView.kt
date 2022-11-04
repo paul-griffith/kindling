@@ -39,14 +39,31 @@ class MetricsView(connection: Connection) : IdbPanel() {
         """.trimIndent(),
     ).executeQuery().toList { rs -> Metric(rs.getString(1)) }
 
+    private val metricCards: List<MetricCard> = metrics.map { MetricCard(it, connection) }
+
+    private val metricTree: MetricTree = MetricTree(metrics)
+
     private val cardPanel = JPanel(MigLayout("fill, wrap 3"))
 
+    private fun updateData() {
+        val selectedMetricNames = metricTree.selectedLeafNodes.map { it.metricName }
+        EDT_SCOPE.launch {
+            cardPanel.removeAll()
+            cardPanel.addAll(
+                metricCards.filter { card ->
+                    card.metric.name in selectedMetricNames
+                },
+            )
+            cardPanel.revalidate()
+            repaint()
+        }
+    }
 
     init {
-        val tree = MetricTree(metrics)
-
-        cardPanel.addAll(metrics.map { MetricCard(it, connection) })
-        add(FlatScrollPane(tree), "grow, w 200::20%")
+        cardPanel.addAll(metricCards)
+        add(FlatScrollPane(metricTree), "grow, w 200::20%")
         add(FlatScrollPane(cardPanel), "push, grow")
+
+        metricTree.checkBoxTreeSelectionModel.addTreeSelectionListener { updateData() }
     }
 }
