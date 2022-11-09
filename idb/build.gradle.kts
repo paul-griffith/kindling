@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation(projects.core)
     implementation(projects.log)
-    implementation("org.jfree:jfreechart:1.5.3")
+    implementation(libs.jfreechart)
 }
 
 java {
