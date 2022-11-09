@@ -12,7 +12,6 @@ import io.github.paulgriffith.kindling.utils.toList
 import java.nio.file.Path
 import java.sql.Connection
 import java.time.Instant
-import javax.swing.JLabel
 import javax.swing.JPanel
 
 enum class IdbTool {
