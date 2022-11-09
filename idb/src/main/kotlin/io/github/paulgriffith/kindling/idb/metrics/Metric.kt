@@ -5,6 +5,8 @@ class Metric(val name: String) {
 
     companion object {
         val legacyMetrics = listOf("PerformanceMonitor", "Gateway.Datasource")
+
+        @Suppress("unused")
         val newMetrics = listOf("databases.connection", "redundancy", "ignition.performance")
     }
 }

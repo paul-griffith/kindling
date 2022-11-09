@@ -337,8 +337,8 @@ fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
     }
 }
 
-fun JComponent.addAll(components: List<JComponent>) {
-    components.forEach { add(it) }
+fun JComponent.addAll(components: List<JComponent>, constraints: String = "") {
+    components.forEach { add(it, constraints) }
 }
 
 abstract class AbstractTreeNode : TreeNode {

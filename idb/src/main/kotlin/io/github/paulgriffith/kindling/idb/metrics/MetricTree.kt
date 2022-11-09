@@ -1,13 +1,10 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
 import com.jidesoft.swing.CheckBoxTree
-import com.jidesoft.swing.TristateCheckBox
 import io.github.paulgriffith.kindling.utils.AbstractTreeNode
 import io.github.paulgriffith.kindling.utils.TypedTreeNode
 import javax.swing.tree.DefaultTreeModel
-import javax.swing.tree.TreeNode
 import javax.swing.tree.TreePath
-import kotlin.properties.Delegates
 
 class MetricNode(override val userObject: String) : TypedTreeNode<String>() {
     val metricName: String
@@ -51,7 +48,8 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
     init {
         isRootVisible = false
         setShowsRootHandles(true)
-        checkBoxTreeSelectionModel.addSelectionPath(TreePath(model.root))
+        expandAll()
+        selectAll()
     }
 
     val selectedLeafNodes: List<MetricNode>
@@ -62,12 +60,24 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
         }
 
     private fun getLeavesFromNode(node: AbstractTreeNode): List<MetricNode> {
+        if (node.isLeaf) return listOf(node as MetricNode)
+
         return buildList {
             addAll(node.children.filter { it.isLeaf }.map { it as MetricNode })
             val nonLeaves = node.children.filter { !it.isLeaf }
             nonLeaves.forEach {
                 addAll(getLeavesFromNode(it as MetricNode))
             }
+        }
+    }
+
+    private fun selectAll() = checkBoxTreeSelectionModel.addSelectionPath(TreePath(model.root))
+
+    private fun expandAll() {
+        var i = 0
+        while (i < rowCount) {
+            expandRow(i)
+            i += 1
         }
     }
 }
