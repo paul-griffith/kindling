@@ -54,6 +54,7 @@ runtime {
             "java.logging",
             "java.naming",
             "java.xml",
+            "jdk.zipfs",
         ),
     )
 
