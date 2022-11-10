@@ -1,12 +1,8 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
-class Metric(val name: String) {
-    val isLegacy: Boolean = legacyMetrics.any { it in name }
+import java.util.Date
 
-    companion object {
-        val legacyMetrics = listOf("PerformanceMonitor", "Gateway.Datasource")
+@JvmInline
+value class Metric(val name: String)
 
-        @Suppress("unused")
-        val newMetrics = listOf("databases.connection", "redundancy", "ignition.performance")
-    }
-}
+data class MetricData(val value: Double, val timestamp: Date)

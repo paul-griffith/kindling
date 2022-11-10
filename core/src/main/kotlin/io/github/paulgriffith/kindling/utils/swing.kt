@@ -27,7 +27,6 @@ import java.awt.event.MouseEvent
 import java.io.File
 import java.util.Collections
 import java.util.Enumeration
-import javax.swing.AbstractListModel
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
@@ -39,7 +38,6 @@ import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
-import javax.swing.ListModel
 import javax.swing.UIManager
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
@@ -201,11 +199,6 @@ fun FlatSVGIcon.derive(colorer: (Color) -> Color): FlatSVGIcon {
     }
 }
 
-class ReifiedListModel<T>(val data: List<T>) : AbstractListModel<T>() {
-    override fun getSize(): Int = data.size
-    override fun getElementAt(index: Int): T = data[index]
-}
-
 fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (Any?) -> String): ListSearchable {
     return object : ListSearchable(this) {
         init {
@@ -335,10 +328,6 @@ fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
     } else {
         null
     }
-}
-
-fun JComponent.addAll(components: List<JComponent>, constraints: String = "") {
-    components.forEach { add(it, constraints) }
 }
 
 abstract class AbstractTreeNode : TreeNode {

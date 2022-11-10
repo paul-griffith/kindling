@@ -3,58 +3,65 @@ package io.github.paulgriffith.kindling.idb.metrics
 import com.jidesoft.swing.CheckBoxTree
 import io.github.paulgriffith.kindling.utils.AbstractTreeNode
 import io.github.paulgriffith.kindling.utils.TypedTreeNode
+import io.github.paulgriffith.kindling.utils.treeCellRenderer
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 
-class MetricNode(override val userObject: String) : TypedTreeNode<String>() {
-    val metricName: String
-        get() {
-            var name: String = userObject
-            var currentNode = this.parent ?: return name
-            while (currentNode.parent !is RootNode) {
-                name = "$currentNode.$name"
-                currentNode = currentNode.parent as MetricNode
-            }
-            return name
-        }
-
-    override fun toString(): String {
-        return userObject
-    }
-}
+data class MetricNode(override val userObject: String) : TypedTreeNode<String>()
 
 class MetricModel(metrics: List<Metric>) : DefaultTreeModel(RootNode(metrics))
 
 class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
     init {
-        metrics.forEach { metric ->
-            var currentNode: AbstractTreeNode = this
-            val fullPath: String = metric.getFullTreePath()
+        val legacy = MetricNode("Legacy")
+        children.add(legacy)
+        val modern = MetricNode("New")
+        children.add(modern)
 
-            fullPath.split(".").forEach { part ->
-                var next = currentNode.children.find { part == (it as MetricNode).userObject } as MetricNode?
-                if (next == null) {
-                    next = MetricNode(part)
-                    currentNode.children.add(next)
+        val seen = mutableMapOf<List<String>, MetricNode>()
+        for (metric in metrics) {
+            var lastSeen: MetricNode = if (metric.isLegacy) legacy else modern
+            val currentLeadingPath = mutableListOf(lastSeen.userObject)
+            for (part in metric.name.split('.')) {
+                currentLeadingPath.add(part)
+                val next = seen.getOrPut(currentLeadingPath.toList()) {
+                    val newChild = MetricNode(
+                        currentLeadingPath.drop(1).joinToString(separator = "."),
+                    )
+                    lastSeen.children.add(newChild)
+                    newChild
                 }
-                currentNode = next
+                lastSeen = next
             }
         }
     }
+
+    private val Metric.isLegacy: Boolean
+        get() = name.any { it.isUpperCase() }
 }
 
 class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
-
     init {
         isRootVisible = false
         setShowsRootHandles(true)
         expandAll()
         selectAll()
+
+        setCellRenderer(
+            treeCellRenderer { _, value, _, _, _, _, _ ->
+                if (value is MetricNode) {
+                    val path = value.userObject
+                    toolTipText = path
+                    text = path.substringAfterLast('.')
+                }
+                this
+            },
+        )
     }
 
     val selectedLeafNodes: List<MetricNode>
         get() {
-            return checkBoxTreeSelectionModel.selectionPaths.toList().flatMap {
+            return checkBoxTreeSelectionModel.selectionPaths.flatMap {
                 getLeavesFromNode(it.lastPathComponent as AbstractTreeNode)
             }
         }
@@ -63,15 +70,14 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
         if (node.isLeaf) return listOf(node as MetricNode)
 
         return buildList {
-            addAll(node.children.filter { it.isLeaf }.map { it as MetricNode })
-            val nonLeaves = node.children.filter { !it.isLeaf }
-            nonLeaves.forEach {
-                addAll(getLeavesFromNode(it as MetricNode))
+            val (leaves, nonLeaves) = node.children.partition { it.isLeaf }
+            addAll(leaves as List<MetricNode>)
+
+            for (nonLeaf in nonLeaves) {
+                addAll(getLeavesFromNode(nonLeaf as MetricNode))
             }
         }
     }
-
-    private fun selectAll() = checkBoxTreeSelectionModel.addSelectionPath(TreePath(model.root))
 
     private fun expandAll() {
         var i = 0
@@ -80,9 +86,6 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
             i += 1
         }
     }
-}
 
-fun Metric.getFullTreePath(): String {
-    val legacy = if (this.isLegacy) "Legacy" else "New"
-    return "${legacy}.${name}"
+    private fun selectAll() = checkBoxTreeSelectionModel.addSelectionPath(TreePath(model.root))
 }
