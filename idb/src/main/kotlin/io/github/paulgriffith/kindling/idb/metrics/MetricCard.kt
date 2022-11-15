@@ -21,8 +21,9 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
         }
         private val queueFormatter = NumberFormat.getIntegerInstance()
         private val throughputFormatter = DecimalFormat("0.00 'dp/s'")
-        private val cpuFormatter = NumberFormat.getPercentInstance()
-
+        private val cpuFormatter = NumberFormat.getPercentInstance().apply {
+            (this as DecimalFormat).multiplier = 1
+        }
         private val Metric.formatter: NumberFormat
             get() = when {
                 name.contains("heap", true) -> heapFormatter
@@ -35,11 +36,11 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
 
     private val sparkLine = ChartPanel(
         /* chart = */ sparkline(data, metric.formatter),
-        /* properties = */ false,
+        /* properties = */ true,
         /* save = */ false,
         /* print = */ false,
-        /* zoom = */ false,
-        /* tooltips = */ false,
+        /* zoom = */ true,
+        /* tooltips = */ true,
     )
 
     init {

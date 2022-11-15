@@ -34,10 +34,13 @@ class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
                 lastSeen = next
             }
         }
+
+        if (legacy.isLeaf) children.remove(legacy)
+        if (modern.isLeaf) children.remove(modern)
     }
 
     private val Metric.isLegacy: Boolean
-        get() = name.any { it.isUpperCase() }
+        get() = name.first().isUpperCase()
 }
 
 class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {

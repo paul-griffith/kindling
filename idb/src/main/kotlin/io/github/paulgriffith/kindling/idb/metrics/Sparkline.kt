@@ -17,14 +17,14 @@ fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
         /* valueAxisLabel = */ null,
         /* dataset = */
         TimeSeriesCollection(
-            TimeSeries("Series").apply {
+            TimeSeries("Metric Data").apply {
                 for ((value, timestamp) in data) {
                     add(Millisecond(timestamp), value, false)
                 }
             },
         ),
         /* legend = */ false,
-        /* tooltips = */ false,
+        /* tooltips = */ true,
         /* urls = */ false,
     ).apply {
         xyPlot.apply {
