@@ -22,6 +22,8 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
         Metric(rs.getString(1))
     }
 
+    private val metricTree = MetricTree(metrics)
+
     private val metricDataQuery = connection.prepareStatement(
         //language=sql
         """
@@ -30,7 +32,7 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
             TIMESTAMP 
         FROM SYSTEM_METRICS
         WHERE METRIC_NAME = ?
-        ORDER BY TIMESTAMP ASC
+        ORDER BY TIMESTAMP
         """,
     )
 
@@ -46,13 +48,23 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
         MetricCard(metric, metricData)
     }
 
-    private val metricTree = MetricTree(metrics)
+    private val cardPanel = JPanel(MigLayout("wrap 3, fillx, hidemode 3")).apply {
+        for (card in metricCards) {
+            add(card, "pushx, growx")
+        }
+    }
 
-    private val cardPanel = JPanel(MigLayout("wrap 3, fillx, hidemode 3"))
+    init {
+        add(FlatScrollPane(metricTree), "grow, w 200::20%")
+        add(FlatScrollPane(cardPanel), "push, grow, span")
+
+        metricTree.checkBoxTreeSelectionModel.addTreeSelectionListener { updateData() }
+    }
 
     private fun updateData() {
-        CoroutineScope(Dispatchers.Default).launch {
-            val selectedMetricNames = metricTree.selectedLeafNodes.map { it.userObject }
+        BACKGROUND.launch {
+            val selectedLeafNodes = metricTree.selectedLeafNodes
+            val selectedMetricNames = selectedLeafNodes.map { it.userObject }
             EDT_SCOPE.launch {
                 for (card in metricCards) {
                     card.isVisible = card.metric.name in selectedMetricNames
@@ -61,14 +73,7 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
         }
     }
 
-    init {
-        for (card in metricCards) {
-            cardPanel.add(card, "pushx, growx")
-        }
-
-        add(FlatScrollPane(metricTree), "grow, w 200::20%")
-        add(FlatScrollPane(cardPanel), "push, grow, span")
-
-        metricTree.checkBoxTreeSelectionModel.addTreeSelectionListener { updateData() }
+    companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
     }
 }

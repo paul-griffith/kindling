@@ -1,10 +1,11 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
+import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.dateFormat
 import org.jfree.chart.ChartFactory
 import org.jfree.chart.JFreeChart
 import org.jfree.chart.axis.NumberAxis
 import org.jfree.chart.ui.RectangleInsets
-import org.jfree.data.time.Millisecond
+import org.jfree.data.time.FixedMillisecond
 import org.jfree.data.time.TimeSeries
 import org.jfree.data.time.TimeSeriesCollection
 import java.text.NumberFormat
@@ -17,9 +18,9 @@ fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
         /* valueAxisLabel = */ null,
         /* dataset = */
         TimeSeriesCollection(
-            TimeSeries("Metric Data").apply {
+            TimeSeries("Series").apply {
                 for ((value, timestamp) in data) {
-                    add(Millisecond(timestamp), value, false)
+                    add(FixedMillisecond(timestamp), value, false)
                 }
             },
         ),
@@ -32,6 +33,9 @@ fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
             rangeAxis.apply {
                 isPositiveArrowVisible = true
                 (this as NumberAxis).numberFormatOverride = formatter
+            }
+            renderer.setDefaultToolTipGenerator { dataset, series, item ->
+                "${dateFormat.format(dataset.getXValue(series, item))} - ${formatter.format(dataset.getYValue(series, item))}"
             }
             isDomainGridlinesVisible = false
             isRangeGridlinesVisible = false

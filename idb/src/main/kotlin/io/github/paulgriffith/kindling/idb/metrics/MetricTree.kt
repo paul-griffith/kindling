@@ -14,9 +14,7 @@ class MetricModel(metrics: List<Metric>) : DefaultTreeModel(RootNode(metrics))
 class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
     init {
         val legacy = MetricNode("Legacy")
-        children.add(legacy)
         val modern = MetricNode("New")
-        children.add(modern)
 
         val seen = mutableMapOf<List<String>, MetricNode>()
         for (metric in metrics) {
@@ -35,8 +33,22 @@ class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
             }
         }
 
-        if (legacy.isLeaf) children.remove(legacy)
-        if (modern.isLeaf) children.remove(modern)
+        when {
+            legacy.childCount == 0 && modern.childCount > 0 -> {
+                for (zoomer in modern.children) {
+                    children.add(zoomer)
+                }
+            }
+            modern.childCount == 0 && legacy.childCount > 0 -> {
+                for (boomer in legacy.children) {
+                    children.add(boomer)
+                }
+            }
+            else -> {
+                children.add(legacy)
+                children.add(modern)
+            }
+        }
     }
 
     private val Metric.isLegacy: Boolean
