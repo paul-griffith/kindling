@@ -36,9 +36,6 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
     )
 
     init {
-        val minTimestamp = data.first().timestamp
-        val maxTimestamp = data.last().timestamp
-
         add(
             JLabel(metric.name, CENTER).apply {
                 font = font.deriveFont(Font.BOLD, 14.0F)
@@ -51,14 +48,20 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
         add(JLabel("Avg: ${presentation.formatter.format(aggregateData.average())}", CENTER), "pushx, growx")
         add(JLabel("Max: ${presentation.formatter.format(aggregateData.max())}", CENTER), "pushx, growx, wrap")
 
+        val minTimestamp = data.first().timestamp
+        val maxTimestamp = data.last().timestamp
+
         if (presentation.isShowTrend) {
-            val regressionFunction = olsRegression(sparkLine.chart.xyPlot.dataset, 0)
+            val regression = regressionFunction(sparkLine.chart.xyPlot.dataset, 0)
+            val minTimeDouble = minTimestamp.time.toDouble()
+            val maxTimeDouble = maxTimestamp.time.toDouble()
+
             sparkLine.chart.xyPlot.addAnnotation(
                 XYLineAnnotation(
-                    minTimestamp.time.toDouble(),
-                    regressionFunction(minTimestamp.time.toDouble()),
-                    maxTimestamp.time.toDouble(),
-                    regressionFunction(maxTimestamp.time.toDouble()),
+                    minTimeDouble,
+                    regression(minTimeDouble),
+                    maxTimeDouble,
+                    regression(maxTimeDouble),
                     BasicStroke(1.0f),
                     UIManager.getColor("Actions.Yellow"),
                 ),
@@ -66,7 +69,7 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
         }
 
         add(sparkLine, "span, w 300, h 170, pushx, growx")
-        add(JLabel("${dateFormat.format(minTimestamp)} - ${dateFormat.format(maxTimestamp)}", CENTER), "pushx, growx, span")
+        add(JLabel("${DATE_FORMAT.format(minTimestamp)} - ${DATE_FORMAT.format(maxTimestamp)}", CENTER), "pushx, growx, span")
 
         border = DropShadowBorder().apply {
             isShowRightShadow = true
@@ -76,7 +79,7 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
     }
 
     companion object {
-        val dateFormat = SimpleDateFormat("MM/dd/yy HH:mm:ss")
+        val DATE_FORMAT = SimpleDateFormat("MM/dd/yy HH:mm:ss")
 
         private val mbFormatter = DecimalFormat("0.0 'mB'")
         private val heapFormatter = object : NumberFormat() {
@@ -110,7 +113,7 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
                 else -> Default
             }
 
-        fun olsRegression(dataset: XYDataset, series: Int): (Double) -> Double {
+        fun regressionFunction(dataset: XYDataset, series: Int): (Double) -> Double {
             val (a, b) = Regression.getOLSRegression(dataset, series)
             return { x ->
                 a + b * x

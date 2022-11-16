@@ -63,8 +63,7 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
 
     private fun updateData() {
         BACKGROUND.launch {
-            val selectedLeafNodes = metricTree.selectedLeafNodes
-            val selectedMetricNames = selectedLeafNodes.map { it.userObject }
+            val selectedMetricNames = metricTree.selectedLeafNodes.map { it.name }
             EDT_SCOPE.launch {
                 for (card in metricCards) {
                     card.isVisible = card.metric.name in selectedMetricNames

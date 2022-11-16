@@ -5,11 +5,14 @@ import io.github.paulgriffith.kindling.utils.AbstractTreeNode
 import io.github.paulgriffith.kindling.utils.TypedTreeNode
 import io.github.paulgriffith.kindling.utils.treeCellRenderer
 import javax.swing.tree.DefaultTreeModel
+import javax.swing.tree.TreeNode
 import javax.swing.tree.TreePath
 
-data class MetricNode(override val userObject: String) : TypedTreeNode<String>()
+data class MetricNode(override val userObject: List<String>) : TypedTreeNode<List<String>>() {
+    constructor(vararg parts: String) : this(parts.toList())
 
-class MetricModel(metrics: List<Metric>) : DefaultTreeModel(RootNode(metrics))
+    val name by lazy { userObject.joinToString(".") }
+}
 
 class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
     init {
@@ -18,14 +21,12 @@ class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
 
         val seen = mutableMapOf<List<String>, MetricNode>()
         for (metric in metrics) {
-            var lastSeen: MetricNode = if (metric.isLegacy) legacy else modern
-            val currentLeadingPath = mutableListOf(lastSeen.userObject)
+            var lastSeen = if (metric.isLegacy) legacy else modern
+            val currentLeadingPath = mutableListOf(lastSeen.name)
             for (part in metric.name.split('.')) {
                 currentLeadingPath.add(part)
                 val next = seen.getOrPut(currentLeadingPath.toList()) {
-                    val newChild = MetricNode(
-                        currentLeadingPath.drop(1).joinToString(separator = "."),
-                    )
+                    val newChild = MetricNode(currentLeadingPath.drop(1))
                     lastSeen.children.add(newChild)
                     newChild
                 }
@@ -39,11 +40,13 @@ class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
                     children.add(zoomer)
                 }
             }
+
             modern.childCount == 0 && legacy.childCount > 0 -> {
                 for (boomer in legacy.children) {
                     children.add(boomer)
                 }
             }
+
             else -> {
                 children.add(legacy)
                 children.add(modern)
@@ -55,10 +58,13 @@ class RootNode(metrics: List<Metric>) : AbstractTreeNode() {
         get() = name.first().isUpperCase()
 }
 
+class MetricModel(metrics: List<Metric>) : DefaultTreeModel(RootNode(metrics))
+
 class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
     init {
         isRootVisible = false
         setShowsRootHandles(true)
+
         expandAll()
         selectAll()
 
@@ -66,8 +72,8 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
             treeCellRenderer { _, value, _, _, _, _, _ ->
                 if (value is MetricNode) {
                     val path = value.userObject
-                    toolTipText = path
-                    text = path.substringAfterLast('.')
+                    text = path.last()
+                    toolTipText = value.name
                 }
                 this
             },
@@ -75,21 +81,17 @@ class MetricTree(metrics: List<Metric>) : CheckBoxTree(MetricModel(metrics)) {
     }
 
     val selectedLeafNodes: List<MetricNode>
-        get() {
-            return checkBoxTreeSelectionModel.selectionPaths.flatMap {
-                getLeavesFromNode(it.lastPathComponent as AbstractTreeNode)
-            }
-        }
+        get() = checkBoxTreeSelectionModel.selectionPaths
+            .flatMap {
+                (it.lastPathComponent as AbstractTreeNode).depthFirstChildren()
+            }.filterIsInstance<MetricNode>()
 
-    private fun getLeavesFromNode(node: AbstractTreeNode): List<MetricNode> {
-        if (node.isLeaf) return listOf(node as MetricNode)
-
-        return buildList {
-            val (leaves, nonLeaves) = node.children.partition { it.isLeaf }
-            addAll(leaves as List<MetricNode>)
-
-            for (nonLeaf in nonLeaves) {
-                addAll(getLeavesFromNode(nonLeaf as MetricNode))
+    private fun TreeNode.depthFirstChildren(): Sequence<AbstractTreeNode> = sequence {
+        if (isLeaf) {
+            yield(this@depthFirstChildren as AbstractTreeNode)
+        } else {
+            for (child in children()) {
+                yieldAll(child.depthFirstChildren())
             }
         }
     }

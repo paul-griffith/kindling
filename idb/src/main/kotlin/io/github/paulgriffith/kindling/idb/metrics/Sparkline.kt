@@ -1,6 +1,6 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
-import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.dateFormat
+import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.DATE_FORMAT
 import org.jfree.chart.ChartFactory
 import org.jfree.chart.JFreeChart
 import org.jfree.chart.axis.NumberAxis
@@ -35,7 +35,7 @@ fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
                 (this as NumberAxis).numberFormatOverride = formatter
             }
             renderer.setDefaultToolTipGenerator { dataset, series, item ->
-                "${dateFormat.format(dataset.getXValue(series, item))} - ${formatter.format(dataset.getYValue(series, item))}"
+                "${DATE_FORMAT.format(dataset.getXValue(series, item))} - ${formatter.format(dataset.getYValue(series, item))}"
             }
             isDomainGridlinesVisible = false
             isRangeGridlinesVisible = false
