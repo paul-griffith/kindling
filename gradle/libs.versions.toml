@@ -35,6 +35,7 @@ jide-common = { group = "com.formdev", name = "jide-oss", version = "3.7.12" }
 swingx = { group = "org.swinglabs.swingx", name = "swingx-core", version = "1.6.5-1" }
 osthemedetector = { group = "com.github.Dansoftowner", name = "jSystemThemeDetector", version = "3.8" }
 rsyntaxtextarea = { group = "com.fifesoft", name = "rsyntaxtextarea", version = "3.3.0" }
+jfreechart = { group = "org.jfree", name = "jfreechart", version = "1.5.3" }
 
 # Ignition
 ignition-common = { group = "com.inductiveautomation.ignition", name = "common", version.ref = "ignition" }

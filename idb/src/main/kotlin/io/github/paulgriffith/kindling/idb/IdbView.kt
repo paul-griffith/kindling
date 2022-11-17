@@ -23,8 +23,9 @@ class IdbView(path: Path) : ToolPanel() {
     private var tool: IdbTool by Delegates.vetoable(
         when {
             "logging_event" in tables -> IdbTool.Log
+            "SYSTEM_METRICS" in tables -> IdbTool.Metrics
             else -> IdbTool.Generic
-        }
+        },
     ) { _, _, newValue ->
         try {
             val newPanel = newValue.openPanel(connection)
@@ -37,7 +38,7 @@ class IdbView(path: Path) : ToolPanel() {
                 "Unable to open as a ${newValue.name}; ${e.message}",
                 "Error",
                 JOptionPane.ERROR_MESSAGE,
-                FlatSVGIcon("icons/bx-error.svg")
+                FlatSVGIcon("icons/bx-error.svg"),
             )
             LOGGER.error("Unable to swap tool to {}", newValue, e)
             false
@@ -61,15 +62,29 @@ class IdbView(path: Path) : ToolPanel() {
                     IdbTool.Log -> add(
                         Action(name = "Generic View") {
                             tool = IdbTool.Generic
-                        }
+                        },
                     )
-                    IdbTool.Generic -> add(
-                        Action(name = "Log View") {
-                            tool = IdbTool.Log
-                        }
+
+                    IdbTool.Metrics -> add(
+                        Action(name = "Generic View") {
+                            tool = IdbTool.Generic
+                        },
                     )
+
+                    IdbTool.Generic -> {
+                        add(
+                            Action(name = "Log View") {
+                                tool = IdbTool.Log
+                            },
+                        )
+                        add(
+                            Action(name = "Metrics View") {
+                                tool = IdbTool.Metrics
+                            },
+                        )
+                    }
                 }
-            }
+            },
         )
     }
 

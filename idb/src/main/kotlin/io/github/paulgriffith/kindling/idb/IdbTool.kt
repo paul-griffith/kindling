@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.idb.generic.GenericView
+import io.github.paulgriffith.kindling.idb.metrics.MetricsView
 import io.github.paulgriffith.kindling.log.Level
 import io.github.paulgriffith.kindling.log.LogPanel
 import io.github.paulgriffith.kindling.log.SystemLogsEvent
@@ -28,12 +29,12 @@ enum class IdbTool {
                 ORDER BY
                     event_id,
                     i
-                """.trimIndent()
+                """.trimIndent(),
             ).executeQuery()
                 .toList { resultSet ->
                     Pair(
                         resultSet.getInt("event_id"),
-                        resultSet.getString("trace_line")
+                        resultSet.getString("trace_line"),
                     )
                 }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
@@ -48,13 +49,13 @@ enum class IdbTool {
                     logging_event_property
                 ORDER BY 
                     event_id
-                """.trimIndent()
+                """.trimIndent(),
             ).executeQuery()
                 .toList { resultSet ->
                     Triple(
                         resultSet.getInt("event_id"),
                         resultSet.getString("mapped_key"),
-                        resultSet.getString("mapped_value")
+                        resultSet.getString("mapped_value"),
                     )
                 }.groupingBy { it.first }
                 // TODO I bet this can be improved
@@ -80,7 +81,7 @@ enum class IdbTool {
                     logging_event
                 ORDER BY
                     event_id
-                """.trimIndent()
+                """.trimIndent(),
             ).executeQuery().toList { resultSet ->
                 val eventId = resultSet.getInt("event_id")
                 SystemLogsEvent(
@@ -90,7 +91,7 @@ enum class IdbTool {
                     thread = resultSet.getString("thread_name"),
                     level = Level.valueOf(resultSet.getString("level_string")),
                     mdc = mdcKeys[eventId].orEmpty(),
-                    stacktrace = stackTraces[eventId].orEmpty()
+                    stacktrace = stackTraces[eventId].orEmpty(),
                 )
             }
             return LogPanel(events)
@@ -98,6 +99,9 @@ enum class IdbTool {
     },
     Generic {
         override fun openPanel(connection: Connection): JPanel = GenericView(connection)
+    },
+    Metrics {
+        override fun openPanel(connection: Connection): JPanel = MetricsView(connection)
     };
 
     abstract fun openPanel(connection: Connection): JPanel

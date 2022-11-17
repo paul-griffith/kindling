@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(projects.core)
     implementation(projects.log)
+    implementation(libs.jfreechart)
 }
 
 java {
