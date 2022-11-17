@@ -18,7 +18,7 @@ class IdbView(path: Path) : ToolPanel() {
 
     private val tables: List<String> = connection.metaData.getTables("", "", "", null).toList { rs ->
         rs.getString(3)
-    }.onEach { LOGGER.debug(it) }
+    }
 
     private var tool: IdbTool by Delegates.vetoable(
         when {
