@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
 import javax.swing.*
+import io.github.paulgriffith.kindling.utils.Action
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
@@ -34,6 +35,10 @@ class LogPanel(
     val header = Header(totalRows)
     private val startTime = rawData.first().timestamp.toEpochMilli()
     private val endTime = rawData.last().timestamp.toEpochMilli()
+    private var messageFilter = ""
+    private var stackTraceFilter = Pair<Short, List<String>>(0, emptyList())
+    private var threadFilter = ""
+    private var mdcFilter : Map<String, String> = emptyMap()
     private val timeline = TimelineSelector(startTime, endTime).apply {
         listeners.add(::updateData)
         isVisible = false
@@ -110,6 +115,65 @@ class LogPanel(
                 }
             }
         }
+        add { event ->
+            if (messageFilter.isEmpty()) {
+                true
+            } else {
+                when (event) {
+                    is SystemLogsEvent -> {
+                        messageFilter in event.message
+                    }
+                    is WrapperLogEvent -> {
+                        messageFilter in event.message
+                    }
+                }
+            }
+        }
+        add { event ->
+            if (stackTraceFilter.first.toInt() == 0) {
+                true
+            } else if (stackTraceFilter.first.toInt() == 1) {
+                if (event.stacktrace.isEmpty()) {
+                    false
+                } else {
+                    stackTraceFilter.second == event.stacktrace
+                }
+            } else {
+                if (event.stacktrace.isEmpty()) {
+                    false
+                } else {
+                    stackTraceFilter.second[0] == event.stacktrace[0]
+                }
+            }
+        }
+        add { event ->
+            when (event) {
+                is SystemLogsEvent -> {
+                    if (threadFilter.isEmpty()) {
+                        true
+                    } else {
+                        threadFilter == event.thread
+                    }
+                }
+                is WrapperLogEvent -> {
+                    true
+                }
+            }
+        }
+        add { event ->
+            when (event) {
+                is SystemLogsEvent -> {
+                    if (mdcFilter.isEmpty()) {
+                        true
+                    } else {
+                        mdcFilter == event.mdc
+                    }
+                }
+                is WrapperLogEvent -> {
+                    true
+                }
+            }
+        }
     }
 
     private fun updateData() {
@@ -180,6 +244,316 @@ class LogPanel(
             }
         }
 
+        fun isLoggerLevelMarked(logger: String) : Boolean {
+            table.model.data.forEach {
+                if (it.level?.name == logger && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isLoggerNameMarked(name: String) : Boolean {
+            table.model.data.forEach {
+                if (it.logger == name && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isLoggerThreadMarked(name: String) : Boolean {
+            table.model.data.forEach {
+                if ((it as SystemLogsEvent).thread == name && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isMDCMarked(mdc: Map<String, String>) : Boolean {
+            table.model.data.forEach {
+                if ((it as SystemLogsEvent).mdc == mdc && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isLoggerMessageMarked(message: String) : Boolean {
+            table.model.data.forEach {
+                if (it.message == message && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isPartialStackTraceMarked(stackTrace: String) : Boolean {
+            table.model.data.forEach {
+                if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == stackTrace && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        fun isFullStackTraceMarked(stackTrace: List<String>) : Boolean {
+            table.model.data.forEach {
+                if (it.stacktrace == stackTrace && !it.marked) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        table.attachPopupMenu table@{
+            val rowAtPoint = selectedRowIndices().first()
+            selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
+            JPopupMenu().apply {
+                add(JMenu("Filter all with same...").apply {
+                    if (!loggerLevelsSidebar.isOnlySelected(this@table.model.data[rowAtPoint].level!!.name)) {
+                        add(Action("Level") {
+                            loggerLevelsSidebar.select(this@table.model.data[rowAtPoint].level!!.name)
+                        })
+                    }   else {
+                        add(JCheckBoxMenuItem("Level", true).apply {
+                            toolTipText = "Remove Filter"
+                            addActionListener{
+                                loggerLevelsSidebar.list.checkBoxListSelectionModel.setSelectionInterval(0, 0)
+                                updateData()
+                            }
+                        })
+                    }
+                    if (this@table.model.data[rowAtPoint] is SystemLogsEvent) {
+                        if (threadFilter.isEmpty()) {
+                            add(Action("Thread") {
+                                threadFilter = (this@table.model.data[rowAtPoint] as SystemLogsEvent).thread
+                                updateData()
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("Thread", true).apply {
+                                toolTipText = "Remove Filter"
+                                addActionListener{
+                                    threadFilter = ""
+                                    updateData()
+                                }
+                            })
+                        }
+                        if (mdcFilter.isEmpty()) {
+                            add(Action("MDC Key") {
+                                mdcFilter = (this@table.model.data[rowAtPoint] as SystemLogsEvent).mdc
+                                updateData()
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("MDC Key", true).apply {
+                                toolTipText = "Remove Filter"
+                                addActionListener{
+                                    mdcFilter = emptyMap()
+                                    updateData()
+                                }
+                            })
+                        }
+                    }
+                    if (!loggerNamesSidebar.isOnlySelected(this@table.model.data[rowAtPoint].logger)) {
+                        add(Action("Logger") {
+                            loggerNamesSidebar.select(this@table.model.data[rowAtPoint].logger)
+                        })
+                    }   else {
+                        add(JCheckBoxMenuItem("Logger", true).apply {
+                            toolTipText = "Remove Filter"
+                            addActionListener{
+                                loggerNamesSidebar.list.checkBoxListSelectionModel.setSelectionInterval(0, 0)
+                                updateData()
+                            }
+                        })
+                    }
+                    if (messageFilter.isEmpty()) {
+                        add(Action("Message") {
+                            messageFilter = this@table.model.data[rowAtPoint].message
+                            updateData()
+                        })
+                    } else {
+                        add(JCheckBoxMenuItem("Message", true).apply {
+                            toolTipText = "Remove Filter"
+                            addActionListener{
+                                messageFilter = ""
+                                updateData()
+                            }
+                        })
+                    }
+                    add(JMenu("StackTrace").apply {
+                        if (stackTraceFilter.first.toInt() == 0) {
+                            add(Action("Complete Match") {
+                                stackTraceFilter = stackTraceFilter.copy(1, this@table.model.data[rowAtPoint].stacktrace)
+                                updateData()
+                            })
+                        } else if (stackTraceFilter.first.toInt() == 1) {
+                            add(JCheckBoxMenuItem("Complete Match", true).apply {
+                                toolTipText = "Remove Filter"
+                                addActionListener{
+                                    stackTraceFilter = stackTraceFilter.copy(0, emptyList())
+                                    updateData()
+                                }
+                            })
+                        }
+                        if (stackTraceFilter.first.toInt() == 0) {
+                            add(Action("Partial Match") {
+                                stackTraceFilter = stackTraceFilter.copy(2, this@table.model.data[rowAtPoint].stacktrace)
+                                updateData()
+                            })
+                        } else if (stackTraceFilter.first.toInt() == 2) {
+                            add(JCheckBoxMenuItem("Partial Match", true).apply {
+                                toolTipText = "Remove Filter"
+                                addActionListener{
+                                    stackTraceFilter = stackTraceFilter.copy(0, emptyList())
+                                    updateData()
+                                }
+                            })
+                        }
+                    })
+                })
+                add(JMenu("Mark/Unmark all with same...").apply {
+                    if (!isLoggerLevelMarked(this@table.model.data[rowAtPoint].level!!.name)) {
+                        add(Action("Level") {
+                            table.model.data.forEach {
+                                if (it.level?.name == this@table.model.data[rowAtPoint].level!!.name) {
+                                    it.marked = true
+                                }
+                            }
+                        })
+                    } else {
+                        add(JCheckBoxMenuItem("Level", true).apply {
+                            addActionListener{
+                                table.model.data.forEach {
+                                    if (it.level?.name == this@table.model.data[rowAtPoint].level!!.name) {
+                                        it.marked = false
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    if (this@table.model.data[rowAtPoint] is SystemLogsEvent) {
+                        if (!(isLoggerThreadMarked((this@table.model.data[rowAtPoint] as SystemLogsEvent).thread))) {
+                            add(Action("Thread") {
+                                table.model.data.forEach {
+                                    if ((it as SystemLogsEvent).thread == (this@table.model.data[rowAtPoint] as SystemLogsEvent).thread) {
+                                        it.marked = true
+                                    }
+                                }
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("Thread", true).apply {
+                                addActionListener{
+                                    table.model.data.forEach {
+                                        if ((it as SystemLogsEvent).thread == (this@table.model.data[rowAtPoint] as SystemLogsEvent).thread) {
+                                            it.marked = false
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                        if (!isMDCMarked((this@table.model.data[rowAtPoint] as SystemLogsEvent).mdc)) {
+                            add(Action("MDC Key") {
+                                table.model.data.forEach {
+                                    if ((it as SystemLogsEvent).mdc == (this@table.model.data[rowAtPoint]as SystemLogsEvent).mdc) {
+                                        it.marked = true
+                                    }
+                                }
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("MDC Key", true).apply {
+                                addActionListener{
+                                    table.model.data.forEach {
+                                        if ((it as SystemLogsEvent).mdc == (this@table.model.data[rowAtPoint]as SystemLogsEvent).mdc) {
+                                            it.marked = false
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                    if (!isLoggerNameMarked(this@table.model.data[rowAtPoint].logger)) {
+                        add(Action("Logger") {
+                            table.model.data.forEach {
+                                if (it.logger == this@table.model.data[rowAtPoint].logger) {
+                                    it.marked = true
+                                }
+                            }
+                        })
+                    } else {
+                        add(JCheckBoxMenuItem("Logger", true).apply {
+                            addActionListener{
+                                table.model.data.forEach {
+                                    if (it.logger == this@table.model.data[rowAtPoint].logger) {
+                                        it.marked = false
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    if (!isLoggerMessageMarked(this@table.model.data[rowAtPoint].message)) {
+                        add(Action("Message") {
+                            table.model.data.forEach {
+                                if (it.message == this@table.model.data[rowAtPoint].message) {
+                                    it.marked = true
+                                }
+                            }
+                        })
+                    } else {
+                        add(JCheckBoxMenuItem("Message", true).apply {
+                            addActionListener{
+                                table.model.data.forEach {
+                                    if (it.message == this@table.model.data[rowAtPoint].message) {
+                                        it.marked = false
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    add(JMenu("StackTrace").apply {
+                        if (!isFullStackTraceMarked(this@table.model.data[rowAtPoint].stacktrace)) {
+                            add(Action("Complete Match") {
+                                table.model.data.forEach {
+                                    if (it.stacktrace == this@table.model.data[rowAtPoint].stacktrace) {
+                                        it.marked = true
+                                    }
+                                }
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("Complete Match", true).apply {
+                                addActionListener{
+                                    table.model.data.forEach {
+                                        if (it.stacktrace == this@table.model.data[rowAtPoint].stacktrace) {
+                                            it.marked = false
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                        if (this@table.model.data[rowAtPoint].stacktrace.isNotEmpty() && !isPartialStackTraceMarked(this@table.model.data[rowAtPoint].stacktrace[0])) {
+                            add(Action("Partial Match") {
+                                table.model.data.forEach {
+                                    if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == this@table.model.data[rowAtPoint].stacktrace[0]) {
+                                        it.marked = true
+                                    }
+                                }
+                            })
+                        } else {
+                            add(JCheckBoxMenuItem("Partial Match", true).apply {
+                                addActionListener{
+                                    table.model.data.forEach {
+                                        if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == this@table.model.data[rowAtPoint].stacktrace[0]) {
+                                            it.marked = false
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    })
+                })
+            }
+        }
         table.addPropertyChangeListener("model") {
             header.displayedRows = table.model.rowCount
         }

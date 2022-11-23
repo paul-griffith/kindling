@@ -122,6 +122,25 @@ class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")
         naturalDesc.action = configSortAction(NATURAL_SORT_DESCENDING, "Sort Z-A", if(isFullName) { byName.reversed() } else { bySubName.reversed()})
     }
 
+    fun select(logger: String) {
+        list.model.data.listIterator().forEach { if (it.name == logger)  {
+            val index = list.model.data.indexOf(it) + 1
+            list.checkBoxListSelectionModel.setSelectionInterval(index, index)
+        } }
+    }
+
+    fun isOnlySelected(logger: String): Boolean {
+        if (list.checkBoxListSelectionModel.model.getElementAt(0) == 0) { return false }
+        for (i in 1 until list.checkBoxListSelectionModel.model.size) {
+            if (logger != (list.checkBoxListSelectionModel.model.getElementAt(i) as LoggerName).name
+                    && logger != (list.checkBoxListSelectionModel.model.getElementAt(i) as LoggerName).subName
+                    && i in list.checkBoxListSelectionModel.selectedIndices) {
+                return false
+            }
+        }
+        return true
+    }
+
     init {
         listOf(
             naturalAsc,

@@ -45,6 +45,7 @@ class LoggerLevelsList(model: LoggerLevelsModel) : CheckBoxList(model) {
                 conversion = ::displayValue
         )
         selectionModel = NoSelectionModel()
+        isClickInCheckBoxOnly = false
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             when (value) {
                 is LoggerLevel -> {
@@ -74,6 +75,24 @@ class LoggerLevelsList(model: LoggerLevelsModel) : CheckBoxList(model) {
 }
 
 class LoggerLevelsPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill, h 120")) {
+    fun select(level: String) {
+       list.model.data.listIterator().forEach { if (it.name == level)  {
+           val index = list.model.data.indexOf(it) + 1
+           list.checkBoxListSelectionModel.setSelectionInterval(index, index)
+       } }
+    }
+
+    fun isOnlySelected(level: String): Boolean {
+        if (list.checkBoxListSelectionModel.model.getElementAt(0) == 0) { return false }
+        for (i in 1 until list.checkBoxListSelectionModel.model.size) {
+            if (level != (list.checkBoxListSelectionModel.model.getElementAt(i) as LoggerLevel).name
+                    && i in list.checkBoxListSelectionModel.selectedIndices) {
+                return false
+            }
+        }
+        return true
+    }
+
     val list: LoggerLevelsList = run {
         val loggerLevels: List<LoggerLevel> = events.groupingBy { it.level!!.name }
                 .eachCount()

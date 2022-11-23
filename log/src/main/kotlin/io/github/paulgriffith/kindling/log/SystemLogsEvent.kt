@@ -8,6 +8,7 @@ sealed interface LogEvent {
     val message: String
     val logger: String
     val level: Level?
+    val stacktrace: List<String>
 }
 
 data class WrapperLogEvent(
@@ -16,7 +17,7 @@ data class WrapperLogEvent(
     override val message: String,
     override val logger: String = STDOUT,
     override val level: Level? = null,
-    val stacktrace: List<String> = emptyList()
+    override val stacktrace: List<String> = emptyList()
 ) : LogEvent {
     companion object {
         const val STDOUT = "STDOUT"
@@ -31,7 +32,7 @@ data class SystemLogsEvent(
     val thread: String,
     override val level: Level,
     val mdc: Map<String, String>,
-    val stacktrace: List<String>
+    override val stacktrace: List<String>
 ) : LogEvent
 
 @Suppress("unused")
