@@ -3,5 +3,10 @@
   "extends": [
     "config:base"
   ],
-  "ignoreDeps": ["ignition", "org.apache.commons:commons-lang3", "com.google.guava:guava"]
+  "ignoreDeps": [
+    "com.inductiveautomation.ignition:gateway-api",
+    "com.inductiveautomation.ignition:common",
+    "org.apache.commons:commons-lang3",
+    "com.google.guava:guava"
+  ]
 }
