@@ -65,7 +65,7 @@ jobs:
             artifacts/*
             kindling-bundle.jar
       - name: Setup Node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '17'
           registry-url: 'https://registry.npmjs.org'
