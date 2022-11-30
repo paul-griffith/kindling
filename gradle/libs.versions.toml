@@ -2,7 +2,7 @@
 java = "17"
 kotlin = "1.7.22"
 coroutines = "1.6.4"
-flatlaf = "2.4"
+flatlaf = "2.6"
 kotest = "5.5.4"
 ignition = "8.1.1"
 
