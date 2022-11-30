@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["ignition", "org.apache.commons:commons-lang3", "com.google.guava:guava"],
+      "enabled": false
+    }
+  ]
+}
