@@ -163,6 +163,3 @@ fun String.escapeHtml(): String {
     }
 }
 
-fun String.toHtmlLink(href: String): String {
-    return """<a href="$href">$this</a>"""
-}

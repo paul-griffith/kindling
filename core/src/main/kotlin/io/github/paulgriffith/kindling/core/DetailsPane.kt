@@ -91,7 +91,13 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                     append(event.message.escapeHtml())
                 }
                 if (event.body.isNotEmpty()) {
-                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>")
+                    event.body.joinTo(buffer = this, separator = "\n", prefix = "<pre>", postfix = "</pre>") { (text, link) ->
+                        if (link != null) {
+                            """<a href="$link">$text</a>"""
+                        } else {
+                            text
+                        }
+                    }
                 } else {
                     append("<br>")
                 }
@@ -106,7 +112,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                 if (event.message != null) {
                     appendLine(event.message)
                 }
-                event.body.joinTo(buffer = this, separator = "\n") { "\t$it" }
+                event.body.joinTo(buffer = this, separator = "\n") { "\t${it.text}" }
             }
         }
     }

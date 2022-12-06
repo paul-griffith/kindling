@@ -4,8 +4,10 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
+import io.github.paulgriffith.kindling.core.Detail.BodyLine
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.core.add
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
@@ -20,7 +22,6 @@ import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getValue
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
-import io.github.paulgriffith.kindling.utils.toHtmlLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -189,10 +190,8 @@ class ThreadView(
         mainTable.selectionModel.apply {
             addListSelectionListener {
                 if (!it.valueIsAdjusting) {
-                    details.events = selectedIndices
-                        .map { viewRow -> mainTable.convertRowIndexToModel(viewRow) }
-                        .map { modelRow -> mainTable.model.threads[modelRow] }
-                        .map { thread -> thread.toDetail() }
+                    details.events = mainTable.selectedRowIndices()
+                        .map { modelRow -> mainTable.model.threads[modelRow].toDetail() }
                 }
             }
         }
@@ -256,7 +255,7 @@ class ThreadView(
 
             if (lockedSynchronizers.isNotEmpty()) {
                 add("locked synchronizers:")
-                addAll(lockedSynchronizers.map { it.escapeHtml() })
+                addAll(lockedSynchronizers.map { BodyLine(it.escapeHtml()) })
             }
 
             if (stacktrace.isNotEmpty()) {
@@ -293,12 +292,12 @@ class ThreadView(
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
 
-        private val classnameRegex = """(.*/)?(?<path>.*)\..*\(.*\)""".toRegex()
+        private val classnameRegex = """(.*/)?(?<path>[^\s\d$]*)[.$].*\(.*\)""".toRegex()
 
-        private fun Stacktrace.linkify(version: String): Stacktrace {
-            val foundEntry = classMapsByVersion.entries.find { (classMapVersion, _) ->
+        private fun Stacktrace.linkify(version: String): List<BodyLine> {
+            val (_, classmap) = classMapsByVersion.entries.find { (classMapVersion, _) ->
                 classMapVersion in version
-            } ?: return this
+            } ?: return this.map(::BodyLine)
 
             return stack.map { line ->
                 val escapedLine = line.escapeHtml()
@@ -306,13 +305,12 @@ class ThreadView(
 
                 if (matchResult != null) {
                     val path by matchResult.groups
-                    val url = foundEntry.value[path.value] as String?
-                    if (url != null) {
-                        return@map escapedLine.toHtmlLink(url)
-                    }
+                    val url = classmap[path.value] as String?
+                    BodyLine(escapedLine, url)
+                } else {
+                    BodyLine(escapedLine)
                 }
-                escapedLine
-            }.let(::Stacktrace)
+            }
         }
     }
 }
