@@ -24,14 +24,17 @@ class DownloadJavadocsPlugin : Plugin<Project> {
         "8.1" to listOf(
             javadoc("https://files.inductiveautomation.com/sdk/javadoc/ignition81/8.1.21/"),
             javadoc("https://docs.oracle.com/en/java/javase/11/docs/api/"),
+            legacyJavadoc("https://www.javadoc.io/static/org.python/jython-standalone/2.7.1/")
         ),
         "8.0" to listOf(
             javadoc("https://files.inductiveautomation.com/sdk/javadoc/ignition80/8.0.14/"),
             javadoc("https://docs.oracle.com/en/java/javase/11/docs/api/"),
+            legacyJavadoc("https://www.javadoc.io/static/org.python/jython-standalone/2.7.1/")
         ),
         "7.9" to listOf(
             legacyJavadoc("https://files.inductiveautomation.com/sdk/javadoc/ignition79/7921/"),
             legacyJavadoc("https://docs.oracle.com/javase/8/docs/api/"),
+            legacyJavadoc("https://www.javadoc.io/static/org.python/jython-standalone/2.5.3/")
         ),
     )
 
@@ -44,18 +47,17 @@ class DownloadJavadocsPlugin : Plugin<Project> {
                     mkdirs()
                     resolve("links.properties").printWriter().use { writer ->
                         for (javadocUrl in urls) {
-                            val classNamesToUrls = javadocUrl.url.openStream().use { inputstream ->
+                            javadocUrl.url.openStream().use { inputstream ->
                                 Jsoup.parse(inputstream, Charsets.UTF_8.name(), "")
                                     .select("a[href]")
-                                    .associate { a ->
+                                    .forEach { a ->
                                         val className = a.text()
                                         val packageName = a.attr("title").substringAfterLast(' ')
 
-                                        "$packageName.$className" to "${javadocUrl.base}${a.attr("href")}"
+                                        writer.append(packageName).append('.').append(className)
+                                            .append('=').append(javadocUrl.base).append(a.attr("href"))
+                                            .appendLine()
                                     }
-                            }
-                            for ((key, value) in classNamesToUrls) {
-                                writer.append(key).append('=').append(value).appendLine()
                             }
                         }
                     }
