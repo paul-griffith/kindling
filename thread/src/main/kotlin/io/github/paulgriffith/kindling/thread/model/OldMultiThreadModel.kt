@@ -8,7 +8,7 @@ import org.jdesktop.swingx.renderer.StringValues
 import java.text.DecimalFormat
 import javax.swing.table.AbstractTableModel
 
-class MultiThreadModel(val threadData: List<List<Thread?>>) : AbstractTableModel() {
+class OldMultiThreadModel(val threadData: List<List<Thread?>>) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = ThreadColumns[column].header
     override fun getRowCount(): Int = threadData.size
     override fun getColumnCount(): Int = size

@@ -21,7 +21,7 @@ class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<An
     }
 }
 
-class ThreadDumpList(data: List<Path>) : CheckBoxList(ThreadDumpListModel(data)) {
+class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListModel(data)) {
 
     private val defaultDismissTimeout = ToolTipManager.sharedInstance().dismissDelay
 

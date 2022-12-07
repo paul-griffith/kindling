@@ -24,16 +24,14 @@ class PoolModel(private val values: List<String?>) : AbstractListModel<Any>() {
     }
 }
 
-class PoolList(data: Map<String?, Int>) :
+class PoolList(var data: Map<String?, Int>) :
     CheckBoxList(PoolModel(data.entries.sortedWith(compareByDescending(nullsFirst()) { it.value }).map { it.key })) {
+
+    private var total = 0
+    private var percentages = emptyMap<String?, String>()
     init {
         selectionModel = NoSelectionModel()
-
-        val total = data.values.sum()
-        val percentages = data.mapValues { (_, count) ->
-            val percentage = count.toFloat() / total
-            DecimalFormat.getPercentInstance().format(percentage)
-        }
+        refreshData(data)
 
         cellRenderer = listCellRenderer<Any?> { _, value, _, _, _ ->
             text = when (value) {
@@ -58,7 +56,17 @@ class PoolList(data: Map<String?, Int>) :
         val selection = checkBoxListSelectedValues
         checkBoxListSelectionModel.valueIsAdjusting = true
         super.setModel(model)
+        total = data.values.sum()
+        percentages = data.mapValues { (_, count) ->
+            val percentage = count.toFloat() / total
+            DecimalFormat.getPercentInstance().format(percentage)
+        }
         addCheckBoxListSelectedValues(selection)
         checkBoxListSelectionModel.valueIsAdjusting = false
+    }
+
+    fun refreshData(data: Map<String?, Int>) {
+        this.data = data
+        model = PoolModel(data.entries.sortedWith(compareByDescending(nullsFirst()) { it.value }).map { it.key })
     }
 }

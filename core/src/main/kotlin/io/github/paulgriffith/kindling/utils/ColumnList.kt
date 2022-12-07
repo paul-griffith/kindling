@@ -36,7 +36,7 @@ abstract class ColumnList<R> private constructor(
     operator fun get(column: Column<R, *>): Int = indexOf(column)
 }
 
-fun JXTable.installColumnFactory(columns: ColumnList<*>) {
+fun JXTable.installColumnFactory(columns: ColumnList<*>, createColumns: Boolean = true) {
     columnFactory = object : ColumnFactory() {
         override fun configureTableColumn(model: TableModel, columnExt: TableColumnExt) {
             super.configureTableColumn(model, columnExt)
@@ -45,5 +45,5 @@ fun JXTable.installColumnFactory(columns: ColumnList<*>) {
             column.columnCustomization?.invoke(columnExt, model)
         }
     }
-    createDefaultColumnsFromModel()
+    if (createColumns) createDefaultColumnsFromModel()
 }

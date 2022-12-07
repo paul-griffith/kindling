@@ -11,8 +11,8 @@ import io.github.paulgriffith.kindling.core.add
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
-import io.github.paulgriffith.kindling.thread.model.ThreadModel
-import io.github.paulgriffith.kindling.thread.model.ThreadModel.ThreadColumns.Id
+import io.github.paulgriffith.kindling.thread.model.OldSingleThreadModel
+import io.github.paulgriffith.kindling.thread.model.OldSingleThreadModel.ThreadColumns.Id
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
@@ -55,12 +55,12 @@ class ThreadView(
     private val threadDump: ThreadDump = requireNotNull(ThreadDump.fromStream(data))
 
     private val details = DetailsPane()
-    private val mainTable = ReifiedJXTable(ThreadModel(threadDump.threads), ThreadModel).apply {
-        setSortOrder(ThreadModel[Id], SortOrder.ASCENDING)
+    private val mainTable = ReifiedJXTable(OldSingleThreadModel(threadDump.threads), OldSingleThreadModel).apply {
+        setSortOrder(OldSingleThreadModel[Id], SortOrder.ASCENDING)
         addHighlighter(
             ColorHighlighter(
                 { _, adapter ->
-                    threadDump.deadlockIds.contains(adapter.getValue(ThreadModel.ThreadColumns[Id]))
+                    threadDump.deadlockIds.contains(adapter.getValue(OldSingleThreadModel.ThreadColumns[Id]))
                 },
                 UIManager.getColor("Actions.Red"),
                 null,
@@ -82,20 +82,20 @@ class ThreadView(
         fun filterAllWithSameValue(property: Column<Thread, *>) {
             val firstRow = selectedRowIndices().first()
             when (property) {
-                ThreadModel.State -> {
-                    val state = model[firstRow, ThreadModel.State]
+                OldSingleThreadModel.State -> {
+                    val state = model[firstRow, OldSingleThreadModel.State]
                     stateList.select(state)
                 }
 
-                ThreadModel.System -> {
-                    val system = model[firstRow, ThreadModel.System]
+                OldSingleThreadModel.System -> {
+                    val system = model[firstRow, OldSingleThreadModel.System]
                     if (system != null) {
                         systemList.select(system)
                     }
                 }
 
-                ThreadModel.Pool -> {
-                    val pool = model[firstRow, ThreadModel.Pool]
+                OldSingleThreadModel.Pool -> {
+                    val pool = model[firstRow, OldSingleThreadModel.Pool]
                     if (pool != null) {
                         poolList.select(pool)
                     }
@@ -118,7 +118,7 @@ class ThreadView(
             JPopupMenu().apply {
                 add(
                     JMenu("Filter all with same...").apply {
-                        for (column in ThreadModel.filterableColumns) {
+                        for (column in OldSingleThreadModel.filterableColumns) {
                             add(
                                 Action(column.header) {
                                     filterAllWithSameValue(column)
@@ -129,7 +129,7 @@ class ThreadView(
                 )
                 add(
                     JMenu("Mark all with same...").apply {
-                        for (column in ThreadModel.markableColumns) {
+                        for (column in OldSingleThreadModel.markableColumns) {
                             add(
                                 Action(column.header) {
                                     markAllWithSameValue(column)
@@ -178,7 +178,7 @@ class ThreadView(
                 filters.all { filter -> filter(thread) }
             }
             EDT_SCOPE.launch {
-                mainTable.model = ThreadModel(data)
+                mainTable.model = OldSingleThreadModel(data)
             }
         }
     }
@@ -338,4 +338,4 @@ object ThreadViewer : ClipboardTool {
     }
 }
 
-class ThreadViewerProxy : ClipboardTool by ThreadViewer
+//class ThreadViewerProxy : ClipboardTool by ThreadViewer
