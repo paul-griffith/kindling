@@ -2,6 +2,9 @@ package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxListSelectionModel
+import io.github.paulgriffith.kindling.core.add
+import io.github.paulgriffith.kindling.core.Detail
+import io.github.paulgriffith.kindling.core.Detail.BodyLine
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
@@ -19,7 +22,6 @@ import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getValue
 import io.github.paulgriffith.kindling.utils.installColumnFactory
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
-import io.github.paulgriffith.kindling.utils.toHtmlLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,11 +66,12 @@ class MultiThreadView(
                 ),
             )
 
-            fun markAllWithSameValue(property: Column<ThreadLifespan, *>) {
+            fun toggleMarkAllWithSameValue(property: Column<ThreadLifespan, *>) {
                 val selectedPropertyValue = model[selectedRowIndices().first(), property]
+                val selectedThreadMarked = model.getValueAt(selectedRowIndices().first(), ThreadModel.markIndex) as Boolean
                 for (lifespan: ThreadLifespan in model.threadData) {
                     if (property.getValue(lifespan) == selectedPropertyValue) {
-                        lifespan.forEach { it?.marked = true }
+                        lifespan.forEach { it?.marked = !selectedThreadMarked }
                     }
                 }
 
@@ -151,11 +154,11 @@ class MultiThreadView(
                         },
                     )
                     add(
-                        JMenu("Mark all with same...").apply {
+                        JMenu("Mark/Unmark all with same...").apply {
                             for (column in markable) {
                                 add(
                                     Action(column.header) {
-                                        markAllWithSameValue(column)
+                                        toggleMarkAllWithSameValue(column)
                                     },
                                 )
                             }
@@ -167,7 +170,7 @@ class MultiThreadView(
     }
 
     // Details pane replaced with comparison pane
-    private var comparison = ThreadComparisonPane(threadDumps.size)
+    private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
 
     private var allThreads: List<Thread> = threadDumps.flatMap { it.threads }
 
@@ -210,7 +213,6 @@ class MultiThreadView(
     }
 
     private fun updateData() {
-        println("Update data called")
         BACKGROUND.launch {
             val selectedThreadDumps = threadDumps.filterIndexed { index, _ ->
                 index + 1 in threadDumpCheckboxList.checkBoxListSelectedIndices
@@ -280,6 +282,7 @@ class MultiThreadView(
 
         poolList.checkBoxListSelectionModel.bind()
         stateList.checkBoxListSelectionModel.bind()
+        systemList.checkBoxListSelectionModel.bind()
         threadDumpCheckboxList.checkBoxListSelectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {
                 listModelsAdjusting = true
@@ -289,8 +292,9 @@ class MultiThreadView(
                 }
                 allThreads = selectedThreadDumps.flatMap { it.threads }
 
-                poolList.refreshData(allThreads.groupingBy(Thread::pool).eachCount())
-                stateList.refreshData(allThreads.groupingBy(Thread::state).eachCount())
+                poolList.setModel(allThreads.groupingBy(Thread::pool).eachCount())
+                stateList.setModel(allThreads.groupingBy(Thread::state).eachCount())
+                systemList.setModel(allThreads.groupingBy(Thread::system).eachCount())
 
                 listModelsAdjusting = false
                 updateData()
@@ -327,6 +331,7 @@ class MultiThreadView(
                 JPanel(MigLayout("ins 0, fill")).apply {
                     add(FlatScrollPane(stateList), "grow, w 200::25%, height 100!")
                     add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
+                    add(FlatScrollPane(systemList), "grow, w 200::25%, hmin 100, wrap")
                     add(FlatScrollPane(poolList), "grow, w 200::25%, h 1500")
                 },
                 comparison,
@@ -376,11 +381,12 @@ class MultiThreadView(
             return map.values.toList()
         }
 
-        private val classnameRegex = """(.*/)?(?<path>.*)\..*\(.*\)""".toRegex()
-        private fun Stacktrace.linkify(version: String): Stacktrace {
-            val foundEntry = classMapsByVersion.entries.find { (classMapVersion, _) ->
+        private val classnameRegex = """(.*/)?(?<path>[^\s\d$]*)[.$].*\(.*\)""".toRegex()
+
+        fun Stacktrace.linkify(version: String): List<BodyLine> {
+            val (_, classmap) = classMapsByVersion.entries.find { (classMapVersion, _) ->
                 classMapVersion in version
-            } ?: return this
+            } ?: return this.map(Detail::BodyLine)
 
             return stack.map { line ->
                 val escapedLine = line.escapeHtml()
@@ -388,14 +394,46 @@ class MultiThreadView(
 
                 if (matchResult != null) {
                     val path by matchResult.groups
-                    val url = foundEntry.value[path.value] as String?
-                    if (url != null) {
-                        return@map escapedLine.toHtmlLink(url)
+                    val url = classmap[path.value] as String?
+                    BodyLine(escapedLine, url)
+                } else {
+                    BodyLine(escapedLine)
+                }
+            }
+        }
+
+        fun Thread.toDetail(version: String): Detail = Detail(
+            title = name,
+            details = mapOf(
+                "id" to id.toString(),
+            ),
+            body = buildList {
+                if (blocker != null) {
+                    add("waiting for:")
+                    add(blocker.toString())
+                }
+
+                if (lockedMonitors.isNotEmpty()) {
+                    add("locked monitors:")
+                    lockedMonitors.forEach { monitor ->
+                        if (monitor.frame != null) {
+                            add(monitor.frame)
+                        }
+                        add(monitor.lock.escapeHtml())
                     }
                 }
-                escapedLine
-            }.let(::Stacktrace)
-        }
+
+                if (lockedSynchronizers.isNotEmpty()) {
+                    add("locked synchronizers:")
+                    addAll(lockedSynchronizers.map { BodyLine(it.escapeHtml()) })
+                }
+
+                if (stacktrace.isNotEmpty()) {
+                    add("stacktrace:")
+                    addAll(stacktrace.linkify(version))
+                }
+            },
+        )
     }
 }
 
@@ -408,13 +446,7 @@ object MultiThreadViewer : MultiTool {
     override fun open(paths: List<Path>): ToolPanel {
         return MultiThreadView(paths.sorted())
     }
-//    override fun open(data: String): ToolPanel {
-//        return MultiThreadView(
-//            tabName = "Paste at ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))}",
-//            data = data.byteInputStream(),
-//            fromFile = false,
-//        )
-//    }
+    //TODO: Implement Clipboard tool
 }
 
 class ThreadViewerProxy : MultiTool by MultiThreadViewer

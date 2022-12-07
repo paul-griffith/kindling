@@ -13,18 +13,12 @@ class ScrollingTextPane() : FlatScrollPane() {
             preferredSize = Dimension(Integer.MAX_VALUE, newPrefHeight)
             textPane.text = value
         }
-    private val textPane = JTextPane().apply {
+    val textPane = JTextPane().apply {
         isEditable = false
         contentType = "text/html"
     }
     init {
         setViewportView(textPane)
-//            textPane.apply {
-//                text = buildString {
-//                    append(input.joinToString("\n", "<html><pre>", "</pre></html>", transform = String::escapeHtml))
-//                }
-//            }
-//        )
 
         horizontalScrollBar.preferredSize = Dimension(0, 10)
         verticalScrollBar.preferredSize = Dimension(10, 0)

@@ -17,14 +17,6 @@ class StateModel(private val values: List<State>) : AbstractListModel<Any>() {
             CheckBoxList.ALL_ENTRY
         } else {
             values[index - 1]
-//            try{
-//                values[index - 1]
-//            } catch(e: Exception) {
-//                println(e.message)
-//                println(e.stackTrace)
-//                println(index)
-//            }
-
         }
     }
 
@@ -46,7 +38,7 @@ class StateList(var data: Map<State, Int>) :
 
     init {
         selectionModel = NoSelectionModel()
-        refreshData(data)
+        setModel(data)
 
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
             text = when (value) {
@@ -66,28 +58,20 @@ class StateList(var data: Map<State, Int>) :
     override fun getModel(): StateModel = super.getModel() as StateModel
 
     override fun setModel(model: ListModel<*>) {
-        println("Max Value before call: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
         require(model is StateModel)
         val selection = checkBoxListSelectedValues
         checkBoxListSelectionModel.valueIsAdjusting = true
-        println("value is adjusting")
-        println("Max Value before set model: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
         super.setModel(model)
-        println("Max Value after set model: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
         total = data.values.sum()
         percentages = data.mapValues { (_, count) ->
             val percentage = count.toFloat() / total
             DecimalFormat.getPercentInstance().format(percentage)
         }
-        println("Max Value before selection change: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
         addCheckBoxListSelectedValues(selection)
-        println("Max Value after selection change: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
         checkBoxListSelectionModel.valueIsAdjusting = false
-        println("value not adjusting")
-        println("Max Value after valueIsAdj: ${this.checkBoxListSelectionModel.maxSelectionIndex}")
     }
 
-    fun refreshData(data: Map<State, Int>) {
+    fun setModel(data: Map<State, Int>) {
         this.data = data
         model = StateModel(data.entries.sortedByDescending { it.value }.map { it.key })
     }

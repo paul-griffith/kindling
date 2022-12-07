@@ -9,9 +9,12 @@ import javax.swing.ListModel
 
 class PoolModel(private val values: List<String?>) : AbstractListModel<Any>() {
     override fun getSize(): Int = values.size + 1
-    override fun getElementAt(index: Int): Any? = when (index) {
-        0 -> CheckBoxList.ALL_ENTRY
-        else -> values[index - 1]
+    override fun getElementAt(index: Int): Any? {
+        return if (index == 0) {
+            CheckBoxList.ALL_ENTRY
+        } else {
+            values[index - 1]
+        }
     }
 
     fun indexOf(pool: String): Int {
@@ -31,7 +34,7 @@ class PoolList(var data: Map<String?, Int>) :
     private var percentages = emptyMap<String?, String>()
     init {
         selectionModel = NoSelectionModel()
-        refreshData(data)
+        setModel(data)
 
         cellRenderer = listCellRenderer<Any?> { _, value, _, _, _ ->
             text = when (value) {
@@ -65,7 +68,7 @@ class PoolList(var data: Map<String?, Int>) :
         checkBoxListSelectionModel.valueIsAdjusting = false
     }
 
-    fun refreshData(data: Map<String?, Int>) {
+    fun setModel(data: Map<String?, Int>) {
         this.data = data
         model = PoolModel(data.entries.sortedWith(compareByDescending(nullsFirst()) { it.value }).map { it.key })
     }

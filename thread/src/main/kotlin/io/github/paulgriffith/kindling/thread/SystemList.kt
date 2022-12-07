@@ -27,16 +27,15 @@ class SystemModel(private val values: List<String?>) : AbstractListModel<Any>() 
     }
 }
 
-class SystemList(data: Map<String?, Int>) :
+class SystemList(var data: Map<String?, Int>) :
     CheckBoxList(SystemModel(data.entries.sortedByDescending { it.value }.map { it.key })) {
+
+    private var total = 0
+    private var percentages = emptyMap<String?, String>()
+
     init {
         selectionModel = NoSelectionModel()
-
-        val total = data.values.sum()
-        val percentages = data.mapValues { (_, count) ->
-            val percentage = count.toFloat() / total
-            DecimalFormat.getPercentInstance().format(percentage)
-        }
+        setModel(data)
 
         cellRenderer = listCellRenderer<Any?> { _, value, _, _, _ ->
             text = when (value) {
@@ -64,7 +63,17 @@ class SystemList(data: Map<String?, Int>) :
         val selection = checkBoxListSelectedValues
         checkBoxListSelectionModel.valueIsAdjusting = true
         super.setModel(model)
+        total = data.values.sum()
+        percentages = data.mapValues { (_, count) ->
+            val percentage = count.toFloat() / total
+            DecimalFormat.getPercentInstance().format(percentage)
+        }
         addCheckBoxListSelectedValues(selection)
         checkBoxListSelectionModel.valueIsAdjusting = false
+    }
+
+    fun setModel(data: Map<String?, Int>) {
+        this.data = data
+        model = SystemModel(data.entries.sortedByDescending { it.value }.map { it.key })
     }
 }
