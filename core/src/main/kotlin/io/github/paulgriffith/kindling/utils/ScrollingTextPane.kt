@@ -5,7 +5,7 @@ import java.awt.Dimension
 import java.awt.Rectangle
 import javax.swing.JTextPane
 
-class ScrollingTextPane() : FlatScrollPane() {
+class ScrollingTextPane : FlatScrollPane() {
     var text: String?
         get() = textPane.text
         set(value) {

@@ -358,7 +358,6 @@ class MultiThreadView(
     private fun CheckBoxListSelectionModel.bind() {
         addListSelectionListener { event ->
             if (!event.valueIsAdjusting && !listModelsAdjusting) {
-                println("${event.source} calling update data...")
                 updateData()
             }
         }
@@ -375,7 +374,12 @@ class MultiThreadView(
                     }
                     map[it.id]!![index] = it
                     val condition = map[it.id]!!.distinctBy { thread -> thread?.name }.filterNotNull().size == 1
-                    require(condition) { "Thread dumps must be from the same gateway and runtime instance." }
+                    require(condition) {
+                        """Thread dumps must be from the same gateway and runtime instance.
+                           Thread dump number ${index + 1} caused this issue.
+                           ID ${it.id} differs.
+                        """.trimMargin()
+                    }
                 }
             }
             return map.values.toList()

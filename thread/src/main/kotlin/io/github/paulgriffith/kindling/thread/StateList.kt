@@ -7,8 +7,6 @@ import java.lang.Thread.State
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
 import javax.swing.ListModel
-import kotlin.properties.Delegates
-import kotlin.reflect.KProperty
 
 class StateModel(private val values: List<State>) : AbstractListModel<Any>() {
     override fun getSize(): Int = values.size + 1
@@ -34,7 +32,7 @@ class StateList(var data: Map<State, Int>) :
     CheckBoxList(StateModel(data.entries.sortedByDescending { it.value }.map { it.key })) {
 
     private var total = 0
-    private var percentages = emptyMap<Thread.State, String>()
+    private var percentages = emptyMap<State, String>()
 
     init {
         selectionModel = NoSelectionModel()

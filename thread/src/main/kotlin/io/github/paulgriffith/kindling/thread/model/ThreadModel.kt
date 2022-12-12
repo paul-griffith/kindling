@@ -168,7 +168,6 @@ class ThreadModel(
             },
             value = { it.toThread().id },
         )
-        val Name by column { it.toThread().name }
         val State by column(
             column = {
                 minWidth = 105
@@ -176,6 +175,7 @@ class ThreadModel(
             },
             value = { it.toThread().state },
         )
+        val Name by column { it.toThread().name }
         val Daemon by column(
             column = {
                 minWidth = 55

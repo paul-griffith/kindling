@@ -8,11 +8,9 @@ import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.thread.MultiThreadView.Companion.linkify
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.MultiThreadView.Companion.toDetail
-import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ScrollingTextPane
 import io.github.paulgriffith.kindling.utils.add
-import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.firstNotNull
 import io.github.paulgriffith.kindling.utils.getAll
@@ -25,7 +23,6 @@ import java.util.EventListener
 import javax.swing.JCheckBox
 import javax.swing.JFrame
 import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.SwingConstants
 import javax.swing.event.EventListenerList
 import javax.swing.event.HyperlinkEvent
