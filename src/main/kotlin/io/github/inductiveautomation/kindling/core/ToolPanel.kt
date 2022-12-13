@@ -15,6 +15,7 @@ import javax.swing.JFileChooser
 import javax.swing.JMenu
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
+import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 
 abstract class ToolPanel(

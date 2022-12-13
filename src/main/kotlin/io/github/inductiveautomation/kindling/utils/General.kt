@@ -1,5 +1,17 @@
-package io.github.inductiveautomation.kindling.utils
+package io.github.paulgriffith.kindling.utils // ktlint-disable filename
 
+import io.github.evanrupert.excelkt.workbook
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -7,6 +19,7 @@ import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.math.BigDecimal
@@ -19,6 +32,8 @@ import java.sql.Time
 import java.sql.Timestamp
 import java.util.Properties
 import java.util.ServiceLoader
+import javax.swing.JOptionPane
+import javax.swing.table.TableModel
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.reflect.KProperty
@@ -123,6 +138,134 @@ fun Long.toFileSizeLabel(): String = when {
 
 operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>): MatchGroup {
     return requireNotNull(get(property.name))
+}
+
+val TableModel.rowIndices get() = 0 until rowCount
+val TableModel.columnIndices get() = 0 until columnCount
+
+fun TableModel.exportToCSV(file: File) {
+    file.printWriter().use(::toCSV)
+}
+
+fun TableModel.toCSV(appendable: Appendable) {
+    (0 until columnCount).joinTo(buffer = appendable, separator = ",") { col ->
+        getColumnName(col)
+    }
+    appendable.appendLine()
+    (0 until rowCount).forEach { row ->
+        (0 until columnCount).joinTo(buffer = appendable, separator = ",") { col ->
+            """"${getValueAt(row, col)?.toString().orEmpty()}""""
+        }
+        appendable.appendLine()
+    }
+}
+
+private const val UPLOAD_URL =
+    "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/upload_thread_dump"
+
+private val uploadClient = HttpClient(CIO)
+
+private suspend fun HttpClient.checkFileAndUser(
+    filename: String,
+    username: String,
+): Pair<HttpStatusCode, Boolean> {
+    val response = get(UPLOAD_URL) {
+        url {
+            parameter("filename", filename)
+            parameter("username", username)
+        }
+    }
+    return Pair(response.status, response.bodyAsText().toBoolean())
+}
+
+fun checkFileAndUserBlocking(filename: String, username: String): Pair<HttpStatusCode, Boolean> =
+    runBlocking(Dispatchers.IO) {
+        uploadClient.checkFileAndUser(filename, username)
+    }
+
+suspend fun HttpClient.upload(model: TableModel, filename: String, username: String): Boolean {
+    val httpResponse = post(UPLOAD_URL) {
+        url {
+            parameter("username", username)
+            parameter("filename", filename)
+        }
+        contentType(ContentType.Text.CSV)
+        setBody(buildString { model.toCSV(this) })
+    }
+    return httpResponse.body<String>().toBoolean()
+}
+
+fun uploadBlocking(model: TableModel, filename: String, username: String): Boolean =
+    runBlocking(Dispatchers.IO) { uploadClient.upload(model, filename, username) }
+
+fun TableModel.uploadToWeb(filename: String) {
+    val username = JOptionPane.showInputDialog(null, "Enter Username:\n")
+    if (!username.isNullOrEmpty()) {
+        val responseData = checkFileAndUserBlocking(filename, username)
+        val uploadExists = responseData.second
+        val responseCode = responseData.first
+        if (responseCode.value in 200..299) {
+            if (!uploadExists || JOptionPane.showConfirmDialog(
+                    null,
+                    "The filename for this thread already exists in the database. Would you like to overwrite it?",
+                    "Filename Already Exists",
+                    JOptionPane.YES_NO_CANCEL_OPTION,
+                ) == JOptionPane.YES_OPTION
+            ) {
+                val uploaded = uploadBlocking(this, filename, username)
+                if (uploaded) {
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "Uploaded $filename successfully",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE,
+                    )
+                } else {
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "Failed to upload $filename",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE,
+                    )
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(
+                null,
+                "Failed to upload $filename.\nError response: $responseCode",
+                "Error",
+                JOptionPane.ERROR_MESSAGE,
+            )
+        }
+    }
+}
+
+fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
+    workbook {
+        sheet("Sheet 1") { // TODO: Some way to pipe in a more useful sheet name (or multiple sheets?)
+            row {
+                for (col in columnIndices) {
+                    cell(getColumnName(col))
+                }
+            }
+            for (row in rowIndices) {
+                row {
+                    for (col in columnIndices) {
+                        when (val value = getValueAt(row, col)) {
+                            is Double -> cell(
+                                value,
+                                createCellStyle {
+                                    dataFormat = xssfWorkbook.createDataFormat().getFormat("0.00")
+                                },
+                            )
+
+                            else -> cell(value ?: "")
+                        }
+                    }
+                }
+            }
+        }
+    }.xssfWorkbook.write(fos)
 }
 
 inline fun <reified S> loadService(): ServiceLoader<S> {
