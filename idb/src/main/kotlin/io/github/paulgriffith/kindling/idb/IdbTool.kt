@@ -61,7 +61,7 @@ enum class IdbTool {
                 // TODO I bet this can be improved
                 .aggregateTo(mutableMapOf<Int, MutableMap<String, String>>()) { _, accumulator, element, _ ->
                     val acc = accumulator ?: mutableMapOf()
-                    acc[element.second] = element.third
+                    acc[element.second] = element.third ?: "null"
                     acc
                 }
 

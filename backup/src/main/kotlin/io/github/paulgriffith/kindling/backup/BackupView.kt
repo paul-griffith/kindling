@@ -8,11 +8,13 @@ import io.github.paulgriffith.kindling.backup.views.IdbView
 import io.github.paulgriffith.kindling.backup.views.ImageView
 import io.github.paulgriffith.kindling.backup.views.ProjectView
 import io.github.paulgriffith.kindling.backup.views.TextFileView
+import io.github.paulgriffith.kindling.backup.views.ToolView
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.PathNode
 import io.github.paulgriffith.kindling.utils.ZipFileTree
+import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.toFileSizeLabel
 import net.miginfocom.swing.MigLayout
 import java.io.File
@@ -27,9 +29,11 @@ import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
@@ -42,22 +46,29 @@ class BackupView(path: Path) : ToolPanel() {
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
     }
 
-    private val backupInfo = JLabel().apply {
-        val file = XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(gwbk.getPath(BACKUP_INFO))).apply {
-            normalizeDocument()
-        }
-        val version = file.getElementsByTagName("version").item(0).textContent
-        val timestamp = file.getElementsByTagName("timestamp").item(0).textContent
-        val edition = file.getElementsByTagName("edition").item(0)?.textContent
+    private val backupInfo = run {
+        if (path.extension == "gwbk") {
+            JLabel().apply {
+                val file =
+                    XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(gwbk.getPath(BACKUP_INFO))).apply {
+                        normalizeDocument()
+                    }
+                val version = file.getElementsByTagName("version").item(0).textContent
+                val timestamp = file.getElementsByTagName("timestamp").item(0).textContent
+                val edition = file.getElementsByTagName("edition").item(0)?.textContent
 
-        text = buildString {
-            append(version)
-            append(" - ")
-            append(timestamp)
-            if (!edition.isNullOrEmpty()) {
-                append(" - ")
-                append(edition)
+                text = buildString {
+                    append(version)
+                    append(" - ")
+                    append(timestamp)
+                    if (!edition.isNullOrEmpty()) {
+                        append(" - ")
+                        append(edition)
+                    }
+                }
             }
+        } else {
+            JLabel("Ignition Bundle")
         }
     }
 
@@ -67,6 +78,15 @@ class BackupView(path: Path) : ToolPanel() {
         isTabsClosable = true
         tabCloseCallback = BiConsumer { _, i ->
             removeTabAt(i)
+        }
+
+        attachPopupMenu { event ->
+            val tabIndex = indexAtLocation(event.x, event.y)
+            if (tabIndex == -1) return@attachPopupMenu null
+            val tab = (getComponentAt(tabIndex) as TabWrapper).pathView
+            JPopupMenu().apply {
+                tab.customizePopupMenu(this)
+            }
         }
     }
 
@@ -113,7 +133,7 @@ class BackupView(path: Path) : ToolPanel() {
 
     class TabWrapper(
         val path: Path,
-        pathView: PathView,
+        val pathView: PathView,
         attributes: BasicFileAttributes,
     ) : JPanel(MigLayout("ins 6")) {
         private val saveAs = JButton("Save As").apply {
@@ -170,26 +190,33 @@ abstract class PathView : JPanel(MigLayout("ins 0, fill")) {
 
     open val icon: FlatSVGIcon? = null
 
+    open fun customizePopupMenu(menu: JPopupMenu) = Unit
     override fun toString(): String = "${this::class.simpleName}(path=$path)"
 }
 
 object BackupViewer : Tool {
-    override val title = "Gateway Backup"
-    override val description = ".gwbk Files"
+    override val title = "Ignition Bundle"
+    override val description = "Archives (.gwbk, .zip, .modl)"
     override val icon = FlatSVGIcon("icons/bx-archive.svg")
-    override val extensions = listOf("gwbk")
+    override val extensions = listOf("gwbk", "zip", "modl")
     override fun open(path: Path): ToolPanel = BackupView(path)
 
     private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
+        put(ToolView::maybeIsTool, ::ToolView)
         put(TextFileView::isTextFile, ::TextFileView)
         put(ImageView::isImageFile, ::ImageView)
-        put(IdbView::isIdbFile, ::IdbView)
         put(ProjectView::isProjectDirectory, ::ProjectView)
     }
 
     fun createView(path: Path, fileSystemProvider: FileSystemProvider): PathView? {
-        val matchEntry = handlers.entries.firstOrNull { (predicate, _) -> predicate(path) }
-        val fileView = matchEntry?.value?.invoke(fileSystemProvider, path)
+        val possibleMatches = handlers.entries.filter { (predicate, _) -> predicate(path) }.map { it.value }
+        val fileView = possibleMatches.firstNotNullOfOrNull { provider ->
+                try {
+                    provider(fileSystemProvider, path)
+                } catch (e: Exception) {
+                    null
+                }
+            }
         return when {
             fileView != null -> fileView
             path.isRegularFile() -> GenericFileView(fileSystemProvider, path)
