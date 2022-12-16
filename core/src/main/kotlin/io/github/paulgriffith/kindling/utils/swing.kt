@@ -25,13 +25,12 @@ import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
-import java.util.Enumeration
 import java.util.Collections
+import java.util.Enumeration
 import java.util.EventListener
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
-import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JLabel
@@ -48,7 +47,6 @@ import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
 import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreeNode
-import kotlin.collections.ArrayList
 import kotlin.io.path.Path
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
@@ -62,7 +60,7 @@ class ReifiedLabelProvider<T : Any>(
     private val valueClass: KClass<T>,
     private val getText: StringProvider<T>,
     private val getIcon: IconProvider<T>,
-    private val getTooltip: StringProvider<T>
+    private val getTooltip: StringProvider<T>,
 ) : ComponentProvider<JLabel>() {
     override fun createRendererComponent(): JLabel = JRendererLabel()
 
@@ -92,7 +90,7 @@ class ReifiedLabelProvider<T : Any>(
         inline operator fun <reified T : Any> invoke(
             noinline getText: StringProvider<T>,
             noinline getIcon: IconProvider<T> = defaultIconFunction(),
-            noinline getTooltip: StringProvider<T> = { null }
+            noinline getTooltip: StringProvider<T> = { null },
         ): ReifiedLabelProvider<T> {
             return ReifiedLabelProvider(T::class, getText, getIcon, getTooltip)
         }
@@ -100,11 +98,11 @@ class ReifiedLabelProvider<T : Any>(
         inline fun <reified T : Any> JXTable.setDefaultRenderer(
             noinline getText: StringProvider<T>,
             noinline getIcon: IconProvider<T> = defaultIconFunction(),
-            noinline getTooltip: StringProvider<T> = { null }
+            noinline getTooltip: StringProvider<T> = { null },
         ) {
             this.setDefaultRenderer(
                 T::class.java,
-                DefaultTableRenderer(ReifiedLabelProvider(getText, getIcon, getTooltip))
+                DefaultTableRenderer(ReifiedLabelProvider(getText, getIcon, getTooltip)),
             )
         }
     }
@@ -132,7 +130,7 @@ inline fun <reified T> listCellRenderer(crossinline customize: JLabel.(list: JLi
             value: Any?,
             index: Int,
             selected: Boolean,
-            focused: Boolean
+            focused: Boolean,
         ): Component {
             return super.getListCellRendererComponent(list, value, index, selected, focused).apply {
                 if (value is T) {
@@ -152,7 +150,7 @@ fun treeCellRenderer(customize: JLabel.(tree: JTree, value: Any?, selected: Bool
             expanded: Boolean,
             leaf: Boolean,
             row: Int,
-            hasFocus: Boolean
+            hasFocus: Boolean,
         ): Component {
             val soup = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
             return customize.invoke(soup as JLabel, tree, value, sel, expanded, leaf, row, hasFocus)
@@ -176,23 +174,25 @@ val Document.text: String
 val EDT_SCOPE by lazy { CoroutineScope(Dispatchers.Swing) }
 
 inline fun <T : Component> T.attachPopupMenu(
-    crossinline menuFn: T.(event: MouseEvent) -> JPopupMenu?
+    crossinline menuFn: T.(event: MouseEvent) -> JPopupMenu?,
 ) {
-    addMouseListener(object : MouseAdapter() {
-        override fun mousePressed(e: MouseEvent) {
-            maybeShowPopup(e)
-        }
-
-        override fun mouseReleased(e: MouseEvent) {
-            maybeShowPopup(e)
-        }
-
-        private fun maybeShowPopup(e: MouseEvent) {
-            if (e.isPopupTrigger) {
-                menuFn.invoke(this@attachPopupMenu, e)?.show(e.component, e.x, e.y)
+    addMouseListener(
+        object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                maybeShowPopup(e)
             }
-        }
-    })
+
+            override fun mouseReleased(e: MouseEvent) {
+                maybeShowPopup(e)
+            }
+
+            private fun maybeShowPopup(e: MouseEvent) {
+                if (e.isPopupTrigger) {
+                    menuFn.invoke(this@attachPopupMenu, e)?.show(e.component, e.x, e.y)
+                }
+            }
+        },
+    )
 }
 
 fun FlatSVGIcon.derive(colorer: (Color) -> Color): FlatSVGIcon {
@@ -233,26 +233,29 @@ class NoSelectionModel : DefaultListSelectionModel() {
 class ReifiedJXTable<T : TableModel>(
     model: T,
     private val modelClass: Class<T>,
-    columns: ColumnList<*>?
+    columns: ColumnList<*>?,
 ) : JXTable(model) {
     private val setup = true
 
     init {
         if (columns != null) {
-            installColumnFactory(columns)
+            columnFactory = columns.toColumnFactory()
+            createDefaultColumnsFromModel()
         }
         isColumnControlVisible = true
 
         setDefaultRenderer<String>(
             getText = { it },
-            getTooltip = { it }
+            getTooltip = { it },
         )
 
         // TODO header name as tooltip without breaking sorting
 
-        addHighlighter(object : ColorHighlighter(HighlightPredicate.ODD) {
-            override fun getBackground(): Color? = UIManager.getColor("UIColorHighlighter.stripingBackground")
-        })
+        addHighlighter(
+            object : ColorHighlighter(HighlightPredicate.ODD) {
+                override fun getBackground(): Color? = UIManager.getColor("UIColorHighlighter.stripingBackground")
+            },
+        )
 
         packAll()
         actionMap.remove("find")
@@ -285,7 +288,7 @@ class ReifiedJXTable<T : TableModel>(
     companion object {
         inline operator fun <reified T : TableModel> invoke(
             model: T,
-            columns: ColumnList<*>? = null
+            columns: ColumnList<*>? = null,
         ): ReifiedJXTable<T> {
             return ReifiedJXTable(model, T::class.java, columns)
         }
@@ -297,7 +300,7 @@ class ReifiedJXTable<T : TableModel>(
  */
 data class FileExtensionFilter(
     private val description: String,
-    private val extensions: List<String>
+    private val extensions: List<String>,
 ) : FileFilter() {
     override fun accept(f: File): Boolean {
         return f.isDirectory || f.extension in extensions
@@ -351,13 +354,6 @@ abstract class AbstractTreeNode : TreeNode {
 
 abstract class TypedTreeNode<T> : AbstractTreeNode() {
     abstract val userObject: T
-}
-
-@Suppress("UNCHECKED_CAST")
-class TypeSafeJComboBox<E>(items: Array<E>) : JComboBox<E>(items) {
-    override fun getSelectedItem(): E? {
-        return super.getSelectedItem() as? E
-    }
 }
 
 inline fun <reified T : EventListener> EventListenerList.add(listener: T) {

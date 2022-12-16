@@ -50,4 +50,4 @@ interface ClipboardTool : Tool {
 
 interface MultiClipboardTool : MultiTool, ClipboardTool // "union" interface for usage downstream
 
-class ToolOpeningException(message: String, cause: Throwable) : Exception(message, cause)
+class ToolOpeningException(message: String, cause: Throwable? = null) : Exception(message, cause)

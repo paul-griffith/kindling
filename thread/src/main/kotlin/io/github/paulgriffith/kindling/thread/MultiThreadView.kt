@@ -2,16 +2,19 @@ package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxListSelectionModel
-import io.github.paulgriffith.kindling.core.add
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
 import io.github.paulgriffith.kindling.core.MultiTool
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.core.add
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.thread.model.ThreadLifespan
 import io.github.paulgriffith.kindling.thread.model.ThreadModel
+import io.github.paulgriffith.kindling.thread.model.ThreadModel.MultiThreadColumns
+import io.github.paulgriffith.kindling.thread.model.ThreadModel.SingleThreadColumns
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
@@ -20,7 +23,6 @@ import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getValue
-import io.github.paulgriffith.kindling.utils.installColumnFactory
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,34 +46,62 @@ import javax.swing.SortOrder
 import javax.swing.UIManager
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
+import kotlin.io.path.nameWithoutExtension
 
 class MultiThreadView(
-    private val paths: List<Path>
+    private val paths: List<Path>,
 ) : ToolPanel() {
-    private val threadDumps = paths.mapNotNull { path -> ThreadDump.fromStream(path.inputStream()) }.toList()
+    private val threadDumps = paths.map { path ->
+        ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
+    }
 
-    private val mainTable = run {
-        val initialModel = ThreadModel(threadDumps.toLifespanList())
-        ReifiedJXTable(initialModel, initialModel.columns).apply {
-            setSortOrder(ThreadModel.idIndex, SortOrder.ASCENDING)
+    private var visibleThreadDumps: List<ThreadDump> = emptyList()
+        set(value) {
+            field = value
+            currentLifespanList = value.toLifespanList()
+        }
+
+    private var currentLifespanList: List<ThreadLifespan> = emptyList()
+        set(value) {
+            field = value
+            val allThreads = value.flatten().filterNotNull()
+            poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
+            stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
+            systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
+
+            updateData()
+        }
+
+    private val mainTable: ReifiedJXTable<ThreadModel> = run {
+        val initialModel = ThreadModel(currentLifespanList)
+
+        ReifiedJXTable(initialModel).apply {
+            columnFactory = initialModel.columns.toColumnFactory()
+            createDefaultColumnsFromModel()
+            setSortOrder(initialModel.columns[initialModel.columns.id], SortOrder.ASCENDING)
+
             addHighlighter(
                 ColorHighlighter(
                     { _, adapter ->
                         threadDumps.any { threadDump ->
-                            threadDump.deadlockIds.contains(adapter.getValue(ThreadModel.idIndex))
+                            model[adapter.row, model.columns.id] in threadDump.deadlockIds
                         }
                     },
                     UIManager.getColor("Actions.Red"),
                     null,
                 ),
             )
+            selectionMode = ListSelectionModel.SINGLE_SELECTION
 
             fun toggleMarkAllWithSameValue(property: Column<ThreadLifespan, *>) {
-                val selectedPropertyValue = model[selectedRowIndices().first(), property]
-                val selectedThreadMarked = model.getValueAt(selectedRowIndices().first(), ThreadModel.markIndex) as Boolean
-                for (lifespan: ThreadLifespan in model.threadData) {
+                val selectedRowIndex = selectedRowIndices().first()
+                val selectedPropertyValue = model[selectedRowIndex, property]
+                val selectedThreadMarked = model[selectedRowIndex, model.columns.mark]
+                for (lifespan in model.threadData) {
                     if (property.getValue(lifespan) == selectedPropertyValue) {
-                        lifespan.forEach { it?.marked = !selectedThreadMarked }
+                        for (thread in lifespan) {
+                            thread?.marked = !selectedThreadMarked
+                        }
                     }
                 }
 
@@ -79,36 +109,22 @@ class MultiThreadView(
             }
 
             fun filterAllWithSameValue(property: Column<ThreadLifespan, *>) {
-                val firstRow = selectedRowIndices().first()
+                val selectedRowIndex = selectedRowIndices().first()
                 when (property) {
-                    ThreadModel.SingleThreadColumns.State -> {
-                        val state = model[firstRow, ThreadModel.SingleThreadColumns.State]
-                        stateList.select(state)
+                    SingleThreadColumns.state -> {
+                        val state = model[selectedRowIndex, SingleThreadColumns.state]
+                        stateList.select(state.name)
                     }
 
-                    ThreadModel.SingleThreadColumns.System -> {
-                        val system = model[firstRow, ThreadModel.SingleThreadColumns.System]
+                    SingleThreadColumns.system, MultiThreadColumns.system -> {
+                        val system = model[selectedRowIndex, model.columns.system]
                         if (system != null) {
                             systemList.select(system)
                         }
                     }
 
-                    ThreadModel.SingleThreadColumns.Pool -> {
-                        val pool = model[firstRow, ThreadModel.SingleThreadColumns.Pool]
-                        if (pool != null) {
-                            poolList.select(pool)
-                        }
-                    }
-
-                    ThreadModel.MultiThreadColumns.System -> {
-                        val system = model[firstRow, ThreadModel.MultiThreadColumns.System]
-                        if (system != null) {
-                            systemList.select(system)
-                        }
-                    }
-
-                    ThreadModel.MultiThreadColumns.Pool -> {
-                        val pool = model[firstRow, ThreadModel.MultiThreadColumns.Pool]
+                    SingleThreadColumns.pool, MultiThreadColumns.pool -> {
+                        val pool = model[selectedRowIndex, model.columns.pool]
                         if (pool != null) {
                             poolList.select(pool)
                         }
@@ -127,24 +143,14 @@ class MultiThreadView(
                 },
             )
 
-            attachPopupMenu { event ->
+            attachPopupMenu table@{ event ->
                 val rowAtPoint = rowAtPoint(event.point)
                 selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
-
-                val filterable = when(model.isSingleContext) {
-                    true -> ThreadModel.SingleThreadColumns.filterableColumns
-                    false -> ThreadModel.MultiThreadColumns.filterableColumns
-                }
-
-                val markable = when(model.isSingleContext) {
-                    true -> ThreadModel.SingleThreadColumns.markableColumns
-                    false -> ThreadModel.MultiThreadColumns.markableColumns
-                }
 
                 JPopupMenu().apply {
                     add(
                         JMenu("Filter all with same...").apply {
-                            for (column in filterable) {
+                            for (column in this@table.model.columns.filterableColumns) {
                                 add(
                                     Action(column.header) {
                                         filterAllWithSameValue(column)
@@ -155,7 +161,7 @@ class MultiThreadView(
                     )
                     add(
                         JMenu("Mark/Unmark all with same...").apply {
-                            for (column in markable) {
+                            for (column in this@table.model.columns.markableColumns) {
                                 add(
                                     Action(column.header) {
                                         toggleMarkAllWithSameValue(column)
@@ -169,81 +175,66 @@ class MultiThreadView(
         }
     }
 
-    // Details pane replaced with comparison pane
     private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
 
-    private var allThreads: List<Thread> = threadDumps.flatMap { it.threads }
-
-    private var poolList = PoolList(allThreads.groupingBy(Thread::pool).eachCount())
-    private var systemList = SystemList(allThreads.groupingBy(Thread::system).eachCount())
-    private var stateList = StateList(allThreads.groupingBy(Thread::state).eachCount())
+    private val poolList = FilterList("(No Pool)")
+    private val systemList = FilterList("Unassigned")
+    private val stateList = FilterList("")
     private val threadDumpCheckboxList = ThreadDumpCheckboxList(paths)
     private var listModelsAdjusting = false
 
     private val exportButton = JMenuBar().apply {
-        val fileName = "threaddump_${threadDumps[0].version}_${threadDumps[0].hashCode()}"
+        val firstThreadDump = threadDumps.first()
+        val fileName = "threaddump_${firstThreadDump.version}_${firstThreadDump.hashCode()}"
         add(exportMenu(fileName) { mainTable.model })
         isVisible = mainTable.model.isSingleContext
     }
 
     private val searchField = JXSearchField("Search")
 
-    private val filters: List<(thread: Thread) -> Boolean> = buildList {
-        add { thread ->
-            thread.state in stateList.checkBoxListSelectedValues
+    private fun filter(thread: Thread?): Boolean {
+        if (thread == null) {
+            return false
         }
-        add { thread ->
-            thread.system in systemList.checkBoxListSelectedValues
-        }
-        add { thread ->
-            thread.pool in poolList.checkBoxListSelectedValues
-        }
-        add { thread ->
-            val query = searchField.text ?: return@add true
 
-            val idMatches = thread.id.toString().contains(query)
-            val nameMatches = thread.name.contains(query, ignoreCase = true)
-            val systemMatches = thread.system != null && thread.system.contains(query, ignoreCase = true)
-            val scopeMatches = thread.scope != null && thread.scope.contains(query, ignoreCase = true)
-            val stateMatches = thread.state.name.contains(query, ignoreCase = true)
-            val stackMatches = thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
-
-            idMatches || nameMatches || systemMatches || scopeMatches || stateMatches || stackMatches
+        if (thread.state.name !in stateList.checkBoxListSelectedValues
+            || thread.system !in systemList.checkBoxListSelectedValues
+            || thread.pool !in poolList.checkBoxListSelectedValues) {
+            return false
         }
+
+        val query = searchField.text ?: return true
+
+        return thread.id.toString().contains(query)
+            || thread.name.contains(query, ignoreCase = true)
+            || thread.system != null && thread.system.contains(query, ignoreCase = true)
+            || thread.scope != null && thread.scope.contains(query, ignoreCase = true)
+            || thread.state.name.contains(query, ignoreCase = true)
+            || thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
     }
 
     private fun updateData() {
         BACKGROUND.launch {
-            val selectedThreadDumps = threadDumps.filterIndexed { index, _ ->
-                index + 1 in threadDumpCheckboxList.checkBoxListSelectedIndices
+            val filteredThreadDumps = currentLifespanList.filter { lifespan ->
+                lifespan.any(::filter)
             }
-
-            val filteredThreadDumps = selectedThreadDumps.map {
-                ThreadDump(
-                    it.version,
-                    it.threads.filter { thread ->
-                        filters.all { filter -> filter(thread) }
-                    }
-                )
-            }
-            val data = filteredThreadDumps.toLifespanList()
 
             EDT_SCOPE.launch {
-                if (mainTable.selectionModel.isSelectionEmpty) {
-                    val newModel = ThreadModel(data)
-                    mainTable.installColumnFactory(newModel.columns, false)
-                    mainTable.model = newModel
-                    mainTable.createDefaultColumnsFromModel()
-                } else {
+                val selectedID = if (!mainTable.selectionModel.isSelectionEmpty) {
                     /* Maintain selection when model changes */
                     val previousSelectedIndex = mainTable.convertRowIndexToModel(mainTable.selectedRow)
-                    val selectedID = mainTable.model.getValueAt(previousSelectedIndex, ThreadModel.idIndex)
+                    mainTable.model[previousSelectedIndex, mainTable.model.columns.id]
+                } else {
+                    null
+                }
 
-                    val newModel = ThreadModel(data)
-                    mainTable.installColumnFactory(newModel.columns, false)
-                    mainTable.model = newModel
-                    mainTable.createDefaultColumnsFromModel()
+                val newModel = ThreadModel(filteredThreadDumps)
+                mainTable.columnFactory = newModel.columns.toColumnFactory()
+                mainTable.model = newModel
+                mainTable.createDefaultColumnsFromModel()
+                exportButton.isVisible = newModel.isSingleContext
 
+                if (selectedID != null) {
                     val newSelectedIndex = mainTable.model.threadData.indexOfFirst { lifespan ->
                         selectedID in lifespan.mapNotNull { thread -> thread?.id }
                     }
@@ -253,8 +244,6 @@ class MultiThreadView(
                         mainTable.scrollRectToVisible(Rectangle(mainTable.getCellRect(newSelectedViewIndex, 0, true)))
                     }
                 }
-
-                exportButton.isVisible = mainTable.model.isSingleContext
             }
         }
     }
@@ -263,12 +252,12 @@ class MultiThreadView(
         name = if (mainTable.model.isSingleContext) {
             paths[0].fileName.toString()
         } else {
-            "${threadDumps.size} thread dumps"
+            "[${paths.size}] " + paths.fold(paths.first().nameWithoutExtension) { acc, right ->
+                acc.commonPrefixWith(right.nameWithoutExtension)
+            }
         }
 
-        toolTipText = paths.joinToString("\n") { path -> path.name }
-
-        mainTable.selectionMode = ListSelectionModel.SINGLE_SELECTION
+        toolTipText = paths.joinToString("\n", transform = Path::name)
 
         mainTable.selectionModel.apply {
             addListSelectionListener {
@@ -280,24 +269,22 @@ class MultiThreadView(
             }
         }
 
+        // populate initial state of all the filter lists
+        visibleThreadDumps = threadDumps
+
         poolList.checkBoxListSelectionModel.bind()
         stateList.checkBoxListSelectionModel.bind()
         systemList.checkBoxListSelectionModel.bind()
+
         threadDumpCheckboxList.checkBoxListSelectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {
                 listModelsAdjusting = true
 
-                val selectedThreadDumps = threadDumps.filterIndexed { index, _ ->
-                    index + 1 in (event.source as CheckBoxListSelectionModel).selectedIndices
-                }
-                allThreads = selectedThreadDumps.flatMap { it.threads }
+                val selectedIndices = (event.source as CheckBoxListSelectionModel).selectedIndices
 
-                poolList.setModel(allThreads.groupingBy(Thread::pool).eachCount())
-                stateList.setModel(allThreads.groupingBy(Thread::state).eachCount())
-                systemList.setModel(allThreads.groupingBy(Thread::system).eachCount())
-
+                val selectedThreadDumps = threadDumps.slice(selectedIndices.map { it - 1 })
+                visibleThreadDumps = selectedThreadDumps
                 listModelsAdjusting = false
-                updateData()
             }
         }
 
@@ -307,7 +294,7 @@ class MultiThreadView(
 
         comparison.addBlockerSelectedListener { selectedID ->
             for (i in 0 until mainTable.model.rowCount) {
-                if (selectedID == mainTable.model.getValueAt(i, ThreadModel.idIndex)) {
+                if (selectedID == mainTable.model[i, mainTable.model.columns.id]) {
                     val rowIndex = mainTable.convertRowIndexToView(i)
                     mainTable.selectionModel.setSelectionInterval(0, rowIndex)
                     mainTable.scrollRectToVisible(Rectangle(mainTable.getCellRect(rowIndex, 0, true)))
@@ -339,7 +326,7 @@ class MultiThreadView(
                 resizeWeight = 0.5
                 isOneTouchExpandable = true
             },
-            "push, grow, span"
+            "push, grow, span",
         )
     }
 
@@ -351,7 +338,7 @@ class MultiThreadView(
             Action(name = "Open in External Editors") {
                 val desktop = Desktop.getDesktop()
                 paths.forEach { desktop.open(it.toFile()) }
-            }
+            },
         )
     }
 
@@ -362,27 +349,26 @@ class MultiThreadView(
             }
         }
     }
+
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
 
         private fun List<ThreadDump>.toLifespanList(): List<ThreadLifespan> {
-            val map: MutableMap<Int, MutableList<Thread?>> = mutableMapOf()
-            forEachIndexed { index, threadDump ->
-                threadDump.threads.forEach {
-                    if (!map.contains(it.id)) {
-                        map[it.id] = MutableList(this.size) { null }
-                    }
-                    map[it.id]!![index] = it
-                    val condition = map[it.id]!!.distinctBy { thread -> thread?.name }.filterNotNull().size == 1
-                    require(condition) {
+            val idsToLifespans = mutableMapOf<Int, Array<Thread?>>()
+            forEachIndexed { i, threadDump ->
+                for (thread in threadDump.threads) {
+                    val array = idsToLifespans.getOrPut(thread.id) { arrayOfNulls(size) }
+                    array[i] = thread
+                    val distinctNames = array.mapNotNull { it?.name }.distinct()
+                    require(distinctNames.size == 1) {
                         """Thread dumps must be from the same gateway and runtime instance.
-                           Thread dump number ${index + 1} caused this issue.
-                           ID ${it.id} differs.
+                           Thread dump number ${i + 1} caused this issue.
+                           ID ${thread.id} differs.
                         """.trimMargin()
                     }
                 }
             }
-            return map.values.toList()
+            return idsToLifespans.map { it.value.toList() }
         }
 
         private val classnameRegex = """(.*/)?(?<path>[^\s\d$]*)[.$].*\(.*\)""".toRegex()

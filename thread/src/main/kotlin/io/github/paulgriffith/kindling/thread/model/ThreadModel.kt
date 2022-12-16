@@ -3,35 +3,121 @@ package io.github.paulgriffith.kindling.thread.model
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.ColumnList
-import io.github.paulgriffith.kindling.utils.firstNotNull
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
 import org.jdesktop.swingx.renderer.StringValues
-import java.text.DecimalFormat
+import java.lang.Thread.State.BLOCKED
+import java.lang.Thread.State.NEW
+import java.lang.Thread.State.RUNNABLE
+import java.lang.Thread.State.TIMED_WAITING
+import java.lang.Thread.State.WAITING
+import java.text.NumberFormat
 import javax.swing.table.AbstractTableModel
+import java.lang.Thread.State as ThreadState
 
 // A thread's lifespan across multiple thread dumps
 typealias ThreadLifespan = List<Thread?>
-fun ThreadLifespan.toThread(): Thread = firstNotNull()
+
+sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
+    private val percent: NumberFormat = NumberFormat.getPercentInstance()
+
+    val mark = Column<ThreadLifespan, Boolean>(
+        header = "Mark",
+        columnCustomization = {
+            minWidth = 25
+            maxWidth = 25
+            toolTipText = "Marked Threads"
+            headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
+                FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
+            }
+        },
+        getValue = { it.firstNotNullOf { thread -> thread?.marked } },
+    )
+
+    val id = Column<ThreadLifespan, Int>(
+        header = "Id",
+        columnCustomization = {
+            minWidth = 50
+            cellRenderer = DefaultTableRenderer(Any?::toString)
+        },
+        getValue = { it.firstNotNullOf { thread -> thread?.id } },
+    )
+
+    val name = Column<ThreadLifespan, String>(
+        header = "Name",
+        columnCustomization = null,
+        getValue = { threads ->
+            threads.firstNotNullOf { thread -> thread?.name }
+        },
+    )
+
+    val cpu = Column<ThreadLifespan, Double?>(
+        header = "CPU",
+        columnCustomization = {
+            cellRenderer = DefaultTableRenderer { value ->
+                (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
+            }
+        },
+        getValue = { threads ->
+            threads.maxOfOrNull { thread -> thread?.cpuUsage ?: 0.0 }
+        },
+    )
+
+    val depth = Column<ThreadLifespan, Int>(
+        header = "Depth",
+        columnCustomization = { minWidth = 50 },
+        getValue = { threads ->
+            threads.maxOf { thread -> thread?.stacktrace?.size ?: 0 }
+       },
+    )
+
+    val system = Column<ThreadLifespan, String?>(
+        header = "System",
+        columnCustomization = {
+            isVisible = false
+            minWidth = 75
+            cellRenderer = DefaultTableRenderer { value ->
+                (value as? String) ?: "Unassigned"
+            }
+        },
+        getValue = { threads ->
+            threads.firstNotNullOfOrNull { thread -> thread?.system }
+       },
+    )
+
+    val pool = Column<ThreadLifespan, String?>(
+        header = "Pool",
+        columnCustomization = {
+            isVisible = false
+            minWidth = 75
+            cellRenderer = DefaultTableRenderer { value ->
+                (value as? String) ?: "(No Pool)"
+            }
+        },
+        getValue = { threads ->
+            threads.firstNotNullOfOrNull { thread -> thread?.pool }
+        },
+    )
+
+    abstract val filterableColumns: List<Column<ThreadLifespan, out Any?>>
+    abstract val markableColumns: List<Column<ThreadLifespan, out Any?>>
+}
 
 class ThreadModel(
     val threadData: List<ThreadLifespan>,
 ) : AbstractTableModel() {
-    val columns: ColumnList<ThreadLifespan>
-        get() = if (isSingleContext) SingleThreadColumns else MultiThreadColumns
+    init {
+        require(threadData.all { it.isNotEmpty() }) { "Cannot aggregate empty list of thread dumps" }
+    }
 
-    val isSingleContext: Boolean
-        get() = threadData.firstOrNull()?.size == 1
+    val isSingleContext: Boolean = threadData.first().size == 1
+
+    val columns = if (isSingleContext) SingleThreadColumns else MultiThreadColumns
 
     override fun getColumnName(column: Int): String = columns[column].header
-
     override fun getRowCount(): Int = threadData.size
-
     override fun getColumnCount(): Int = columns.size
-
     override fun getValueAt(row: Int, column: Int): Any? = get(row, columns[column])
-
     override fun getColumnClass(column: Int): Class<*> = columns[column].clazz
-
     operator fun <T> get(row: Int, column: Column<ThreadLifespan, T>): T {
         return threadData[row].let { info ->
             column.getValue(info)
@@ -39,224 +125,161 @@ class ThreadModel(
     }
 
     override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
-        return columnIndex == markIndex
+        return columnIndex == columns[columns.mark]
     }
 
     override fun setValueAt(aValue: Any?, rowIndex: Int, columnIndex: Int) {
-        check(columnIndex == markIndex)
+        require(isCellEditable(rowIndex, columnIndex))
         threadData[rowIndex].forEach {
             it?.marked = aValue as Boolean
         }
     }
 
-    companion object {
-        const val markIndex = 0
-        const val idIndex = 1
-    }
-
     @Suppress("unused", "MemberVisibilityCanBePrivate")
-    object MultiThreadColumns : ColumnList<ThreadLifespan>() {
-        private val percent = DecimalFormat("0.00%")
-
-        val Mark by column(
-            column = {
-                minWidth = 25
-                maxWidth = 25
-                toolTipText = "Marked Threads"
-                headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
-                    FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
-                }
-            },
-            value = { it.firstNotNullOf { thread -> thread }.marked }
-        )
-
-        val Id by column(
-            column = {
-                minWidth = 50
-                cellRenderer = DefaultTableRenderer(Any?::toString)
-            },
-            value = { it.firstNotNullOf { thread -> thread?.id } }
-        )
-
-        val Name by column { it.firstNotNullOf { thread -> thread?.name } }
-
-        val State by column(
-            column = {
+    object MultiThreadColumns : ThreadColumnList() {
+        val state = Column<ThreadLifespan, String>(
+            "State",
+            columnCustomization = {
                 minWidth = 105
             },
-            value = { threadList ->
-                threadList.map { thread ->
-                    thread?.state?.toString()?.first() ?: "X"
-                }.joinToString(" -> ")
-            }
-        )
-
-        val CPU by column(
-            column = {
-                minWidth = 60
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
+            getValue = { threadList ->
+                threadList.joinToString(" -> ") { thread ->
+                    when (thread?.state) {
+                        NEW -> "N"
+                        RUNNABLE -> "R"
+                        BLOCKED -> "B"
+                        WAITING -> "W"
+                        TIMED_WAITING -> "T"
+                        else -> "X"
+                    }
                 }
             },
-            value = { threads -> threads.maxByOrNull { it?.cpuUsage ?: 0.0 }?.cpuUsage ?: 0.0 }
         )
 
-        val Depth by column(
-            column = { minWidth = 50 },
-            value = { threads -> threads.maxByOrNull { it?.stacktrace?.size ?: 0 }?.stacktrace?.size ?: 0 }
-        )
-
-        val Blocker by column(
-            column = {
+        val blocker = Column<ThreadLifespan, Boolean>(
+            "Blocker",
+            columnCustomization = {
                 minWidth = 60
                 maxWidth = 60
             },
-            value = { it.mapNotNull { thread -> thread?.blocker?.owner }.isNotEmpty() }
-        )
-        val System by column(
-            column = {
-                isVisible = false
-                minWidth = 75
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? String) ?: "Unassigned"
-                }
-            },
-            value = { it.firstNotNull().system },
-        )
-        val Pool by column(
-            column = {
-                isVisible = false
-                minWidth = 75
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? String?) ?: "(No Pool)"
-                }
-            },
-            value = { it.firstNotNull().pool },
+            getValue = { threads ->
+                threads.any { thread -> thread?.blocker?.owner != null }
+           },
         )
 
-        val filterableColumns = listOf(
-            System,
-            Pool,
+        init {
+            add(mark)
+            add(id)
+            add(name)
+            add(state)
+            add(cpu)
+            add(depth)
+            add(blocker)
+            add(system)
+            add(pool)
+        }
+
+        override val filterableColumns = listOf(
+            system,
+            pool,
         )
 
-        val markableColumns = listOf(
-            System,
-            Pool,
-            Blocker,
+        override val markableColumns = listOf(
+            system,
+            pool,
+            blocker,
         )
-
     }
 
     @Suppress("unused", "MemberVisibilityCanBePrivate")
-    object SingleThreadColumns : ColumnList<ThreadLifespan>() {
-        private val percent = DecimalFormat("0.00%")
-
-        val Mark by column(
-            column = {
-                minWidth = 20
-                maxWidth = 20
-                toolTipText = "Marked Threads"
-                headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
-                    FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
-                }
-            },
-            value = { it.toThread().marked }
-        )
-        val Id by column(
-            column = {
-                cellRenderer = DefaultTableRenderer(Any?::toString)
-            },
-            value = { it.toThread().id },
-        )
-        val State by column(
-            column = {
+    object SingleThreadColumns : ThreadColumnList() {
+        val state = Column<ThreadLifespan, ThreadState>(
+            "State",
+            columnCustomization = {
                 minWidth = 105
                 maxWidth = 105
             },
-            value = { it.toThread().state },
+            getValue = { threads ->
+                threads.firstNotNullOf { thread -> thread?.state }
+            },
         )
-        val Name by column { it.toThread().name }
-        val Daemon by column(
-            column = {
+
+        val daemon = Column<ThreadLifespan, Boolean>(
+            header = "Daemon",
+            columnCustomization = {
                 minWidth = 55
                 maxWidth = 55
             },
-            value = { it.toThread().isDaemon },
+            getValue = {  threads ->
+                threads.any { thread -> thread?.isDaemon == true }
+           },
         )
-        val Depth by column { it.toThread().stacktrace.size }
-        val CPU by column(
-            column = {
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
-                }
+
+        val blocker = Column<ThreadLifespan, Int?>(
+            "Blocker",
+            columnCustomization = {
+                minWidth = 60
+                maxWidth = 60
             },
-            value = { it.toThread().cpuUsage }
-        )
-        val System by column(
-            column = {
-                minWidth = 75
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? String) ?: "Unassigned"
-                }
-            },
-            value = { it.toThread().system },
-        )
-        val Pool by column(
-            column = {
-                isVisible = false
-                minWidth = 75
-                cellRenderer = DefaultTableRenderer { value ->
-                    (value as? String?) ?: "(No Pool)"
-                }
-            },
-            value = { it.toThread().pool },
-        )
-        val Blocker by column(
-            column = {
-                cellRenderer = DefaultTableRenderer {
-                    it?.toString().orEmpty()
-                }
-            },
-            value = {
-                it.toThread().blocker?.owner
+            getValue = { threads ->
+                threads.firstNotNullOfOrNull { thread -> thread?.blocker?.owner }
             },
         )
-        val Stacktrace by column(
-            column = {
+
+        val stacktrace = Column<ThreadLifespan, String>(
+            header = "Stacktrace",
+            columnCustomization = {
                 isVisible = false
                 minWidth = 75
                 cellRenderer = DefaultTableRenderer { value ->
                     (value as? String?) ?: "No Trace"
                 }
             },
-            value = {
-                it.toThread().stacktrace.joinToString()
+            getValue = { threads ->
+                threads.firstNotNullOf { thread -> thread?.stacktrace }.joinToString()
             },
         )
-        val Scope by column(
-            column = {
+
+        val scope = Column<ThreadLifespan, String?>(
+            header = "Scope",
+            columnCustomization = {
                 isVisible = false
                 cellRenderer = DefaultTableRenderer { value ->
                     (value as? String?) ?: "Unknown"
                 }
             },
-            value = {
-                it.toThread().scope
+            getValue = { threads ->
+                threads.firstNotNullOfOrNull { thread -> thread?.scope }
             },
         )
 
-        val filterableColumns = listOf(
-            State,
-            System,
-            Pool,
+        init {
+            add(mark)
+            add(id)
+            add(state)
+            add(name)
+            add(daemon)
+            add(depth)
+            add(cpu)
+            add(system)
+            add(pool)
+            add(blocker)
+            add(stacktrace)
+            add(scope)
+        }
+
+        override val filterableColumns = listOf(
+            state,
+            system,
+            pool,
         )
 
-        val markableColumns = listOf(
-            State,
-            System,
-            Pool,
-            Blocker,
-            Stacktrace,
+        override val markableColumns = listOf(
+            state,
+            system,
+            pool,
+            blocker,
+            stacktrace,
         )
     }
 }

@@ -3,13 +3,10 @@ package io.github.paulgriffith.kindling.thread
 import com.jidesoft.swing.CheckBoxList
 import io.github.paulgriffith.kindling.utils.NoSelectionModel
 import io.github.paulgriffith.kindling.utils.listCellRenderer
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.nio.file.Path
 import javax.swing.AbstractListModel
 import javax.swing.JList
 import javax.swing.ListModel
-import javax.swing.ToolTipManager
 import kotlin.io.path.name
 
 
@@ -22,26 +19,23 @@ class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<An
 }
 
 class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListModel(data)) {
-
-    private val defaultDismissTimeout = ToolTipManager.sharedInstance().dismissDelay
+//    private val defaultDismissTimeout = ToolTipManager.sharedInstance().dismissDelay
 
     init {
 
-        addMouseListener(object : MouseAdapter() {
-            override fun mouseEntered(me: MouseEvent?) {
-                ToolTipManager.sharedInstance().dismissDelay = 60000
-            }
-
-            override fun mouseExited(me: MouseEvent?) {
-                ToolTipManager.sharedInstance().dismissDelay = defaultDismissTimeout
-            }
-        })
+//        addMouseListener(object : MouseAdapter() {
+//            override fun mouseEntered(me: MouseEvent?) {
+//                ToolTipManager.sharedInstance().dismissDelay = 60000
+//            }
+//
+//            override fun mouseExited(me: MouseEvent?) {
+//                ToolTipManager.sharedInstance().dismissDelay = defaultDismissTimeout
+//            }
+//        })
 
         layoutOrientation = JList.HORIZONTAL_WRAP
-        visibleRowCount = -1
-
+        visibleRowCount = 0
         isClickInCheckBoxOnly = false
-
         selectionModel = NoSelectionModel()
 
         cellRenderer = listCellRenderer<Any?> { _, value, index, _, _ ->
@@ -53,7 +47,7 @@ class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListMode
                 is Path -> value.name
                 else -> null
             }
-            isOpaque = false
+//            isOpaque = false
         }
         isOpaque = false
 

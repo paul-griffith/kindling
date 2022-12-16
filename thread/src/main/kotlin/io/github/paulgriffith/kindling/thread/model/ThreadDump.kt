@@ -69,7 +69,7 @@ data class ThreadDump internal constructor(
         """.trimIndent().toRegex()
         private val webThreadMonitorRegex = "owns monitor: (?<monitor>.*)".toRegex()
         private val webThreadSynchronizerRegex = "owns synchronizer: (?<synchronizer>.*)".toRegex()
-        private val webThreadBlockerRegex = "waiting for: (?<lock>[^\\s]+)(?: \\(owned by (?<owner>\\d*))?".toRegex()
+        private val webThreadBlockerRegex = "waiting for: (?<lock>\\S+)(?: \\(owned by (?<owner>\\d*))?".toRegex()
         private val webThreadStackRegex = "^(?<line>(?!waiting |owns ).*)$".toRegex(RegexOption.MULTILINE)
 
         private fun parseScript(dump: String): List<Thread> {

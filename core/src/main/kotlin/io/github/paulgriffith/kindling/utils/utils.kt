@@ -45,7 +45,7 @@ fun <T> ResultSet.toList(
 }
 
 fun <T> List<T?>.firstNotNull(): T {
-    return checkNotNull(first { it != null })
+    return firstNotNullOf { it }
 }
 
 val JDBCType.javaType: Class<*>
