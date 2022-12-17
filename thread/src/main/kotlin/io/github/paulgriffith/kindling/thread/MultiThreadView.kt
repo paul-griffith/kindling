@@ -34,7 +34,6 @@ import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Desktop
 import java.awt.Rectangle
 import java.nio.file.Path
-import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JMenu
 import javax.swing.JMenuBar
@@ -55,7 +54,12 @@ class MultiThreadView(
         ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
     }
 
-    private var visibleThreadDumps: List<ThreadDump> = emptyList()
+    private val poolList = FilterList("(No Pool)")
+    private val systemList = FilterList("Unassigned")
+    private val stateList = FilterList("")
+    private val searchField = JXSearchField("Search")
+
+    private var visibleThreadDumps: List<ThreadDump?> = emptyList()
         set(value) {
             field = value
             currentLifespanList = value.toLifespanList()
@@ -65,20 +69,26 @@ class MultiThreadView(
         set(value) {
             field = value
             val allThreads = value.flatten().filterNotNull()
-            poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
-            stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
-            systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
-
-            updateData()
+            if (allThreads.isNotEmpty()) {
+                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
+                stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
+                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
+            }
+            if (initialized) {
+                updateData()
+            }
         }
 
     private val mainTable: ReifiedJXTable<ThreadModel> = run {
+        // populate initial state of all the filter lists
+        visibleThreadDumps = threadDumps
         val initialModel = ThreadModel(currentLifespanList)
 
         ReifiedJXTable(initialModel).apply {
             columnFactory = initialModel.columns.toColumnFactory()
             createDefaultColumnsFromModel()
             setSortOrder(initialModel.columns[initialModel.columns.id], SortOrder.ASCENDING)
+            selectionMode = ListSelectionModel.SINGLE_SELECTION
 
             addHighlighter(
                 ColorHighlighter(
@@ -91,7 +101,6 @@ class MultiThreadView(
                     null,
                 ),
             )
-            selectionMode = ListSelectionModel.SINGLE_SELECTION
 
             fun toggleMarkAllWithSameValue(property: Column<ThreadLifespan, *>) {
                 val selectedRowIndex = selectedRowIndices().first()
@@ -177,10 +186,9 @@ class MultiThreadView(
 
     private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
 
-    private val poolList = FilterList("(No Pool)")
-    private val systemList = FilterList("Unassigned")
-    private val stateList = FilterList("")
-    private val threadDumpCheckboxList = ThreadDumpCheckboxList(paths)
+    private val threadDumpCheckboxList = ThreadDumpCheckboxList(paths).apply {
+        isVisible = !mainTable.model.isSingleContext
+    }
     private var listModelsAdjusting = false
 
     private val exportButton = JMenuBar().apply {
@@ -189,8 +197,6 @@ class MultiThreadView(
         add(exportMenu(fileName) { mainTable.model })
         isVisible = mainTable.model.isSingleContext
     }
-
-    private val searchField = JXSearchField("Search")
 
     private fun filter(thread: Thread?): Boolean {
         if (thread == null) {
@@ -250,46 +256,55 @@ class MultiThreadView(
 
     init {
         name = if (mainTable.model.isSingleContext) {
-            paths[0].fileName.toString()
+            paths.first().name
         } else {
-            "[${paths.size}] " + paths.fold(paths.first().nameWithoutExtension) { acc, right ->
-                acc.commonPrefixWith(right.nameWithoutExtension)
+            "[${paths.size}] " + paths.fold(paths.first().nameWithoutExtension) { acc, next ->
+                acc.commonPrefixWith(next.nameWithoutExtension)
             }
         }
 
         toolTipText = paths.joinToString("\n", transform = Path::name)
 
-        mainTable.selectionModel.apply {
-            addListSelectionListener {
-                if (!it.valueIsAdjusting && !isSelectionEmpty) {
-                    val viewIndex = selectedIndices[0]
-                    val modelIndex = mainTable.convertRowIndexToModel(viewIndex)
-                    comparison.threads = mainTable.model.threadData[modelIndex]
+        poolList.selectAll()
+        poolList.checkBoxListSelectionModel.bind()
+        stateList.selectAll()
+        stateList.checkBoxListSelectionModel.bind()
+        systemList.selectAll()
+        systemList.checkBoxListSelectionModel.bind()
+
+        searchField.addActionListener {
+            updateData()
+        }
+
+        threadDumpCheckboxList.checkBoxListSelectionModel.apply {
+            addListSelectionListener { event ->
+                if (!event.valueIsAdjusting) {
+                    listModelsAdjusting = true
+
+                    val selectedThreadDumps =List(threadDumps.size) { i ->
+                        if (isSelectedIndex(i + 1)) {
+                            threadDumps[i]
+                        } else {
+                            null
+                        }
+                    }
+                    visibleThreadDumps = selectedThreadDumps
+                    listModelsAdjusting = false
                 }
             }
         }
 
-        // populate initial state of all the filter lists
-        visibleThreadDumps = threadDumps
-
-        poolList.checkBoxListSelectionModel.bind()
-        stateList.checkBoxListSelectionModel.bind()
-        systemList.checkBoxListSelectionModel.bind()
-
-        threadDumpCheckboxList.checkBoxListSelectionModel.addListSelectionListener { event ->
-            if (!event.valueIsAdjusting) {
-                listModelsAdjusting = true
-
-                val selectedIndices = (event.source as CheckBoxListSelectionModel).selectedIndices
-
-                val selectedThreadDumps = threadDumps.slice(selectedIndices.map { it - 1 })
-                visibleThreadDumps = selectedThreadDumps
-                listModelsAdjusting = false
+        mainTable.selectionModel.apply {
+            addListSelectionListener {
+                if (!it.valueIsAdjusting) {
+                    val selectedRowIndices = mainTable.selectedRowIndices()
+                    if (selectedRowIndices.isNotEmpty()) {
+                        comparison.threads = mainTable.model.threadData[selectedRowIndices.first()]
+                    } else {
+                        comparison.threads = List(threadDumps.size) { null }
+                    }
+                }
             }
-        }
-
-        searchField.addActionListener {
-            updateData()
         }
 
         comparison.addBlockerSelectedListener { selectedID ->
@@ -304,22 +319,17 @@ class MultiThreadView(
         }
 
         add(JLabel("Version: ${threadDumps[0].version}"))
-
-        if (!mainTable.model.isSingleContext) {
-            add(threadDumpCheckboxList, "growx, pushx")
-        }
-
-        add(exportButton, "align right, gapright 8")
-
-        add(searchField, "align right, wmin 300, wrap")
+        add(threadDumpCheckboxList, "gapleft 20px, pushx, growx, shpx 200")
+        add(exportButton, "gapright 8")
+        add(searchField, "wmin 300, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
-                JPanel(MigLayout("ins 0, fill")).apply {
-                    add(FlatScrollPane(stateList), "grow, w 200::25%, height 100!")
-                    add(FlatScrollPane(mainTable), "wrap, spany 3, push, grow 100 100")
-                    add(FlatScrollPane(systemList), "grow, w 200::25%, hmin 100, wrap")
-                    add(FlatScrollPane(poolList), "grow, w 200::25%, h 1500")
+                JPanel(MigLayout("ins 0, fill, flowy")).apply {
+                    add(FlatScrollPane(stateList), "w 220, h 100!")
+                    add(FlatScrollPane(systemList), "w 220, growy")
+                    add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
+                    add(FlatScrollPane(mainTable), "newline, spany 3, pushx, grow")
                 },
                 comparison,
             ).apply {
@@ -330,12 +340,14 @@ class MultiThreadView(
         )
     }
 
-    override val icon: Icon = MultiThreadViewer.icon
+    private val initialized = true
+
+    override val icon = MultiThreadViewer.icon
 
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.addSeparator()
         menu.add(
-            Action(name = "Open in External Editors") {
+            Action(name = "Open in External Editor") {
                 val desktop = Desktop.getDesktop()
                 paths.forEach { desktop.open(it.toFile()) }
             },
@@ -353,10 +365,10 @@ class MultiThreadView(
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
 
-        private fun List<ThreadDump>.toLifespanList(): List<ThreadLifespan> {
+        private fun List<ThreadDump?>.toLifespanList(): List<ThreadLifespan> {
             val idsToLifespans = mutableMapOf<Int, Array<Thread?>>()
             forEachIndexed { i, threadDump ->
-                for (thread in threadDump.threads) {
+                for (thread in threadDump?.threads.orEmpty()) {
                     val array = idsToLifespans.getOrPut(thread.id) { arrayOfNulls(size) }
                     array[i] = thread
                     val distinctNames = array.mapNotNull { it?.name }.distinct()

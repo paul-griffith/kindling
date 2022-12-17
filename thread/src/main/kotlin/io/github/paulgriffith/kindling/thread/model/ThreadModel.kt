@@ -3,8 +3,11 @@ package io.github.paulgriffith.kindling.thread.model
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.ColumnList
+import org.jdesktop.swingx.renderer.CellContext
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
+import org.jdesktop.swingx.renderer.LabelProvider
 import org.jdesktop.swingx.renderer.StringValues
+import java.awt.Font
 import java.lang.Thread.State.BLOCKED
 import java.lang.Thread.State.NEW
 import java.lang.Thread.State.RUNNABLE
@@ -37,6 +40,7 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
         header = "Id",
         columnCustomization = {
             minWidth = 50
+            maxWidth = 75
             cellRenderer = DefaultTableRenderer(Any?::toString)
         },
         getValue = { it.firstNotNullOf { thread -> thread?.id } },
@@ -102,14 +106,12 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
     abstract val markableColumns: List<Column<ThreadLifespan, out Any?>>
 }
 
-class ThreadModel(
-    val threadData: List<ThreadLifespan>,
-) : AbstractTableModel() {
+class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
     init {
         require(threadData.all { it.isNotEmpty() }) { "Cannot aggregate empty list of thread dumps" }
     }
 
-    val isSingleContext: Boolean = threadData.first().size == 1
+    val isSingleContext: Boolean = threadData.firstOrNull()?.size == 1
 
     val columns = if (isSingleContext) SingleThreadColumns else MultiThreadColumns
 
@@ -137,13 +139,22 @@ class ThreadModel(
 
     @Suppress("unused", "MemberVisibilityCanBePrivate")
     object MultiThreadColumns : ThreadColumnList() {
+        private val MONOSPACED = Font(Font.MONOSPACED, Font.PLAIN, 13)
+
         val state = Column<ThreadLifespan, String>(
             "State",
             columnCustomization = {
                 minWidth = 105
+                cellRenderer = DefaultTableRenderer(object : LabelProvider() {
+                    override fun configureVisuals(context: CellContext?) {
+                        super.configureVisuals(context).also {
+                            rendererComponent.font = MONOSPACED
+                        }
+                    }
+                })
             },
             getValue = { threadList ->
-                threadList.joinToString(" -> ") { thread ->
+                threadList.joinToString(" → ") { thread ->
                     when (thread?.state) {
                         NEW -> "N"
                         RUNNABLE -> "R"
@@ -172,8 +183,8 @@ class ThreadModel(
             add(id)
             add(name)
             add(state)
-            add(cpu)
-            add(depth)
+            add(cpu.copy(header = "Max CPU"))
+            add(depth.copy(header = "Max Depth"))
             add(blocker)
             add(system)
             add(pool)

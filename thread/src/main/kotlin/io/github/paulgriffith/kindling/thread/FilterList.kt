@@ -34,6 +34,8 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
     private var total = 0
     private var percentages = emptyMap<String?, String>()
 
+    private var lastSelection = arrayOf<Any>()
+
     init {
         selectionModel = NoSelectionModel()
         isClickInCheckBoxOnly = false
@@ -56,7 +58,14 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
 
     override fun setModel(model: ListModel<*>) {
         require(model is FilterModel)
-        val selection = checkBoxListSelectedValues
+        val currentSelection = checkBoxListSelectedValues
+        val selection = if (currentSelection.isEmpty()) {
+            lastSelection
+        } else {
+            currentSelection
+        }
+        lastSelection = selection
+
         checkBoxListSelectionModel.valueIsAdjusting = true
         super.setModel(model)
         total = model.rawData.values.sum()
@@ -66,7 +75,5 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
         }
         addCheckBoxListSelectedValues(selection)
         checkBoxListSelectionModel.valueIsAdjusting = false
-
-        selectAll()
     }
 }

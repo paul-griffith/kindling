@@ -44,8 +44,16 @@ fun <T> ResultSet.toList(
     }
 }
 
-fun <T> List<T?>.firstNotNull(): T {
-    return firstNotNullOf { it }
+inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
+    append("<").append(tag).append(">")
+    content(this)
+    append("</").append(tag).append(">")
+}
+
+fun StringBuilder.tag(tag: String, content: String) {
+    append("<").append(tag).append(">")
+    append(content)
+    append("</").append(tag).append(">")
 }
 
 val JDBCType.javaType: Class<*>

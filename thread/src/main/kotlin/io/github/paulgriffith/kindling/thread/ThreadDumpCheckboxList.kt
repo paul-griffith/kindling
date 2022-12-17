@@ -19,20 +19,7 @@ class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<An
 }
 
 class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListModel(data)) {
-//    private val defaultDismissTimeout = ToolTipManager.sharedInstance().dismissDelay
-
     init {
-
-//        addMouseListener(object : MouseAdapter() {
-//            override fun mouseEntered(me: MouseEvent?) {
-//                ToolTipManager.sharedInstance().dismissDelay = 60000
-//            }
-//
-//            override fun mouseExited(me: MouseEvent?) {
-//                ToolTipManager.sharedInstance().dismissDelay = defaultDismissTimeout
-//            }
-//        })
-
         layoutOrientation = JList.HORIZONTAL_WRAP
         visibleRowCount = 0
         isClickInCheckBoxOnly = false
@@ -47,13 +34,9 @@ class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListMode
                 is Path -> value.name
                 else -> null
             }
-//            isOpaque = false
         }
-        isOpaque = false
-
         selectAll()
     }
-
 
     override fun getModel() = super.getModel() as ThreadDumpListModel
 
