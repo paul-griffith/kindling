@@ -3,6 +3,7 @@ package io.github.paulgriffith.kindling.thread.model
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.ColumnList
+import io.github.paulgriffith.kindling.utils.mode
 import org.jdesktop.swingx.renderer.CellContext
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
 import org.jdesktop.swingx.renderer.LabelProvider
@@ -71,7 +72,7 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
         columnCustomization = { minWidth = 50 },
         getValue = { threads ->
             threads.maxOf { thread -> thread?.stacktrace?.size ?: 0 }
-       },
+        },
     )
 
     val system = Column<ThreadLifespan, String?>(
@@ -85,7 +86,7 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
         },
         getValue = { threads ->
             threads.firstNotNullOfOrNull { thread -> thread?.system }
-       },
+        },
     )
 
     val pool = Column<ThreadLifespan, String?>(
@@ -111,7 +112,7 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
         require(threadData.all { it.isNotEmpty() }) { "Cannot aggregate empty list of thread dumps" }
     }
 
-    val isSingleContext: Boolean = threadData.firstOrNull()?.size == 1
+    val isSingleContext: Boolean = threadData.groupingBy { lifespan -> lifespan.count { thread -> thread != null } }.mode() == 1
 
     val columns = if (isSingleContext) SingleThreadColumns else MultiThreadColumns
 
@@ -145,13 +146,15 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
             "State",
             columnCustomization = {
                 minWidth = 105
-                cellRenderer = DefaultTableRenderer(object : LabelProvider() {
-                    override fun configureVisuals(context: CellContext?) {
-                        super.configureVisuals(context).also {
-                            rendererComponent.font = MONOSPACED
+                cellRenderer = DefaultTableRenderer(
+                    object : LabelProvider() {
+                        override fun configureVisuals(context: CellContext?) {
+                            super.configureVisuals(context).also {
+                                rendererComponent.font = MONOSPACED
+                            }
                         }
-                    }
-                })
+                    },
+                )
             },
             getValue = { threadList ->
                 threadList.joinToString(" → ") { thread ->
@@ -175,7 +178,7 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
             },
             getValue = { threads ->
                 threads.any { thread -> thread?.blocker?.owner != null }
-           },
+            },
         )
 
         init {
@@ -221,9 +224,9 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
                 minWidth = 55
                 maxWidth = 55
             },
-            getValue = {  threads ->
+            getValue = { threads ->
                 threads.any { thread -> thread?.isDaemon == true }
-           },
+            },
         )
 
         val blocker = Column<ThreadLifespan, Int?>(
