@@ -8,4 +8,17 @@ data class Column<R, C>(
     val getValue: (row: R) -> C,
     val columnCustomization: (TableColumnExt.(model: TableModel) -> Unit)?,
     val clazz: Class<C>
-)
+) {
+    companion object {
+        inline operator fun <R, reified C> invoke(
+            header: String,
+            noinline columnCustomization: (TableColumnExt.(model: TableModel) -> Unit)? = null,
+            noinline getValue: (row: R) -> C,
+        ) = Column(
+            header = header,
+            columnCustomization = columnCustomization,
+            getValue = getValue,
+            clazz = C::class.java,
+        )
+    }
+}

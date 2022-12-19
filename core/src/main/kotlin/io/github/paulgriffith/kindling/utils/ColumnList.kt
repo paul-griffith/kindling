@@ -1,6 +1,5 @@
 package io.github.paulgriffith.kindling.utils
 
-import org.jdesktop.swingx.JXTable
 import org.jdesktop.swingx.table.ColumnFactory
 import org.jdesktop.swingx.table.TableColumnExt
 import javax.swing.table.TableModel
@@ -8,7 +7,7 @@ import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
 
 abstract class ColumnList<R> private constructor(
-    @PublishedApi internal val list: MutableList<Column<R, *>>
+    @PublishedApi internal val list: MutableList<Column<R, *>>,
 ) : List<Column<R, *>> by list {
     constructor() : this(mutableListOf())
 
@@ -19,31 +18,32 @@ abstract class ColumnList<R> private constructor(
     protected inline fun <reified T> column(
         name: String? = null,
         noinline column: (TableColumnExt.(model: TableModel) -> Unit)? = null,
-        noinline value: (R) -> T
+        noinline value: (R) -> T,
     ): PropertyDelegateProvider<ColumnList<R>, ReadOnlyProperty<ColumnList<R>, Column<R, T>>> {
         return PropertyDelegateProvider { thisRef, prop ->
             val actual = Column(
                 header = name ?: prop.name,
                 getValue = value,
                 columnCustomization = column,
-                clazz = T::class.java
+                clazz = T::class.java,
             )
-            thisRef.list.add(actual)
+            thisRef.add(actual)
             ReadOnlyProperty { _, _ -> actual }
         }
     }
 
-    operator fun get(column: Column<R, *>): Int = indexOf(column)
-}
+    fun add(column: Column<R, *>) {
+        list.add(column)
+    }
 
-fun JXTable.installColumnFactory(columns: ColumnList<*>) {
-    columnFactory = object : ColumnFactory() {
+    operator fun get(column: Column<R, *>): Int = indexOf(column)
+
+    fun toColumnFactory() = object : ColumnFactory() {
         override fun configureTableColumn(model: TableModel, columnExt: TableColumnExt) {
             super.configureTableColumn(model, columnExt)
-            val column = columns[columnExt.modelIndex]
+            val column = list[columnExt.modelIndex]
             columnExt.toolTipText = column.header
             column.columnCustomization?.invoke(columnExt, model)
         }
     }
-    createDefaultColumnsFromModel()
 }

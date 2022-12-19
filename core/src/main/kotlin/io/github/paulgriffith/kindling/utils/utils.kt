@@ -44,6 +44,18 @@ fun <T> ResultSet.toList(
     }
 }
 
+inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
+    append("<").append(tag).append(">")
+    content(this)
+    append("</").append(tag).append(">")
+}
+
+fun StringBuilder.tag(tag: String, content: String) {
+    append("<").append(tag).append(">")
+    append(content)
+    append("</").append(tag).append(">")
+}
+
 val JDBCType.javaType: Class<*>
     get() = when (this) {
         JDBCType.BIT -> Boolean::class

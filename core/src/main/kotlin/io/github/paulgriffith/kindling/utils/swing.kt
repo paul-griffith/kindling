@@ -27,6 +27,7 @@ import java.awt.event.MouseEvent
 import java.io.File
 import java.util.Collections
 import java.util.Enumeration
+import java.util.EventListener
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
@@ -39,6 +40,7 @@ import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
 import javax.swing.UIManager
+import javax.swing.event.EventListenerList
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 import javax.swing.text.Document
@@ -237,7 +239,8 @@ class ReifiedJXTable<T : TableModel>(
 
     init {
         if (columns != null) {
-            installColumnFactory(columns)
+            columnFactory = columns.toColumnFactory()
+            createDefaultColumnsFromModel()
         }
         isColumnControlVisible = true
 
@@ -351,4 +354,12 @@ abstract class AbstractTreeNode : TreeNode {
 
 abstract class TypedTreeNode<T> : AbstractTreeNode() {
     abstract val userObject: T
+}
+
+inline fun <reified T : EventListener> EventListenerList.add(listener: T) {
+    add(T::class.java, listener)
+}
+
+inline fun <reified T : EventListener> EventListenerList.getAll(): Array<T> {
+    return getListeners(T::class.java)
 }
