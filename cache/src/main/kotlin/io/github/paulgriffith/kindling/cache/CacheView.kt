@@ -221,9 +221,9 @@ class CacheView(private val path: Path) : ToolPanel() {
 
 object CacheViewer : Tool {
     override val title = "Cache Dump"
-    override val description = "S&F Cache ZIP Files"
+    override val description = "S&F Cache data/script files"
     override val icon = FlatSVGIcon("icons/bx-data.svg")
-    override val extensions = listOf("zip")
+    override val extensions = listOf("data", "script")
     override fun open(path: Path): ToolPanel = CacheView(path)
 }
 

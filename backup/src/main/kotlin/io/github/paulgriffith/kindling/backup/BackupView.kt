@@ -1,22 +1,29 @@
 package io.github.paulgriffith.kindling.backup
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import com.formdev.flatlaf.extras.components.FlatTabbedPane.WRAP_TAB_LAYOUT
+import io.github.paulgriffith.kindling.backup.BackupViewer.createMultiView
 import io.github.paulgriffith.kindling.backup.views.GenericFileView
-import io.github.paulgriffith.kindling.backup.views.IdbView
 import io.github.paulgriffith.kindling.backup.views.ImageView
+import io.github.paulgriffith.kindling.backup.views.MultiToolView
 import io.github.paulgriffith.kindling.backup.views.ProjectView
 import io.github.paulgriffith.kindling.backup.views.TextFileView
 import io.github.paulgriffith.kindling.backup.views.ToolView
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.PathNode
 import io.github.paulgriffith.kindling.utils.ZipFileTree
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.toFileSizeLabel
 import net.miginfocom.swing.MigLayout
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.File
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -43,7 +50,7 @@ class BackupView(path: Path) : ToolPanel() {
     private val provider: FileSystemProvider = gwbk.provider()
 
     private val files = ZipFileTree(gwbk).apply {
-        selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
+        selectionModel.selectionMode = TreeSelectionModel.CONTIGUOUS_TREE_SELECTION
     }
 
     private val backupInfo = run {
@@ -68,7 +75,7 @@ class BackupView(path: Path) : ToolPanel() {
                 }
             }
         } else {
-            JLabel("Ignition Bundle")
+            JLabel("ZIP Bundle")
         }
     }
 
@@ -90,10 +97,10 @@ class BackupView(path: Path) : ToolPanel() {
         }
     }
 
-    private val FlatTabbedPane.tabs: Sequence<TabWrapper>
+    private val FlatTabbedPane.tabs: Sequence<JPanel>
         get() = sequence {
             for (i in 0 until tabCount) {
-                yield(getComponentAt(i) as TabWrapper)
+                yield(getComponentAt(i) as JPanel)
             }
         }
 
@@ -103,31 +110,44 @@ class BackupView(path: Path) : ToolPanel() {
         name = path.name
         toolTipText = path.toString()
 
-        files.addTreeSelectionListener {
-            val pathNode = it.path.lastPathComponent as PathNode
-            val actualPath = pathNode.userObject
-
-            val existingTab = tabbedPane.tabs.find { tab -> tab.path == actualPath }
-            if (existingTab == null) {
-                val fileView = BackupViewer.createView(actualPath, provider)
-                if (fileView != null) {
-                    val attributes = provider.readAttributes(actualPath, BasicFileAttributes::class.java)
-                    val tab = TabWrapper(actualPath, fileView, attributes)
-                    tabbedPane.addTab(
-                        actualPath.name,
-                        fileView.icon?.derive(16, 16),
-                        tab,
-                        actualPath.toString(),
-                    )
-                    tabbedPane.selectedIndex = tabbedPane.tabCount - 1
+        files.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent?) {
+                if (e?.clickCount == 2) {
+                    val pathNode = files.selectionPath?.lastPathComponent as? PathNode ?: return
+                    val actualPath = pathNode.userObject
+                    maybeAddTab(actualPath)
                 }
-            } else {
-                tabbedPane.selectedComponent = existingTab
+            }
+        })
+
+        files.attachPopupMenu {
+            selectionPaths?.let { selectedPaths ->
+                val numFilesSelected = selectedPaths.size
+                FlatPopupMenu().apply {
+                    var prompt = "Open File"
+                    if (numFilesSelected > 1) {
+                        add(
+                            Action("Open in new aggregate view") {
+                                val actualPaths = selectedPaths.map { (it.lastPathComponent as PathNode).userObject }
+                                maybeAddMultiTab(actualPaths)
+                            }
+                        )
+                        prompt = "Open $numFilesSelected files individually"
+                    }
+                    add(
+                        Action(prompt) {
+                            selectedPaths.forEach {
+                                val actualPath = (it.lastPathComponent as PathNode).userObject
+                                maybeAddTab(actualPath)
+                            }
+                        }
+                    )
+                }
             }
         }
 
         add(backupInfo, "north, pad 6 6 6 6")
-        add(sidebar, "west, width 300!, pad 6 6 6 6")
+        add(sidebar, "west, width 200::300, pad 6 6 6 6")
         add(tabbedPane, "dock center")
     }
 
@@ -163,11 +183,53 @@ class BackupView(path: Path) : ToolPanel() {
         }
     }
 
-    override fun removeNotify() = super.removeNotify().also {
-        gwbk.close()
+    override val icon: Icon = BackupViewer.icon
+
+    private fun maybeAddTab(path: Path) {
+        val existingTab = tabbedPane.tabs.find { tab ->
+            if (tab is TabWrapper) {
+                tab.path == path
+            } else false
+        }
+        if (existingTab == null) {
+            val fileView = BackupViewer.createView(path, provider)
+            if (fileView != null) {
+                val attributes = provider.readAttributes(path, BasicFileAttributes::class.java)
+                val tab = TabWrapper(path, fileView, attributes)
+                tabbedPane.addTab(
+                    path.name,
+                    fileView.icon?.derive(16, 16),
+                    tab,
+                    path.toString(),
+                )
+                tabbedPane.selectedIndex = tabbedPane.tabCount - 1
+            }
+        } else {
+            tabbedPane.selectedComponent = existingTab
+        }
     }
 
-    override val icon: Icon = BackupViewer.icon
+    private fun maybeAddMultiTab(paths: List<Path>) {
+        val existingTab = tabbedPane.tabs.find {
+            if (it is MultiPathView) {
+                it.paths == paths
+            } else false
+        }
+        if (existingTab == null) {
+            val newTab = createMultiView(paths, provider)
+            if (newTab != null) {
+                tabbedPane.addTab(
+                    newTab.paths.joinToString("\n"),
+                    newTab.icon?.derive(16, 16),
+                    newTab,
+                    newTab.paths.joinToString("\n"),
+                )
+            }
+        } else {
+            tabbedPane.selectedComponent = existingTab
+        }
+
+    }
 
     companion object Constants {
         const val BACKUP_INFO = "backupinfo.xml"
@@ -194,6 +256,17 @@ abstract class PathView : JPanel(MigLayout("ins 0, fill")) {
     override fun toString(): String = "${this::class.simpleName}(path=$path)"
 }
 
+abstract class MultiPathView: JPanel(MigLayout("ins 0, fill")) {
+    abstract val provider: FileSystemProvider
+    abstract val paths: List<Path>
+
+    open val icon: FlatSVGIcon? = null
+
+    open fun customizePopupMenu(menu: JPopupMenu) = Unit
+
+    override fun toString(): String = "${this::class.simpleName}(paths=$paths)"
+}
+
 object BackupViewer : Tool {
     override val title = "Ignition Bundle"
     override val description = "Archives (.gwbk, .zip, .modl)"
@@ -209,19 +282,18 @@ object BackupViewer : Tool {
     }
 
     fun createView(path: Path, fileSystemProvider: FileSystemProvider): PathView? {
-        val possibleMatches = handlers.entries.filter { (predicate, _) -> predicate(path) }.map { it.value }
-        val fileView = possibleMatches.firstNotNullOfOrNull { provider ->
-                try {
-                    provider(fileSystemProvider, path)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        return when {
-            fileView != null -> fileView
-            path.isRegularFile() -> GenericFileView(fileSystemProvider, path)
-            else -> null
+        val possibleViews = handlers.entries.filter { (predicate, _) -> predicate(path) }.map { it.value } + ::GenericFileView
+        return possibleViews.firstNotNullOfOrNull { provider ->
+            runCatching {
+                provider(fileSystemProvider, path)
+            }.getOrNull()
         }
+    }
+
+    fun createMultiView(paths: List<Path>, fileSystemProvider: FileSystemProvider) : MultiPathView? {
+        return runCatching {
+            MultiToolView(fileSystemProvider, paths)
+        }.getOrNull()
     }
 }
 

@@ -41,7 +41,7 @@ data class ThreadDump internal constructor(
                 }
 
                 ThreadDump(
-                    version = versionPattern.find(firstLine)?.value ?: firstLine,
+                    version = requireNotNull(versionPattern.find(firstLine)?.value),
                     threads = when {
                         firstLine.contains(":") -> parseScript(text)
                         else -> parseWebPage(text)
