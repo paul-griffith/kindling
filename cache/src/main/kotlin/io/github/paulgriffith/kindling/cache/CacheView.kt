@@ -6,6 +6,7 @@ import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
@@ -16,25 +17,46 @@ import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
 import java.io.ObjectInputStream
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
+import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
 class CacheView(private val path: Path) : ToolPanel() {
     private val tempDirectory: Path = Files.createTempDirectory(path.nameWithoutExtension)
 
-    private val dbName: String = run {
-        LOGGER.debug("Exploding to $tempDirectory")
-        ZipFile(path.toFile()).run {
-            extractAll(tempDirectory.toString())
-            fileHeaders.first { !it.isDirectory }.fileName.substringBeforeLast('.')
+    private val dbName = when(path.extension) {
+        "zip" -> run {
+            LOGGER.debug("Exploding to $tempDirectory")
+            ZipFile(path.toFile()).run {
+                extractAll(tempDirectory.toString())
+                fileHeaders.first { !it.isDirectory }.fileName.substringBeforeLast('.')
+            }
         }
+        in CacheViewer.extensions -> run {
+            Files.walkFileTree(
+                path.parent,
+                object : SimpleFileVisitor<Path>() {
+                    override fun visitFile(file: Path?, attrs: BasicFileAttributes?): FileVisitResult {
+                        if (file != null && file.extension in cacheFileExtensions) {
+                            Files.copy(file, tempDirectory.resolve(path.parent.relativize(file)))
+                        }
+                        return FileVisitResult.CONTINUE
+                    }
+                }
+            )
+            path.nameWithoutExtension
+        }
+        else -> throw ToolOpeningException(".${path.extension} files not supported.")
     }.also { dbName ->
         LOGGER.trace("dbName: $dbName")
     }
@@ -216,6 +238,7 @@ class CacheView(private val path: Path) : ToolPanel() {
 
     companion object {
         val LOGGER = getLogger<CacheView>()
+        val cacheFileExtensions = listOf("data", "script", "log", "backup", "properties")
     }
 }
 
@@ -223,7 +246,7 @@ object CacheViewer : Tool {
     override val title = "Cache Dump"
     override val description = "S&F Cache data/script files"
     override val icon = FlatSVGIcon("icons/bx-data.svg")
-    override val extensions = listOf("data", "script")
+    override val extensions = listOf("data", "script", "zip")
     override fun open(path: Path): ToolPanel = CacheView(path)
 }
 

@@ -1,17 +1,16 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.backup.MultiPathView
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.zip.MultiPathView
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import java.util.zip.ZipException
 import javax.swing.JLabel
 import javax.swing.JPopupMenu
-import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 

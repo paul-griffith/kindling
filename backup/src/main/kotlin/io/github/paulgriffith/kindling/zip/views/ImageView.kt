@@ -1,7 +1,7 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.backup.PathView
+import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.imageio.ImageIO
@@ -10,7 +10,7 @@ import javax.swing.JLabel
 import javax.swing.SwingConstants.CENTER
 import kotlin.io.path.extension
 
-class ImageView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
+class ImageView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     init {
         val imageInputStream = ImageIO.createImageInputStream(provider.newInputStream(path))
         val image = imageInputStream.use { iis ->

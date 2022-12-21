@@ -1,9 +1,10 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.backup.PathView
 import io.github.paulgriffith.kindling.core.Tool
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -14,7 +15,7 @@ import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
-class ToolView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
+class ToolView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     private lateinit var toolPanel: ToolPanel
     init {
         val tempFile = Files.createTempFile("kindling", path.name)
@@ -23,7 +24,8 @@ class ToolView(override val provider: FileSystemProvider, override val path: Pat
                 tempFile.outputStream().use(file::copyTo)
             }
             /* Tool.get() throws exception if tool not found, but this check is already done with isTool() */
-            toolPanel = Tool[tempFile.toFile()].open(tempFile)
+            println(Tool.byExtension[path.extension])
+            toolPanel = Tool.byExtension[path.extension]?.open(tempFile) ?: throw ToolOpeningException("No tool for files of type .${path.extension}")
             add(toolPanel, "push, grow")
         } catch (e: ZipException) {
             add(JLabel("Unable to open $path; ${e.message}"), "push, grow")

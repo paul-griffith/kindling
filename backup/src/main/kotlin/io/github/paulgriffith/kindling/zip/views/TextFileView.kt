@@ -1,8 +1,8 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.backup.PathView
+import io.github.paulgriffith.kindling.zip.SinglePathView
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -21,7 +21,7 @@ import javax.swing.UIManager
 import kotlin.io.path.extension
 import kotlin.io.path.name
 
-class TextFileView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
+class TextFileView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     private val textArea = RSyntaxTextArea().apply {
         isEditable = false
         syntaxEditingStyle = KNOWN_EXTENSIONS[path.extension] ?: SYNTAX_STYLE_NONE

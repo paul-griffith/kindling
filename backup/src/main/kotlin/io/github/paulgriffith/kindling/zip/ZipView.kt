@@ -1,16 +1,9 @@
-package io.github.paulgriffith.kindling.backup
+package io.github.paulgriffith.kindling.zip
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import com.formdev.flatlaf.extras.components.FlatTabbedPane.WRAP_TAB_LAYOUT
-import io.github.paulgriffith.kindling.backup.BackupViewer.createMultiView
-import io.github.paulgriffith.kindling.backup.views.GenericFileView
-import io.github.paulgriffith.kindling.backup.views.ImageView
-import io.github.paulgriffith.kindling.backup.views.MultiToolView
-import io.github.paulgriffith.kindling.backup.views.ProjectView
-import io.github.paulgriffith.kindling.backup.views.TextFileView
-import io.github.paulgriffith.kindling.backup.views.ToolView
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
@@ -19,9 +12,14 @@ import io.github.paulgriffith.kindling.utils.PathNode
 import io.github.paulgriffith.kindling.utils.ZipFileTree
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.toFileSizeLabel
+import io.github.paulgriffith.kindling.zip.ZipViewer.createView
+import io.github.paulgriffith.kindling.zip.views.GenericFileView
+import io.github.paulgriffith.kindling.zip.views.ImageView
+import io.github.paulgriffith.kindling.zip.views.MultiToolView
+import io.github.paulgriffith.kindling.zip.views.ProjectView
+import io.github.paulgriffith.kindling.zip.views.TextFileView
+import io.github.paulgriffith.kindling.zip.views.ToolView
 import net.miginfocom.swing.MigLayout
-import java.awt.event.KeyAdapter
-import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -45,11 +43,11 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
-class BackupView(path: Path) : ToolPanel() {
-    private val gwbk: FileSystem = FileSystems.newFileSystem(path)
-    private val provider: FileSystemProvider = gwbk.provider()
+class ZipView(path: Path) : ToolPanel() {
+    private val zipFile: FileSystem = FileSystems.newFileSystem(path)
+    private val provider: FileSystemProvider = zipFile.provider()
 
-    private val files = ZipFileTree(gwbk).apply {
+    private val files = ZipFileTree(zipFile).apply {
         selectionModel.selectionMode = TreeSelectionModel.CONTIGUOUS_TREE_SELECTION
     }
 
@@ -57,7 +55,7 @@ class BackupView(path: Path) : ToolPanel() {
         if (path.extension == "gwbk") {
             JLabel().apply {
                 val file =
-                    XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(gwbk.getPath(BACKUP_INFO))).apply {
+                    XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(zipFile.getPath(BACKUP_INFO))).apply {
                         normalizeDocument()
                     }
                 val version = file.getElementsByTagName("version").item(0).textContent
@@ -97,10 +95,10 @@ class BackupView(path: Path) : ToolPanel() {
         }
     }
 
-    private val FlatTabbedPane.tabs: Sequence<JPanel>
+    private val FlatTabbedPane.tabs: Sequence<TabWrapper>
         get() = sequence {
             for (i in 0 until tabCount) {
-                yield(getComponentAt(i) as JPanel)
+                yield(getComponentAt(i) as TabWrapper)
             }
         }
 
@@ -115,7 +113,7 @@ class BackupView(path: Path) : ToolPanel() {
                 if (e?.clickCount == 2) {
                     val pathNode = files.selectionPath?.lastPathComponent as? PathNode ?: return
                     val actualPath = pathNode.userObject
-                    maybeAddTab(actualPath)
+                    maybeAddNewTab(actualPath)
                 }
             }
         })
@@ -128,8 +126,10 @@ class BackupView(path: Path) : ToolPanel() {
                     if (numFilesSelected > 1) {
                         add(
                             Action("Open in new aggregate view") {
-                                val actualPaths = selectedPaths.map { (it.lastPathComponent as PathNode).userObject }
-                                maybeAddMultiTab(actualPaths)
+                                val actualPaths = Array(selectedPaths.size) {
+                                    (selectedPaths[it].lastPathComponent as PathNode).userObject
+                                }
+                                maybeAddNewTab(*actualPaths)
                             }
                         )
                         prompt = "Open $numFilesSelected files individually"
@@ -138,7 +138,7 @@ class BackupView(path: Path) : ToolPanel() {
                         Action(prompt) {
                             selectedPaths.forEach {
                                 val actualPath = (it.lastPathComponent as PathNode).userObject
-                                maybeAddTab(actualPath)
+                                maybeAddNewTab(actualPath)
                             }
                         }
                     )
@@ -152,13 +152,13 @@ class BackupView(path: Path) : ToolPanel() {
     }
 
     class TabWrapper(
-        val path: Path,
+        val attributes: List<Pair<Path, BasicFileAttributes>>,
         val pathView: PathView,
-        attributes: BasicFileAttributes,
     ) : JPanel(MigLayout("ins 6")) {
+        private val path = if (attributes.size == 1) attributes.first().first else null
         private val saveAs = JButton("Save As").apply {
             addActionListener {
-                exportFileChooser.selectedFile = File(path.last().toString())
+                exportFileChooser.selectedFile = File(path?.last().toString())
                 if (exportFileChooser.showSaveDialog(this@TabWrapper) == JFileChooser.APPROVE_OPTION) {
                     pathView.provider.newInputStream(path).use { file ->
                         exportFileChooser.selectedFile.toPath().outputStream().use(file::copyTo)
@@ -168,67 +168,43 @@ class BackupView(path: Path) : ToolPanel() {
         }
 
         init {
-            val header = buildString {
-                append(path.toString().substring(1))
-                if (path.isRegularFile()) {
-                    append(" - ")
-                    append(attributes.size().toFileSizeLabel())
-                }
+            val header = attributes.joinToString(", ") { (path, attribute) ->
+                path.toString().substring(1) + if (path.isRegularFile()) {
+                    " - " + attribute.size().toFileSizeLabel()
+                } else ""
             }
             add(JLabel(header), "pushx, growx")
-            if (path.isRegularFile()) {
+            if (path?.isRegularFile() == true) {
                 add(saveAs, "ax 100%")
             }
             add(pathView, "newline, push, grow, span")
         }
     }
 
-    override val icon: Icon = BackupViewer.icon
+    override val icon: Icon = ZipViewer.icon
 
-    private fun maybeAddTab(path: Path) {
+    private fun maybeAddNewTab(vararg paths: Path) {
         val existingTab = tabbedPane.tabs.find { tab ->
-            if (tab is TabWrapper) {
-                tab.path == path
-            } else false
+            tab.attributes.map { it.first } == paths.toList()
         }
         if (existingTab == null) {
-            val fileView = BackupViewer.createView(path, provider)
+            val fileView = createView(provider, *paths)
             if (fileView != null) {
-                val attributes = provider.readAttributes(path, BasicFileAttributes::class.java)
-                val tab = TabWrapper(path, fileView, attributes)
+                val attributes = paths.map { path ->
+                    Pair(path, provider.readAttributes(path, BasicFileAttributes::class.java))
+                }
+                val newTab = TabWrapper(attributes, fileView)
                 tabbedPane.addTab(
-                    path.name,
+                    fileView.viewName,
                     fileView.icon?.derive(16, 16),
-                    tab,
-                    path.toString(),
-                )
-                tabbedPane.selectedIndex = tabbedPane.tabCount - 1
-            }
-        } else {
-            tabbedPane.selectedComponent = existingTab
-        }
-    }
-
-    private fun maybeAddMultiTab(paths: List<Path>) {
-        val existingTab = tabbedPane.tabs.find {
-            if (it is MultiPathView) {
-                it.paths == paths
-            } else false
-        }
-        if (existingTab == null) {
-            val newTab = createMultiView(paths, provider)
-            if (newTab != null) {
-                tabbedPane.addTab(
-                    newTab.paths.joinToString("\n"),
-                    newTab.icon?.derive(16, 16),
                     newTab,
-                    newTab.paths.joinToString("\n"),
+                    fileView.pathDetails
                 )
+                tabbedPane.selectedComponent = newTab
             }
         } else {
             tabbedPane.selectedComponent = existingTab
         }
-
     }
 
     companion object Constants {
@@ -244,35 +220,35 @@ class BackupView(path: Path) : ToolPanel() {
 
 typealias PathPredicate = (Path) -> Boolean
 
-typealias PathViewProvider = (FileSystemProvider, Path) -> PathView
+typealias PathViewProvider = (FileSystemProvider, Path) -> SinglePathView
 
-abstract class PathView : JPanel(MigLayout("ins 0, fill")) {
+sealed class PathView : JPanel(MigLayout("ins 0, fill")) {
     abstract val provider: FileSystemProvider
-    abstract val path: Path
-
+    abstract val viewName: String
+    abstract val pathDetails: String
     open val icon: FlatSVGIcon? = null
-
     open fun customizePopupMenu(menu: JPopupMenu) = Unit
+}
+abstract class SinglePathView : PathView() {
+    abstract val path: Path
+    override val viewName by lazy { path.name }
+    override val pathDetails by lazy { path.toString().substring(1) }
     override fun toString(): String = "${this::class.simpleName}(path=$path)"
 }
 
-abstract class MultiPathView: JPanel(MigLayout("ins 0, fill")) {
-    abstract val provider: FileSystemProvider
+abstract class MultiPathView : PathView() {
     abstract val paths: List<Path>
-
-    open val icon: FlatSVGIcon? = null
-
-    open fun customizePopupMenu(menu: JPopupMenu) = Unit
-
+    override val viewName by lazy { "${paths.size} files" }
+    override val pathDetails by lazy { paths.joinToString("\n") { it.toString().substring(1) } }
     override fun toString(): String = "${this::class.simpleName}(paths=$paths)"
 }
 
-object BackupViewer : Tool {
+object ZipViewer : Tool {
     override val title = "Ignition Bundle"
     override val description = "Archives (.gwbk, .zip, .modl)"
     override val icon = FlatSVGIcon("icons/bx-archive.svg")
     override val extensions = listOf("gwbk", "zip", "modl")
-    override fun open(path: Path): ToolPanel = BackupView(path)
+    override fun open(path: Path): ToolPanel = ZipView(path)
 
     private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
         put(ToolView::maybeIsTool, ::ToolView)
@@ -281,20 +257,21 @@ object BackupViewer : Tool {
         put(ProjectView::isProjectDirectory, ::ProjectView)
     }
 
-    fun createView(path: Path, fileSystemProvider: FileSystemProvider): PathView? {
-        val possibleViews = handlers.entries.filter { (predicate, _) -> predicate(path) }.map { it.value } + ::GenericFileView
-        return possibleViews.firstNotNullOfOrNull { provider ->
+    fun createView(fileSystemProvider: FileSystemProvider, vararg paths: Path): PathView? {
+        return if (paths.size > 1) {
             runCatching {
-                provider(fileSystemProvider, path)
+                MultiToolView(fileSystemProvider, paths.toList())
             }.getOrNull()
+        } else {
+            val path = paths.first()
+            val possibleViews = handlers.entries.filter { (predicate, _) -> predicate(path) }.map { it.value } + ::GenericFileView
+            possibleViews.firstNotNullOfOrNull { provider ->
+                runCatching {
+                    provider(fileSystemProvider, path)
+                }.getOrNull()
+            }
         }
-    }
-
-    fun createMultiView(paths: List<Path>, fileSystemProvider: FileSystemProvider) : MultiPathView? {
-        return runCatching {
-            MultiToolView(fileSystemProvider, paths)
-        }.getOrNull()
     }
 }
 
-class BackupViewerProxy : Tool by BackupViewer
+class ZipViewerProxy : Tool by ZipViewer

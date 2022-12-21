@@ -1,8 +1,8 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.backup.PathView
 import io.github.paulgriffith.kindling.utils.homeLocation
+import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.JButton
@@ -18,7 +18,7 @@ import kotlin.io.path.relativeTo
 import kotlin.io.path.walk
 
 @OptIn(ExperimentalPathApi::class)
-class ProjectView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
+class ProjectView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     private val exportButton = JButton("Export Project")
 
     init {

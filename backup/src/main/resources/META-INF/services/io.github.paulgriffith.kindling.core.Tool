@@ -1,1 +1,1 @@
-io.github.paulgriffith.kindling.backup.BackupViewerProxy
+io.github.paulgriffith.kindling.zip.ZipViewerProxy

@@ -1,4 +1,4 @@
-package io.github.paulgriffith.kindling.backup
+package io.github.paulgriffith.kindling.zip
 
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
