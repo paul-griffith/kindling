@@ -203,20 +203,21 @@ class MultiThreadView(
             return false
         }
 
-        if (thread.state.name !in stateList.checkBoxListSelectedValues
-            || thread.system !in systemList.checkBoxListSelectedValues
-            || thread.pool !in poolList.checkBoxListSelectedValues) {
+        if (thread.state.name !in stateList.checkBoxListSelectedValues ||
+            thread.system !in systemList.checkBoxListSelectedValues ||
+            thread.pool !in poolList.checkBoxListSelectedValues
+        ) {
             return false
         }
 
         val query = searchField.text ?: return true
 
-        return thread.id.toString().contains(query)
-            || thread.name.contains(query, ignoreCase = true)
-            || thread.system != null && thread.system.contains(query, ignoreCase = true)
-            || thread.scope != null && thread.scope.contains(query, ignoreCase = true)
-            || thread.state.name.contains(query, ignoreCase = true)
-            || thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
+        return thread.id.toString().contains(query) ||
+            thread.name.contains(query, ignoreCase = true) ||
+            thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+            thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+            thread.state.name.contains(query, ignoreCase = true) ||
+            thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
     }
 
     private fun updateData() {
@@ -281,7 +282,7 @@ class MultiThreadView(
                 if (!event.valueIsAdjusting) {
                     listModelsAdjusting = true
 
-                    val selectedThreadDumps =List(threadDumps.size) { i ->
+                    val selectedThreadDumps = List(threadDumps.size) { i ->
                         if (isSelectedIndex(i + 1)) {
                             threadDumps[i]
                         } else {
@@ -448,7 +449,7 @@ object MultiThreadViewer : MultiTool {
     override fun open(paths: List<Path>): ToolPanel {
         return MultiThreadView(paths.sorted())
     }
-    //TODO: Implement Clipboard tool
+    // TODO: Implement Clipboard tool
 }
 
 class ThreadViewerProxy : MultiTool by MultiThreadViewer

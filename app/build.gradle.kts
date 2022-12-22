@@ -24,7 +24,7 @@ dependencies {
     implementation(projects.log)
     implementation(projects.thread)
     implementation(projects.cache)
-    implementation(projects.backup)
+    implementation(projects.zip)
     implementation(libs.osthemedetector)
 }
 

@@ -16,7 +16,8 @@ import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
 class ToolView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
-    private lateinit var toolPanel: ToolPanel
+    private val toolPanel: ToolPanel
+
     init {
         val tempFile = Files.createTempFile("kindling", path.name)
         try {
@@ -24,10 +25,11 @@ class ToolView(override val provider: FileSystemProvider, override val path: Pat
                 tempFile.outputStream().use(file::copyTo)
             }
             /* Tool.get() throws exception if tool not found, but this check is already done with isTool() */
-            println(Tool.byExtension[path.extension])
-            toolPanel = Tool.byExtension[path.extension]?.open(tempFile) ?: throw ToolOpeningException("No tool for files of type .${path.extension}")
+            toolPanel = Tool.byExtension[path.extension]?.open(tempFile)
+                ?: throw ToolOpeningException("No tool for files of type .${path.extension}")
             add(toolPanel, "push, grow")
         } catch (e: ZipException) {
+            throw ToolOpeningException("Unable to open $path .${path.extension}")
             add(JLabel("Unable to open $path; ${e.message}"), "push, grow")
         }
     }
@@ -35,7 +37,8 @@ class ToolView(override val provider: FileSystemProvider, override val path: Pat
     override val icon: FlatSVGIcon = toolPanel.icon as FlatSVGIcon
 
     override fun customizePopupMenu(menu: JPopupMenu) = toolPanel.customizePopupMenu(menu)
+
     companion object {
-        fun maybeIsTool(path: Path) = path.extension in Tool.tools.flatMap { tool -> tool.extensions }
+        fun maybeIsTool(path: Path) = path.extension in Tool.byExtension
     }
 }

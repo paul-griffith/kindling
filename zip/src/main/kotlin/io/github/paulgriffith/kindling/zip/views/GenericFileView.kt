@@ -5,7 +5,7 @@ import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.awt.Font
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
-import java.util.*
+import java.util.HexFormat
 import javax.swing.JTextArea
 
 class GenericFileView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {

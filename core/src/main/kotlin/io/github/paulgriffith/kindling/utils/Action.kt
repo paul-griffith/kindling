@@ -4,6 +4,8 @@ import java.awt.event.ActionEvent
 import javax.swing.AbstractAction
 import javax.swing.Icon
 import javax.swing.KeyStroke
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 /**
  * More idiomatic Kotlin wrapper for AbstractAction.
@@ -13,18 +15,27 @@ class Action(
     description: String? = null,
     icon: Icon? = null,
     accelerator: KeyStroke? = null,
-    private val action: (e: ActionEvent) -> Unit
+    private val action: (e: ActionEvent) -> Unit,
 ) : AbstractAction() {
+    var name: String? by actionValue(NAME)
+    var description: String? by actionValue(SHORT_DESCRIPTION)
+    var icon: Icon? by actionValue(SMALL_ICON)
+    var accelerator: KeyStroke? by actionValue(ACCELERATOR_KEY)
+
     init {
-        putNonNull(NAME, name)
-        putNonNull(SHORT_DESCRIPTION, description)
-        putNonNull(SMALL_ICON, icon)
-        putNonNull(ACCELERATOR_KEY, accelerator)
+        this.name = name
+        this.description = description
+        this.icon = icon
+        this.accelerator = accelerator
     }
 
-    private fun putNonNull(key: String, value: Any?) {
-        if (value != null) {
-            putValue(key, value)
+    private fun <V> actionValue(name: String) = object : ReadWriteProperty<AbstractAction, V> {
+        override fun getValue(thisRef: AbstractAction, property: KProperty<*>): V {
+            return thisRef.getValue(name) as V
+        }
+
+        override fun setValue(thisRef: AbstractAction, property: KProperty<*>, value: V) {
+            return thisRef.putValue(name, value)
         }
     }
 

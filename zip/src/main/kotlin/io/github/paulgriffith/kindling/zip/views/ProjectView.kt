@@ -9,7 +9,7 @@ import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.UIManager
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.PathWalkOption
+import kotlin.io.path.PathWalkOption.INCLUDE_DIRECTORIES
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
@@ -26,7 +26,7 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
             exportDirectoryChooser.selectedFile = homeLocation.resolve(path.name)
             if (exportDirectoryChooser.showSaveDialog(this@ProjectView) == JFileChooser.APPROVE_OPTION) {
                 val exportLocation = exportDirectoryChooser.selectedFile.toPath()
-                for (projectPath in path.walk(PathWalkOption.INCLUDE_DIRECTORIES)) {
+                for (projectPath in path.walk(INCLUDE_DIRECTORIES)) {
                     val unqualified = projectPath.relativeTo(path)
                     var writeLocation = exportLocation
                     for (part in unqualified) {

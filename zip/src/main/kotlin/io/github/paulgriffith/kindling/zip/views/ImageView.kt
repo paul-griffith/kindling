@@ -14,7 +14,7 @@ class ImageView(override val provider: FileSystemProvider, override val path: Pa
     init {
         val imageInputStream = ImageIO.createImageInputStream(provider.newInputStream(path))
         val image = imageInputStream.use { iis ->
-            val reader = ImageIO.getImageReaders(iis).asSequence().first()
+            val reader = ImageIO.getImageReaders(iis).next()
             reader.input = iis
             reader.read(0)
         }
