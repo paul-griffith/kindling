@@ -14,7 +14,7 @@ import java.lang.Thread.State.NEW
 import java.lang.Thread.State.RUNNABLE
 import java.lang.Thread.State.TIMED_WAITING
 import java.lang.Thread.State.WAITING
-import java.text.NumberFormat
+import java.text.DecimalFormat
 import javax.swing.table.AbstractTableModel
 import java.lang.Thread.State as ThreadState
 
@@ -22,7 +22,7 @@ import java.lang.Thread.State as ThreadState
 typealias ThreadLifespan = List<Thread?>
 
 sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
-    private val percent: NumberFormat = NumberFormat.getPercentInstance()
+    private val percent = DecimalFormat("0.000'%'")
 
     val mark = Column<ThreadLifespan, Boolean>(
         header = "Mark",
@@ -59,7 +59,7 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
         header = "CPU",
         columnCustomization = {
             cellRenderer = DefaultTableRenderer { value ->
-                (value as? Double)?.let { percent.format(it / 100) }.orEmpty()
+                (value as? Double)?.let { percent.format(it) }.orEmpty()
             }
         },
         getValue = { threads ->

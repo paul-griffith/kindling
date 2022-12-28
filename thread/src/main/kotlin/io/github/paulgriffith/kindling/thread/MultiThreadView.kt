@@ -5,7 +5,7 @@ import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
-import io.github.paulgriffith.kindling.core.MultiTool
+import io.github.paulgriffith.kindling.core.MultiClipboardTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
@@ -34,6 +34,7 @@ import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Desktop
 import java.awt.Rectangle
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JLabel
 import javax.swing.JMenu
@@ -47,6 +48,7 @@ import javax.swing.UIManager
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.outputStream
 
 class MultiThreadView(
     private val paths: List<Path>,
@@ -446,7 +448,7 @@ class MultiThreadView(
     }
 }
 
-object MultiThreadViewer : MultiTool {
+object MultiThreadViewer : MultiClipboardTool {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
@@ -455,7 +457,13 @@ object MultiThreadViewer : MultiTool {
     override fun open(paths: List<Path>): ToolPanel {
         return MultiThreadView(paths.sortedWith(compareBy(AlphanumComparator(), Path::name)))
     }
-    // TODO: Implement Clipboard tool
+    override fun open(data: String): ToolPanel {
+        val tempFile = Files.createTempFile("kindling", "cb")
+        data.byteInputStream().use { threadDump ->
+            tempFile.outputStream().use(threadDump::copyTo)
+        }
+        return open(tempFile)
+    }
 }
 
-class ThreadViewerProxy : MultiTool by MultiThreadViewer
+class ThreadViewerProxy : MultiClipboardTool by MultiThreadViewer
