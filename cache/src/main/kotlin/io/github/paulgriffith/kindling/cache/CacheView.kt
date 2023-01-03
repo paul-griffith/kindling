@@ -1,8 +1,12 @@
 package io.github.paulgriffith.kindling.cache
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.formdev.flatlaf.extras.components.FlatButton
+import com.formdev.flatlaf.extras.components.FlatMenu
+import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
+import com.jidesoft.swing.JideButton
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
@@ -10,18 +14,23 @@ import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
+import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
+import io.github.paulgriffith.kindling.utils.toMap
 import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.ObjectInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
+import javax.swing.JMenuItem
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
 import kotlin.io.path.CopyActionResult
@@ -94,6 +103,12 @@ class CacheView(private val path: Path) : ToolPanel() {
         "SELECT id, schemaid, t_stamp, attemptcount, data_count FROM datastore_data",
     )
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
+    @Language("HSQLDB")
+    private val schemaQuery: PreparedStatement = connection.prepareStatement(
+        "SELECT id, signature FROM datastore_schema"
+    )
+
     private fun queryForData(id: Int): Detail {
         dataQuery.apply {
             setInt(1, id)
@@ -107,11 +122,16 @@ class CacheView(private val path: Path) : ToolPanel() {
         }
     }
 
+    private val schemata: Map<Int, String> = schemaQuery.use { statement ->
+        statement.executeQuery().toMap("ID", "SIGNATURE")
+    }
+
     private val data: List<CacheEntry> = tableQuery.use { statement ->
         statement.executeQuery().toList { resultSet ->
             CacheEntry(
                 id = resultSet.getInt("ID"),
                 schemaId = resultSet.getInt("SCHEMAID"),
+                schemaName = schemata[resultSet.getInt("SCHEMAID")] ?: "null",
                 timestamp = resultSet.getString("T_STAMP"),
                 attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
                 dataCount = resultSet.getInt("DATA_COUNT"),
@@ -123,6 +143,21 @@ class CacheView(private val path: Path) : ToolPanel() {
     private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
     private val table = ReifiedJXTable(model, CacheModel)
+
+    private val settingsMenu = FlatPopupMenu().apply {
+        add(
+            JMenuItem("Test Item 1")
+        )
+    }
+    private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
+        addMouseListener(
+            object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    settingsMenu.show(this@apply, e.x, e.y)
+                }
+            },
+        )
+    }
 
     private fun deserialize(data: ByteArray): Detail {
         return try {
@@ -211,6 +246,10 @@ class CacheView(private val path: Path) : ToolPanel() {
     init {
         name = path.name
         toolTipText = path.toString()
+
+        add(settings, "right, wrap")
+
+        add(SchemaFilterList(schemata), "w 300!, pushy, growy")
 
         add(
             JSplitPane(

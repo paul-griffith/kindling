@@ -44,6 +44,16 @@ fun <T> ResultSet.toList(
     }
 }
 
+fun <T, R> ResultSet.toMap(keyColumn: String, valueColumn: String): Map<T, R> {
+    return use { rs ->
+        buildMap {
+            while (rs.next()) {
+                put(rs.getObject(keyColumn) as T, rs.getObject(valueColumn) as R)
+            }
+        }
+    }
+}
+
 inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
     append("<").append(tag).append(">")
     content(this)
