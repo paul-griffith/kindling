@@ -4,6 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.lang.Thread.State
 
+typealias Stacktrace = List<String>
+
 @Serializable
 data class Thread(
     val id: Int,
@@ -19,7 +21,7 @@ data class Thread(
     val lockedSynchronizers: List<String> = emptyList(),
     @SerialName("waitingFor")
     val blocker: Blocker? = null,
-    val stacktrace: Stacktrace = Stacktrace()
+    val stacktrace: Stacktrace = emptyList(),
 ) {
     var marked: Boolean = false
 
@@ -28,13 +30,13 @@ data class Thread(
     @Serializable
     data class Monitors(
         val lock: String,
-        val frame: String? = null
+        val frame: String? = null,
     )
 
     @Serializable
     data class Blocker(
         val lock: String,
-        val owner: Int? = null
+        val owner: Int? = null,
     ) {
         override fun toString(): String = if (owner != null) {
             "$lock (owned by $owner)"
