@@ -85,7 +85,7 @@ data class ThreadDump internal constructor(
                     cpuUsage = cpu.value.toDouble(),
                     state = ThreadState.valueOf(state.value),
                     isDaemon = false,
-                    stacktrace = stack.value.lines().map(String::trim).let(::Stacktrace),
+                    stacktrace = stack.value.lines().map(String::trim),
                 )
             }.toList()
         }
@@ -111,6 +111,7 @@ data class ThreadDump internal constructor(
                 val parsedStack = webThreadStackRegex.findAll(stack).mapNotNull { stackMatcher ->
                     stackMatcher.groups["line"]?.value
                 }.toList()
+
                 Thread(
                     id = id.value.toInt(),
                     name = name.value,
@@ -119,7 +120,7 @@ data class ThreadDump internal constructor(
                     blocker = blocker,
                     lockedMonitors = monitors,
                     lockedSynchronizers = synchronizers,
-                    stacktrace = Stacktrace(parsedStack),
+                    stacktrace = parsedStack,
                 )
             }.toList()
         }

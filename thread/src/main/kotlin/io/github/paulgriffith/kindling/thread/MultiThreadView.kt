@@ -393,9 +393,9 @@ class MultiThreadView(
         fun Stacktrace.linkify(version: String): List<BodyLine> {
             val (_, classmap) = classMapsByVersion.entries.find { (classMapVersion, _) ->
                 classMapVersion in version
-            } ?: return this.map(Detail::BodyLine)
+            } ?: return map(Detail::BodyLine)
 
-            return stack.map { line ->
+            return map { line ->
                 val escapedLine = line.escapeHtml()
                 val matchResult = classnameRegex.find(line)
 
