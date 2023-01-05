@@ -189,13 +189,18 @@ class MultiThreadView(
     private val threadDumpCheckboxList = ThreadDumpCheckboxList(paths).apply {
         isVisible = !mainTable.model.isSingleContext
     }
+
     private var listModelsAdjusting = false
 
-    private val exportButton = JMenuBar().apply {
+    private val exportMenu = run {
         val firstThreadDump = threadDumps.first()
         val fileName = "threaddump_${firstThreadDump.version}_${firstThreadDump.hashCode()}"
-        add(exportMenu(fileName) { mainTable.model })
-        isVisible = mainTable.model.isSingleContext
+        exportMenu(fileName) { mainTable.model }
+    }
+
+    private val exportButton = JMenuBar().apply {
+        add(exportMenu)
+        exportMenu.isEnabled = mainTable.model.isSingleContext
     }
 
     private fun filter(thread: Thread?): Boolean {
@@ -239,7 +244,7 @@ class MultiThreadView(
                 mainTable.columnFactory = newModel.columns.toColumnFactory()
                 mainTable.model = newModel
                 mainTable.createDefaultColumnsFromModel()
-                exportButton.isVisible = newModel.isSingleContext
+                exportMenu.isEnabled = newModel.isSingleContext
 
                 if (selectedID != null) {
                     val newSelectedIndex = mainTable.model.threadData.indexOfFirst { lifespan ->
@@ -389,9 +394,9 @@ class MultiThreadView(
         fun Stacktrace.linkify(version: String): List<BodyLine> {
             val (_, classmap) = classMapsByVersion.entries.find { (classMapVersion, _) ->
                 classMapVersion in version
-            } ?: return this.map(Detail::BodyLine)
+            } ?: return map(Detail::BodyLine)
 
-            return stack.map { line ->
+            return map { line ->
                 val escapedLine = line.escapeHtml()
                 val matchResult = classnameRegex.find(line)
 

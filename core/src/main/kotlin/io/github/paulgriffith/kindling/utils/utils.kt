@@ -51,10 +51,13 @@ inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
 }
 
 fun StringBuilder.tag(tag: String, content: String) {
-    append("<").append(tag).append(">")
-    append(content)
-    append("</").append(tag).append(">")
+    tag(tag) { append( content) }
 }
+
+/**
+ * Returns the mode (most common value) in a Grouping<T>
+ */
+fun <T> Grouping<T, Int>.mode(): Int? = eachCount().maxOfOrNull { it.key }
 
 val JDBCType.javaType: Class<*>
     get() = when (this) {

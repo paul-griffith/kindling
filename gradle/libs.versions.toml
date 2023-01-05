@@ -1,6 +1,6 @@
 [versions]
 java = "17"
-kotlin = "1.7.22"
+kotlin = "1.8.0"
 coroutines = "1.6.4"
 flatlaf = "3.0"
 kotest = "5.5.4"
@@ -11,7 +11,7 @@ kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.0.0" }
 shadow = { id = "com.github.johnrengelman.shadow", version = "7.1.2" }
-runtime = { id = "org.beryx.runtime", version = "1.12.7" }
+runtime = { id = "org.beryx.runtime", version = "1.13.0" }
 
 [libraries]
 # core functionality
