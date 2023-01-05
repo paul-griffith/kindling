@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.utils
 
 import java.awt.event.ActionEvent
+import java.awt.event.ActionListener
 import javax.swing.AbstractAction
 import javax.swing.Icon
 import javax.swing.KeyStroke
@@ -15,7 +16,7 @@ class Action(
     description: String? = null,
     icon: Icon? = null,
     accelerator: KeyStroke? = null,
-    private val action: (e: ActionEvent) -> Unit,
+    private val action: ActionListener,
 ) : AbstractAction() {
     var name: String? by actionValue(NAME)
     var description: String? by actionValue(SHORT_DESCRIPTION)
@@ -30,6 +31,7 @@ class Action(
     }
 
     private fun <V> actionValue(name: String) = object : ReadWriteProperty<AbstractAction, V> {
+        @Suppress("UNCHECKED_CAST")
         override fun getValue(thisRef: AbstractAction, property: KProperty<*>): V {
             return thisRef.getValue(name) as V
         }
@@ -39,5 +41,5 @@ class Action(
         }
     }
 
-    override fun actionPerformed(e: ActionEvent) = action(e)
+    override fun actionPerformed(e: ActionEvent) = action.actionPerformed(e)
 }

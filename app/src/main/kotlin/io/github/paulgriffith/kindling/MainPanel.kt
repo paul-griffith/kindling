@@ -58,7 +58,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     private val openAction = Action(
-        name = "Open..."
+        name = "Open...",
     ) {
         fileChooser.chooseFiles(this)?.let { selectedFiles ->
             val selectedTool: Tool? = Tool.byFilter[fileChooser.fileFilter]
@@ -76,23 +76,23 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 for (tool in Tool.tools) {
                     add(
                         Action(
-                            name = "Open ${tool.title}"
+                            name = "Open ${tool.title}",
                         ) {
                             fileChooser.fileFilter = tool.filter
                             fileChooser.chooseFiles(this@MainPanel)?.let { selectedFiles ->
                                 openFiles(selectedFiles, tool)
                             }
-                        }
+                        },
                     )
                 }
-            }
+            },
         )
         add(
             JMenu("Paste").apply {
                 for (clipboardTool in Tool.tools.filterIsInstance<ClipboardTool>()) {
                     add(
                         Action(
-                            name = "Paste ${clipboardTool.title}"
+                            name = "Paste ${clipboardTool.title}",
                         ) {
                             val clipboard = Toolkit.getDefaultToolkit().systemClipboard
                             if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
@@ -103,10 +103,10 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             } else {
                                 println("No string data found on clipboard")
                             }
-                        }
+                        },
                     )
                 }
-            }
+            },
         )
         add(
             JMenu("Theme").apply {
@@ -119,7 +119,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             }
                         }
                         group.add(this)
-                    }
+                    },
                 )
                 add(
                     JCheckBoxMenuItem("Dark", THEME_DETECTOR.isDark).apply {
@@ -129,18 +129,18 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             }
                         }
                         group.add(this)
-                    }
+                    },
                 )
-            }
+            },
         )
         add(
             JMenu("Debug").apply {
                 add(
                     Action("UI Inspector") {
                         FlatUIDefaultsInspector.show()
-                    }
+                    },
                 )
-            }
+            },
         )
     }
 
@@ -161,7 +161,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 toolPanel.name.truncate(),
                 toolPanel.icon,
                 toolPanel,
-                toolPanel.toolTipText
+                toolPanel.toolTipText,
             )
         }.getOrElse { ex ->
             LOGGER.error("Failed to open $description as a $title", ex)
@@ -179,8 +179,8 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             }
                             append((ex.cause ?: ex).stackTraceToString())
                         }
-                    }
-                )
+                    },
+                ),
             )
         }
         tabs.selectedIndex = tabs.tabCount - 1
