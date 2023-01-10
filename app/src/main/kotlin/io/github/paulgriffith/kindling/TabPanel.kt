@@ -12,7 +12,7 @@ import javax.swing.JPopupMenu
 
 class TabPanel : FlatTabbedPane() {
     init {
-        tabPlacement = LEFT
+        tabPlacement = TOP
         tabLayoutPolicy = SCROLL_TAB_LAYOUT
         tabAlignment = TabAlignment.leading
         isTabsClosable = true

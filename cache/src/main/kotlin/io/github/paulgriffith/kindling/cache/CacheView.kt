@@ -6,6 +6,7 @@ import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
@@ -23,18 +24,41 @@ import java.util.zip.GZIPInputStream
 import javax.swing.Icon
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
+import kotlin.io.path.CopyActionResult
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.copyToRecursively
+import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
+@OptIn(ExperimentalPathApi::class)
 class CacheView(private val path: Path) : ToolPanel() {
     private val tempDirectory: Path = Files.createTempDirectory(path.nameWithoutExtension)
 
-    private val dbName: String = run {
-        LOGGER.debug("Exploding to $tempDirectory")
-        ZipFile(path.toFile()).run {
-            extractAll(tempDirectory.toString())
-            fileHeaders.first { !it.isDirectory }.fileName.substringBeforeLast('.')
+    private val dbName = when (path.extension) {
+        "zip" -> run {
+            LOGGER.debug("Exploding to $tempDirectory")
+            ZipFile(path.toFile()).run {
+                extractAll(tempDirectory.toString())
+                fileHeaders.first { !it.isDirectory }.fileName.substringBeforeLast('.')
+            }
         }
+
+        in CacheViewer.extensions -> run {
+            path.parent.copyToRecursively(
+                target = tempDirectory,
+                followLinks = false,
+                copyAction = { source: Path, target: Path ->
+                    if (source.extension in cacheFileExtensions) {
+                        source.copyToIgnoringExistingDirectory(target, false)
+                    }
+                    CopyActionResult.CONTINUE
+                },
+            )
+            path.nameWithoutExtension
+        }
+
+        else -> throw ToolOpeningException(".${path.extension} files not supported.")
     }.also { dbName ->
         LOGGER.trace("dbName: $dbName")
     }
@@ -48,7 +72,7 @@ class CacheView(private val path: Path) : ToolPanel() {
                 append("shutdown=").append(true).append(";")
             }.also { url ->
                 LOGGER.trace("JDBC URL: {}", url)
-            }
+            },
         )
         user = "SA"
         setPassword("dstorepass")
@@ -61,13 +85,13 @@ class CacheView(private val path: Path) : ToolPanel() {
     @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val dataQuery: PreparedStatement = connection.prepareStatement(
-        "SELECT data FROM datastore_data WHERE id = ?"
+        "SELECT data FROM datastore_data WHERE id = ?",
     )
 
     @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val tableQuery: PreparedStatement = connection.prepareStatement(
-        "SELECT id, schemaid, t_stamp, attemptcount, data_count FROM datastore_data"
+        "SELECT id, schemaid, t_stamp, attemptcount, data_count FROM datastore_data",
     )
 
     private fun queryForData(id: Int): Detail {
@@ -90,7 +114,7 @@ class CacheView(private val path: Path) : ToolPanel() {
                 schemaId = resultSet.getInt("SCHEMAID"),
                 timestamp = resultSet.getString("T_STAMP"),
                 attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
-                dataCount = resultSet.getInt("DATA_COUNT")
+                dataCount = resultSet.getInt("DATA_COUNT"),
             )
         }
     }
@@ -113,19 +137,19 @@ class CacheView(private val path: Path) : ToolPanel() {
                             title = "Java 2D Array",
                             body = obj.map { row ->
                                 (row as Array<*>).contentToString()
-                            }
+                            },
                         )
                     } else {
                         Detail(
                             title = "Java Array",
-                            body = obj.map(Any?::toString)
+                            body = obj.map(Any?::toString),
                         )
                     }
                 }
 
                 else -> Detail(
                     title = obj::class.java.name,
-                    message = obj.toString()
+                    message = obj.toString(),
                 )
             }
         } catch (e: ClassNotFoundException) {
@@ -135,7 +159,7 @@ class CacheView(private val path: Path) : ToolPanel() {
 
             Detail(
                 title = "Serialization dump of ${data.size} bytes:",
-                body = serializationDumper.parseStream().lines()
+                body = serializationDumper.parseStream().lines(),
             )
         }
     }
@@ -161,8 +185,8 @@ class CacheView(private val path: Path) : ToolPanel() {
                 "provider" to providerName,
                 "setName" to setName,
                 "execRate" to execRate.toString(),
-                "execTime" to executionTime.time.toString() // TODO date format?
-            )
+                "execTime" to executionTime.time.toString(), // TODO date format?
+            ),
         )
     }
 
@@ -179,8 +203,8 @@ class CacheView(private val path: Path) : ToolPanel() {
                 }
             },
             details = mapOf(
-                "quoteColumnNames" to quoteColumnNames().toString()
-            )
+                "quoteColumnNames" to quoteColumnNames().toString(),
+            ),
         )
     }
 
@@ -192,11 +216,11 @@ class CacheView(private val path: Path) : ToolPanel() {
             JSplitPane(
                 SwingConstants.VERTICAL,
                 FlatScrollPane(table),
-                details
+                details,
             ).apply {
                 resizeWeight = 0.3
             },
-            "dock center"
+            "dock center",
         )
 
         table.selectionModel.addListSelectionListener { event ->
@@ -216,14 +240,15 @@ class CacheView(private val path: Path) : ToolPanel() {
 
     companion object {
         val LOGGER = getLogger<CacheView>()
+        val cacheFileExtensions = listOf("data", "script", "log", "backup", "properties")
     }
 }
 
 object CacheViewer : Tool {
     override val title = "Cache Dump"
-    override val description = "S&F Cache ZIP Files"
+    override val description = "S&F Cache data/script files"
     override val icon = FlatSVGIcon("icons/bx-data.svg")
-    override val extensions = listOf("zip")
+    override val extensions = listOf("data", "script", "zip")
     override fun open(path: Path): ToolPanel = CacheView(path)
 }
 

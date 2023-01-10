@@ -14,6 +14,6 @@ include(
     "log",
     "thread",
     "cache",
-    "backup",
+    "zip",
     "app",
 )

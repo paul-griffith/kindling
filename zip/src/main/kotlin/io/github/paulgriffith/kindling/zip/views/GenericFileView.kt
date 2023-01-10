@@ -1,14 +1,14 @@
-package io.github.paulgriffith.kindling.backup.views
+package io.github.paulgriffith.kindling.zip.views
 
-import io.github.paulgriffith.kindling.backup.PathView
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
+import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.awt.Font
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import java.util.HexFormat
 import javax.swing.JTextArea
 
-class GenericFileView(override val provider: FileSystemProvider, override val path: Path) : PathView() {
+class GenericFileView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     private val textArea = JTextArea().apply {
         font = Font(Font.MONOSPACED, Font.PLAIN, 12)
     }
