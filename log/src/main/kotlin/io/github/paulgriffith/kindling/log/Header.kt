@@ -25,6 +25,10 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         firePropertyChange(property.name, oldValue, newValue)
     }
 
+    var isShowTimeFilter: Boolean by Delegates.observable(false) { property, oldValue, newValue ->
+        firePropertyChange(property.name, oldValue, newValue)
+    }
+
     var selectedTimeZone: String by Delegates.observable(ZoneId.systemDefault().id) { property, oldValue, newValue ->
         firePropertyChange(property.name, oldValue, newValue)
     }
@@ -36,6 +40,14 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                     isShowFullLoggerName = !isShowFullLoggerName
                 }
             }
+        )
+
+        add(
+                JCheckBoxMenuItem("Show Time Filter").apply {
+                    addActionListener {
+                        isShowTimeFilter = !isShowTimeFilter
+                    }
+                }
         )
 
         val tzGroup = ButtonGroup()

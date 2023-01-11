@@ -2,20 +2,13 @@ package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.ui.FlatScrollBarUI
 import io.github.paulgriffith.kindling.core.DetailsPane
-import io.github.paulgriffith.kindling.utils.EDT_SCOPE
-import io.github.paulgriffith.kindling.utils.FlatScrollPane
-import io.github.paulgriffith.kindling.utils.ReifiedJXTable
-import io.github.paulgriffith.kindling.utils.getValue
+import io.github.paulgriffith.kindling.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.action.AbstractActionExt
-import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.Rectangle
-import java.awt.RenderingHints
+import java.awt.*
 import java.awt.event.ActionEvent
 import java.awt.geom.AffineTransform
 import java.time.Duration
@@ -24,13 +17,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JScrollBar
-import javax.swing.JSplitPane
-import javax.swing.SortOrder
-import javax.swing.SwingConstants
-import javax.swing.UIManager
+import javax.swing.*
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
@@ -46,6 +33,12 @@ class LogPanel(
     private var showDensityDisplay: Boolean = true
 
     val header = Header(totalRows)
+    private val startTime = rawData.first().timestamp.toEpochMilli()
+    private val endTime = rawData.last().timestamp.toEpochMilli()
+    private val timeline = TimelineSelector(startTime, endTime).apply {
+        listeners.add(::updateData)
+        isVisible = false
+    }
 
     val table = run {
         val initialModel = createModel(rawData)
@@ -80,6 +73,9 @@ class LogPanel(
                 .map { loggerNamesSidebar.list.model.getElementAt(it) }
                 .filterIsInstance<LoggerName>()
                 .mapTo(mutableSetOf()) { it.name }
+        }
+        add { event ->
+            event.timestamp.toEpochMilli() in timeline.lowerSelectedTime ..  timeline.upperSelectedTime
         }
         add { event ->
             event.level!!.name in loggerLevelsSidebar.list.checkBoxListSelectedIndices
@@ -130,6 +126,7 @@ class LogPanel(
 
     init {
         add(header, "wrap, growx, spanx 2")
+        add(timeline, "wrap, spanx 2, w 620!")
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -206,6 +203,11 @@ class LogPanel(
         header.addPropertyChangeListener("isShowFullLoggerName") {
             table.model.fireTableDataChanged()
             loggerNamesSidebar.list.isShowFullLoggerName = it.newValue as Boolean
+        }
+
+        header.addPropertyChangeListener("isShowTimeFilter") {
+            table.model.fireTableDataChanged()
+            timeline.isVisible = it.newValue as Boolean
         }
     }
 
@@ -315,7 +317,6 @@ class LogPanel(
                     partialEvent = null
                 }
             }
-
             for ((index, line) in lines.withIndex()) {
                 if (line.isBlank()) {
                     continue
