@@ -29,10 +29,6 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         firePropertyChange(property.name, oldValue, newValue)
     }
 
-    var minimumLevel: Level by Delegates.observable(Level.INFO) { property, oldValue, newValue ->
-        firePropertyChange(property.name, oldValue, newValue)
-    }
-
     private val settingsMenu = JidePopupMenu().apply {
         add(
             JCheckBoxMenuItem("Show Full Logger Names").apply {
@@ -50,20 +46,6 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                         tzGroup.add(timezoneItem)
                         timezoneItem.addActionListener {
                             selectedTimeZone = timezone
-                        }
-                    }
-                }
-            }
-        )
-
-        val levelGroup = ButtonGroup()
-        add(
-            JMenu("Minimum Level").apply {
-                for (level in Level.values()) {
-                    add(JCheckBoxMenuItem(level.toString(), level == minimumLevel)).also { levelItem ->
-                        levelGroup.add(levelItem)
-                        levelItem.addActionListener {
-                            minimumLevel = level
                         }
                     }
                 }

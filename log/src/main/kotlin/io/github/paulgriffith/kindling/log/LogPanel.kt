@@ -71,23 +71,21 @@ class LogPanel(
     }
 
     private val details = DetailsPane()
-    private val sidebar = LoggerNamesPanel(rawData)
+    private val loggerNamesSidebar = LoggerNamesPanel(rawData)
+    private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
 
     private val filters: List<(LogEvent) -> Boolean> = buildList {
         add { event ->
-            event.logger in sidebar.list.checkBoxListSelectedIndices
-                .map { sidebar.list.model.getElementAt(it) }
+            event.logger in loggerNamesSidebar.list.checkBoxListSelectedIndices
+                .map { loggerNamesSidebar.list.model.getElementAt(it) }
                 .filterIsInstance<LoggerName>()
                 .mapTo(mutableSetOf()) { it.name }
         }
         add { event ->
-            when (event) {
-                is SystemLogsEvent -> {
-                    event.level >= header.minimumLevel
-                }
-
-                is WrapperLogEvent -> true
-            }
+            event.level!!.name in loggerLevelsSidebar.list.checkBoxListSelectedIndices
+                    .map { loggerLevelsSidebar.list.model.getElementAt(it) }
+                    .filterIsInstance<LoggerLevel>()
+                    .mapTo(mutableSetOf()) { it.name }
         }
         add { event ->
             val text = header.search.text
@@ -135,7 +133,10 @@ class LogPanel(
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                sidebar,
+                    JPanel(MigLayout("fill")).apply {
+                        add(loggerNamesSidebar, "grow, h 100:1000, wrap")
+                        add(loggerLevelsSidebar, "growx, h 120!")
+                    },
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     tableScrollPane,
@@ -180,7 +181,13 @@ class LogPanel(
             header.displayedRows = table.model.rowCount
         }
 
-        sidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+        loggerNamesSidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
+            }
+        }
+
+        loggerLevelsSidebar.list.checkBoxListSelectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 updateData()
             }
@@ -198,7 +205,7 @@ class LogPanel(
 
         header.addPropertyChangeListener("isShowFullLoggerName") {
             table.model.fireTableDataChanged()
-            sidebar.list.isShowFullLoggerName = it.newValue as Boolean
+            loggerNamesSidebar.list.isShowFullLoggerName = it.newValue as Boolean
         }
     }
 
