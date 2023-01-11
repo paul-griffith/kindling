@@ -51,12 +51,7 @@ class MultiThreadView(
     private val paths: List<Path>,
 ) : ToolPanel() {
     private val threadDumps = paths.map { path ->
-        try {
-            ThreadDump.fromStream(path.inputStream())
-                ?: throw ToolOpeningException("Failed to open $path as a thread dump")
-        } catch (ex: Exception) {
-            throw ToolOpeningException("Failed to open $path as a thread dump", ex)
-        }
+        ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
     }
 
     private val poolList = FilterList("(No Pool)")
