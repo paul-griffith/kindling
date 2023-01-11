@@ -40,5 +40,9 @@ class ToolView(
 
     companion object {
         fun maybeIsTool(path: Path) = path.extension in Tool.byExtension
+
+        fun safelyCreate(provider: FileSystemProvider, path: Path): ToolView? {
+            return runCatching { ToolView(provider, path) }.getOrNull()
+        }
     }
 }

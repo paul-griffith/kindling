@@ -20,7 +20,6 @@ import io.github.paulgriffith.kindling.zip.views.ImageView
 import io.github.paulgriffith.kindling.zip.views.MultiToolView
 import io.github.paulgriffith.kindling.zip.views.PathView
 import io.github.paulgriffith.kindling.zip.views.ProjectView
-import io.github.paulgriffith.kindling.zip.views.SinglePathView
 import io.github.paulgriffith.kindling.zip.views.TextFileView
 import io.github.paulgriffith.kindling.zip.views.ToolView
 import java.awt.event.MouseAdapter
@@ -187,7 +186,7 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
 }
 
 private typealias PathPredicate = (Path) -> Boolean
-private typealias PathViewProvider = (FileSystemProvider, Path) -> SinglePathView
+private typealias PathViewProvider = (FileSystemProvider, Path) -> PathView?
 
 object ZipViewer : Tool {
     override val title = "Ignition Archive"
@@ -197,29 +196,25 @@ object ZipViewer : Tool {
     override fun open(path: Path): ToolPanel = ZipView(path)
 
     private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
-        put(ToolView::maybeIsTool, ::ToolView)
+        put(ToolView::maybeIsTool, ToolView::safelyCreate)
         put(TextFileView::isTextFile, ::TextFileView)
         put(ImageView::isImageFile, ::ImageView)
         put(ProjectView::isProjectDirectory, ::ProjectView)
+        put(Path::isRegularFile, ::GenericFileView)
     }
 
-    fun createView(fileSystemProvider: FileSystemProvider, vararg paths: Path): PathView? = runCatching {
+    fun createView(filesystem: FileSystemProvider, vararg paths: Path): PathView? = runCatching {
         if (paths.size > 1) {
-            MultiToolView(fileSystemProvider, paths.toList())
+            MultiToolView(filesystem, paths.toList())
         } else {
-            val path = paths.first()
-            val specificView = handlers.firstNotNullOfOrNull { (predicate, provider) ->
+            val path = paths.single()
+            handlers.firstNotNullOfOrNull { (predicate, provider) ->
                 try {
-                    if (predicate(path)) {
-                        return@firstNotNullOfOrNull provider(fileSystemProvider, path)
-                    }
+                    provider.takeIf { predicate(path) }?.invoke(filesystem, path)
                 } catch (_: ToolOpeningException) {
+                    null
                 }
-                null
             }
-            specificView ?: if (path.isRegularFile()) {
-                GenericFileView(fileSystemProvider, path)
-            } else null
         }
     }.getOrElse { ex ->
         logger.error("Failed to open ${paths.contentToString()}", ex)
