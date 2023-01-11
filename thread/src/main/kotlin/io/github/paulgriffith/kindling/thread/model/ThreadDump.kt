@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.thread.model
 
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
 import kotlinx.serialization.SerialName
@@ -14,7 +15,7 @@ data class ThreadDump internal constructor(
     val version: String,
     val threads: List<Thread>,
     @SerialName("deadlocks")
-    val deadlockIds: List<Int> = emptyList()
+    val deadlockIds: List<Int> = emptyList(),
 ) {
     companion object {
         private val JSON = Json {
@@ -28,10 +29,8 @@ data class ThreadDump internal constructor(
             return try {
                 JSON.decodeFromString(serializer(), text)
             } catch (ex: SerializationException) {
-                logger.debug("Not a JSON string?", ex)
-
                 val lines = text.lines()
-                require(lines.size > 2) { "Not a fully formed thread dump" }
+                if (lines.size <= 2) throw ToolOpeningException("Not a fully formed thread dump")
                 val firstLine = lines.first()
 
                 val deadlockIds = if (lines[2].contains("Deadlock")) {
@@ -41,7 +40,8 @@ data class ThreadDump internal constructor(
                 }
 
                 ThreadDump(
-                    version = requireNotNull(versionPattern.find(firstLine)?.value),
+                    version = versionPattern.find(firstLine)?.value
+                        ?: throw ToolOpeningException("No version, not a thread dump"),
                     threads = when {
                         firstLine.contains(":") -> parseScript(text)
                         else -> parseWebPage(text)

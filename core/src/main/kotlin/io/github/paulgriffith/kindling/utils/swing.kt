@@ -50,14 +50,11 @@ import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
 import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreeNode
-import kotlin.io.path.Path
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 
 typealias StringProvider<T> = (T?) -> String?
 typealias IconProvider<T> = (T?) -> Icon?
-
-val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
 
 class ReifiedLabelProvider<T : Any>(
     private val valueClass: KClass<T>,

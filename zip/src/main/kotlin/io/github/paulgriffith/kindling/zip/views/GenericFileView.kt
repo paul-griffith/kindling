@@ -1,14 +1,18 @@
 package io.github.paulgriffith.kindling.zip.views
 
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
-import io.github.paulgriffith.kindling.zip.SinglePathView
+import java.awt.EventQueue
 import java.awt.Font
+import java.awt.Rectangle
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import java.util.HexFormat
+import javax.swing.Icon
 import javax.swing.JTextArea
 
 class GenericFileView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
+    override val icon: Icon? = null
+
     private val textArea = JTextArea().apply {
         font = Font(Font.MONOSPACED, Font.PLAIN, 12)
     }
@@ -32,6 +36,9 @@ class GenericFileView(override val provider: FileSystemProvider, override val pa
         }
 
         add(FlatScrollPane(textArea), "push, grow")
+        EventQueue.invokeLater {
+            textArea.scrollRectToVisible(Rectangle(0, 0))
+        }
     }
 
     private fun decodeBytes(toRead: ByteArray): String {

@@ -6,6 +6,7 @@ import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
+import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
@@ -15,10 +16,10 @@ import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.DARK_THEME
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.LIGHT_THEME
+import io.github.paulgriffith.kindling.utils.TabStrip
 import io.github.paulgriffith.kindling.utils.chooseFiles
 import io.github.paulgriffith.kindling.utils.display
 import io.github.paulgriffith.kindling.utils.getLogger
-import io.github.paulgriffith.kindling.utils.homeLocation
 import io.github.paulgriffith.kindling.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -26,7 +27,6 @@ import net.miginfocom.swing.MigLayout
 import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
-import java.awt.Image
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.desktop.QuitStrategy
@@ -43,7 +43,7 @@ import javax.swing.JPanel
 import javax.swing.UIManager
 
 class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
-    private val fileChooser = JFileChooser(homeLocation).apply {
+    private val fileChooser = JFileChooser(Kindling.homeLocation).apply {
         isMultiSelectionEnabled = true
         fileView = CustomIconView()
 
@@ -66,7 +66,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         }
     }
 
-    private val tabs = TabPanel()
+    private val tabs = TabStrip()
     private val openButton = JButton(openAction)
 
     private val menuBar = JMenuBar().apply {
@@ -218,12 +218,6 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
-        val FRAME_ICON: Image = run {
-            val toolkit = Toolkit.getDefaultToolkit()
-            val mainPanelClass = MainPanel::class.java
-            toolkit.getImage(mainPanelClass.getResource("/icons/ignition.png"))
-        }
-
         val THEME_DETECTOR: OsThemeDetector = OsThemeDetector.getDetector()
 
         val LOGGER = getLogger<MainPanel>()
@@ -239,7 +233,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 JFrame("Kindling").apply {
                     defaultCloseOperation = JFrame.EXIT_ON_CLOSE
                     preferredSize = Dimension(1280, 800)
-                    iconImage = FRAME_ICON
+                    iconImage = Kindling.frameIcon
 
                     val mainPanel = MainPanel(args.isEmpty())
                     add(mainPanel)
@@ -277,6 +271,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 put("ScrollBar.width", 16)
                 put("TabbedPane.tabType", "card")
                 put("MenuItem.minimumIconSize", Dimension()) // https://github.com/JFormDesigner/FlatLaf/issues/328
+                put("Tree.showDefaultIcons", true)
             }
 
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))

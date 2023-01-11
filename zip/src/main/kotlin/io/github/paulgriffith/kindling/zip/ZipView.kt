@@ -3,118 +3,105 @@ package io.github.paulgriffith.kindling.zip
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
-import com.formdev.flatlaf.extras.components.FlatTabbedPane.WRAP_TAB_LAYOUT
 import io.github.paulgriffith.kindling.core.Tool
+import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.PathNode
+import io.github.paulgriffith.kindling.utils.TabStrip
 import io.github.paulgriffith.kindling.utils.ZipFileTree
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.toFileSizeLabel
 import io.github.paulgriffith.kindling.zip.ZipViewer.createView
-import io.github.paulgriffith.kindling.zip.ZipViewer.logger
 import io.github.paulgriffith.kindling.zip.views.GenericFileView
 import io.github.paulgriffith.kindling.zip.views.ImageView
 import io.github.paulgriffith.kindling.zip.views.MultiToolView
+import io.github.paulgriffith.kindling.zip.views.PathView
 import io.github.paulgriffith.kindling.zip.views.ProjectView
+import io.github.paulgriffith.kindling.zip.views.SinglePathView
 import io.github.paulgriffith.kindling.zip.views.TextFileView
 import io.github.paulgriffith.kindling.zip.views.ToolView
-import net.miginfocom.swing.MigLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
-import java.util.function.BiConsumer
 import javax.swing.Icon
-import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.extension
+import kotlin.io.path.fileSize
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
-class ZipView(path: Path) : ToolPanel() {
+class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
     private val zipFile: FileSystem = FileSystems.newFileSystem(path)
     private val provider: FileSystemProvider = zipFile.provider()
 
-    private val files = ZipFileTree(zipFile).apply {
+    private val fileTree = ZipFileTree(zipFile).apply {
         selectionModel.selectionMode = TreeSelectionModel.CONTIGUOUS_TREE_SELECTION
     }
 
-    private val backupInfo = run {
-        if (path.extension == "gwbk") {
-            JLabel().apply {
-                val file =
-                    XML_FACTORY.newDocumentBuilder().parse(provider.newInputStream(zipFile.getPath(BACKUP_INFO))).apply {
-                        normalizeDocument()
-                    }
-                val version = file.getElementsByTagName("version").item(0).textContent
-                val timestamp = file.getElementsByTagName("timestamp").item(0).textContent
-                val edition = file.getElementsByTagName("edition").item(0)?.textContent
+    private val bundleInfo = JLabel(
+        when (path.extension.lowercase()) {
+            "gwbk" -> {
+                val backupInfo = provider.newInputStream(zipFile.getPath(BACKUP_INFO))
+                val document = XML_FACTORY.newDocumentBuilder().parse(backupInfo).apply {
+                    normalizeDocument()
+                }
+                val version = document.getElementsByTagName("version").item(0).textContent
+                val edition = document.getElementsByTagName("edition").item(0)?.textContent
 
-                text = buildString {
+                buildString {
                     append(version)
-                    append(" - ")
-                    append(timestamp)
                     if (!edition.isNullOrEmpty()) {
                         append(" - ")
                         append(edition)
                     }
                 }
             }
-        } else {
-            JLabel("ZIP Bundle")
-        }
-    }
 
-    private val tabbedPane = FlatTabbedPane().apply {
-        tabLayoutPolicy = WRAP_TAB_LAYOUT
+            "modl" -> {
+                val moduleInfo = provider.newInputStream(zipFile.getPath(MODULE_INFO))
+                val document = XML_FACTORY.newDocumentBuilder().parse(moduleInfo).apply {
+                    normalizeDocument()
+                }
+                val name = document.getElementsByTagName("name").item(0).textContent
+                val version = document.getElementsByTagName("version").item(0).textContent
 
-        isTabsClosable = true
-        tabCloseCallback = BiConsumer { _, i ->
-            removeTabAt(i)
-        }
-
-        attachPopupMenu { event ->
-            val tabIndex = indexAtLocation(event.x, event.y)
-            if (tabIndex == -1) return@attachPopupMenu null
-            val tab = (getComponentAt(tabIndex) as TabWrapper).pathView
-            JPopupMenu().apply {
-                tab.customizePopupMenu(this)
+                "$name - $version"
             }
-        }
-    }
 
-    private val FlatTabbedPane.tabs: Sequence<TabWrapper>
+            else -> "ZIP Archive"
+        } + " - " + path.fileSize().toFileSizeLabel(),
+    )
+
+    private val tabStrip = TabStrip()
+
+    private val FlatTabbedPane.tabs: Sequence<PathView>
         get() = sequence {
-            for (i in 0 until tabCount) {
-                yield(getComponentAt(i) as TabWrapper)
+            repeat(tabCount) { i ->
+                yield(getComponentAt(i) as PathView)
             }
         }
-
-    private val sidebar = FlatScrollPane(files)
 
     init {
         name = path.name
         toolTipText = path.toString()
 
-        files.addMouseListener(
+        fileTree.addMouseListener(
             object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent?) {
                     if (e?.clickCount == 2) {
-                        val pathNode = files.selectionPath?.lastPathComponent as? PathNode ?: return
+                        val pathNode = fileTree.selectionPath?.lastPathComponent as? PathNode ?: return
                         val actualPath = pathNode.userObject
                         maybeAddNewTab(actualPath)
                     }
@@ -122,7 +109,7 @@ class ZipView(path: Path) : ToolPanel() {
             },
         )
 
-        files.attachPopupMenu {
+        fileTree.attachPopupMenu {
             selectionPaths?.let { selectedPaths ->
                 FlatPopupMenu().apply {
                     val openIndividually = Action("Open File") {
@@ -143,83 +130,53 @@ class ZipView(path: Path) : ToolPanel() {
                         openIndividually.name = "Open ${selectedPaths.size} files individually"
                     }
                     add(openIndividually)
-                }
-            }
-        }
 
-        add(backupInfo, "north, pad 6 6 6 6")
-        add(sidebar, "west, width 200::300, pad 6 6 6 6")
-        add(tabbedPane, "dock center")
-    }
-
-    data class ZipFile(val path: Path, val attributes: BasicFileAttributes)
-
-    class TabWrapper(
-        val attributes: List<ZipFile>,
-        val pathView: PathView,
-    ) : JPanel(MigLayout("ins 6")) {
-        private val path = attributes.singleOrNull()?.path
-
-        private val saveAs = JButton("Save As").apply {
-            addActionListener {
-                exportFileChooser.selectedFile = File(path?.last().toString())
-                if (exportFileChooser.showSaveDialog(this@TabWrapper) == JFileChooser.APPROVE_OPTION) {
-                    pathView.provider.newInputStream(path).use { file ->
-                        exportFileChooser.selectedFile.toPath().outputStream().use(file::copyTo)
+                    if (selectedPaths.size == 1) {
+                        add(
+                            Action("Save As") {
+                                val selectedNode = selectedPaths.first().lastPathComponent as PathNode
+                                exportFileChooser.selectedFile = File(selectedNode.userObject.name)
+                                if (exportFileChooser.showSaveDialog(this@attachPopupMenu) == JFileChooser.APPROVE_OPTION) {
+                                    provider.newInputStream(path).use { file ->
+                                        exportFileChooser.selectedFile.toPath().outputStream().use(file::copyTo)
+                                    }
+                                }
+                            },
+                        )
                     }
                 }
             }
         }
 
-        init {
-            val header = attributes.joinToString(", ") { (path, attribute) ->
-                buildString {
-                    append(path.subpath(1, path.nameCount - 1))
-                    if (path.isRegularFile()) {
-                        append(" - ")
-                        append(attribute.size().toFileSizeLabel())
-                    }
-                }
-            }
-            add(JLabel(header), "pushx, growx")
-            if (path?.isRegularFile() == true) {
-                add(saveAs, "ax 100%")
-            }
-            add(pathView, "newline, push, grow, span")
-        }
+        add(bundleInfo, "split 2, height 32!")
+        add(FlatScrollPane(fileTree), "pushy, growy, width 250!")
+        add(tabStrip, "newline, push, grow, spany")
     }
 
     override val icon: Icon = ZipViewer.icon
 
     private fun maybeAddNewTab(vararg paths: Path) {
-        val existingTab = tabbedPane.tabs.find { tab ->
-            tab.attributes.map { it.path } == paths.toList()
-        }
+        val pathList = paths.toList()
+        val existingTab = tabStrip.tabs.find { tab -> tab.paths == pathList }
         if (existingTab == null) {
-            val maybeView = createView(provider, *paths)
-            maybeView.onSuccess { fileView ->
-                val attributes = paths.map { path ->
-                    ZipFile(path, provider.readAttributes(path, BasicFileAttributes::class.java))
-                }
-                val newTab = TabWrapper(attributes, fileView)
-
-                tabbedPane.addTab(
-                    fileView.tabName,
-                    fileView.icon?.derive(16, 16),
-                    newTab,
-                    fileView.pathDetails,
+            val pathView = createView(provider, *paths)
+            if (pathView != null) {
+                tabStrip.addTab(
+                    pathView.tabName,
+                    pathView.icon,
+                    pathView,
+                    pathView.tabTooltip,
                 )
-                tabbedPane.selectedComponent = newTab
-            }.onFailure { ex ->
-                logger.error("Failed to open ${paths.contentToString()}", ex)
+                tabStrip.selectedComponent = pathView
             }
         } else {
-            tabbedPane.selectedComponent = existingTab
+            tabStrip.selectedComponent = existingTab
         }
     }
 
     companion object Constants {
         const val BACKUP_INFO = "backupinfo.xml"
+        const val MODULE_INFO = "module.xml"
 
         private val XML_FACTORY = DocumentBuilderFactory.newDefaultInstance().apply {
             setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
@@ -229,34 +186,11 @@ class ZipView(path: Path) : ToolPanel() {
     }
 }
 
-typealias PathPredicate = (Path) -> Boolean
-
-typealias PathViewProvider = (FileSystemProvider, Path) -> SinglePathView
-
-sealed class PathView : JPanel(MigLayout("ins 0, fill")) {
-    abstract val provider: FileSystemProvider
-    abstract val tabName: String
-    abstract val pathDetails: String
-    open val icon: FlatSVGIcon? = null
-    open fun customizePopupMenu(menu: JPopupMenu) = Unit
-}
-
-abstract class SinglePathView : PathView() {
-    abstract val path: Path
-    override val tabName by lazy { path.name }
-    override val pathDetails by lazy { path.toString().substring(1) }
-    override fun toString(): String = "${this::class.simpleName}(path=$path)"
-}
-
-abstract class MultiPathView : PathView() {
-    abstract val paths: List<Path>
-    override val tabName by lazy { "${paths.size} files" }
-    override val pathDetails by lazy { paths.joinToString("\n") { it.toString().substring(1) } }
-    override fun toString(): String = "${this::class.simpleName}(paths=$paths)"
-}
+private typealias PathPredicate = (Path) -> Boolean
+private typealias PathViewProvider = (FileSystemProvider, Path) -> SinglePathView
 
 object ZipViewer : Tool {
-    override val title = "Ignition Bundle"
+    override val title = "Ignition Archive"
     override val description = "Archives (.gwbk, .zip, .modl)"
     override val icon = FlatSVGIcon("icons/bx-archive.svg")
     override val extensions = listOf("gwbk", "zip", "modl")
@@ -269,22 +203,30 @@ object ZipViewer : Tool {
         put(ProjectView::isProjectDirectory, ::ProjectView)
     }
 
-    fun createView(fileSystemProvider: FileSystemProvider, vararg paths: Path): Result<PathView> = runCatching {
+    fun createView(fileSystemProvider: FileSystemProvider, vararg paths: Path): PathView? = runCatching {
         if (paths.size > 1) {
             MultiToolView(fileSystemProvider, paths.toList())
         } else {
             val path = paths.first()
-            handlers.firstNotNullOfOrNull { (predicate, provider) ->
-                if (predicate(path)) {
-                    provider(fileSystemProvider, path)
-                } else {
-                    null
+            val specificView = handlers.firstNotNullOfOrNull { (predicate, provider) ->
+                try {
+                    if (predicate(path)) {
+                        return@firstNotNullOfOrNull provider(fileSystemProvider, path)
+                    }
+                } catch (_: ToolOpeningException) {
                 }
-            } ?: GenericFileView(fileSystemProvider, path)
+                null
+            }
+            specificView ?: if (path.isRegularFile()) {
+                GenericFileView(fileSystemProvider, path)
+            } else null
         }
+    }.getOrElse { ex ->
+        logger.error("Failed to open ${paths.contentToString()}", ex)
+        null
     }
 
-    val logger = getLogger<ZipViewer>()
+    private val logger = getLogger<ZipViewer>()
 }
 
 class ZipViewerProxy : Tool by ZipViewer

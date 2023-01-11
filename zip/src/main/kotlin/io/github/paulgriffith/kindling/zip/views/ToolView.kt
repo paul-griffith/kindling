@@ -4,18 +4,19 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
-import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import java.util.zip.ZipException
-import javax.swing.JLabel
 import javax.swing.JPopupMenu
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
-class ToolView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
+class ToolView(
+    override val provider: FileSystemProvider,
+    override val path: Path,
+) : SinglePathView("ins 0, fill") {
     private val toolPanel: ToolPanel
 
     init {
@@ -30,11 +31,10 @@ class ToolView(override val provider: FileSystemProvider, override val path: Pat
             add(toolPanel, "push, grow")
         } catch (e: ZipException) {
             throw ToolOpeningException("Unable to open $path .${path.extension}")
-            add(JLabel("Unable to open $path; ${e.message}"), "push, grow")
         }
     }
 
-    override val icon: FlatSVGIcon = toolPanel.icon as FlatSVGIcon
+    override val icon: FlatSVGIcon = (toolPanel.icon as FlatSVGIcon).derive(16, 16)
 
     override fun customizePopupMenu(menu: JPopupMenu) = toolPanel.customizePopupMenu(menu)
 
