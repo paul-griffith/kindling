@@ -14,6 +14,7 @@ import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JPanel
 import javax.swing.event.HyperlinkEvent
@@ -28,6 +29,16 @@ import javax.swing.text.html.HTMLEditorKit
 import kotlin.properties.Delegates
 
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
+
+    private val extraButtons = mutableListOf<JComponent>()
+    var isExtraButtonsEnabled: Boolean = true
+        set(value) {
+            field = value
+            extraButtons.onEach {
+                it.isEnabled = value
+            }
+        }
+
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
         textPane.text = newValue.toDisplayFormat()
         EventQueue.invokeLater {
@@ -72,6 +83,12 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         add(FlatScrollPane(textPane), "push, grow")
         add(JButton(copy), "cell 1 0, top, flowy, gap 0")
         add(JButton(save), "cell 1 0")
+    }
+
+    fun addSideButton(button: JButton) {
+        button.isEnabled = isExtraButtonsEnabled
+        add(button, "cell 1 0")
+        extraButtons.add(button)
     }
 
     private fun List<Detail>.toDisplayFormat(): String {

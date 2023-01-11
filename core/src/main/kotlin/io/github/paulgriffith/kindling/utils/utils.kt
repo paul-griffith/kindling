@@ -44,16 +44,6 @@ fun <T> ResultSet.toList(
     }
 }
 
-fun <T, R> ResultSet.toMap(keyColumn: String, valueColumn: String): Map<T, R> {
-    return use { rs ->
-        buildMap {
-            while (rs.next()) {
-                put(rs.getObject(keyColumn) as T, rs.getObject(valueColumn) as R)
-            }
-        }
-    }
-}
-
 inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
     append("<").append(tag).append(">")
     content(this)
@@ -118,6 +108,16 @@ fun Long.toFileSizeLabel(): String = when {
         val digits = log2(toDouble()).toInt() / 10
         val precision = digits.coerceIn(0, 2)
         "%,.${precision}f${prefix[digits]}b".format(toDouble() / 2.0.pow(digits * 10.0))
+    }
+}
+
+inline fun <reified T> transpose(xs: Array<Array<T>>): Array<Array<T>> {
+    val cols = xs[0].size
+    val rows = xs.size
+    return Array(cols) { j ->
+        Array(rows) { i ->
+            xs[i][j]
+        }
     }
 }
 

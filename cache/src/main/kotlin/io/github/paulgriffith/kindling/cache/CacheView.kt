@@ -1,8 +1,6 @@
 package io.github.paulgriffith.kindling.cache
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.formdev.flatlaf.extras.components.FlatButton
-import com.formdev.flatlaf.extras.components.FlatMenu
 import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
@@ -14,11 +12,9 @@ import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
-import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
-import io.github.paulgriffith.kindling.utils.toMap
 import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
@@ -30,12 +26,9 @@ import java.nio.file.Path
 import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
-import javax.swing.JMenuItem
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
-import kotlin.io.path.CopyActionResult
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.copyToRecursively
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
@@ -109,6 +102,12 @@ class CacheView(private val path: Path) : ToolPanel() {
         "SELECT id, signature FROM datastore_schema"
     )
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
+    @Language("HSQLDB")
+    private val errorQuery: PreparedStatement = connection.prepareStatement(
+        "SELECT schemaid, message FROM datastore_errors"
+    )
+
     private fun queryForData(id: Int): Detail {
         dataQuery.apply {
             setInt(1, id)
@@ -122,8 +121,33 @@ class CacheView(private val path: Path) : ToolPanel() {
         }
     }
 
-    private val schemata: Map<Int, String> = schemaQuery.use { statement ->
-        statement.executeQuery().toMap("ID", "SIGNATURE")
+    private val schemaRecords = run {
+        val schemata = schemaQuery.use { statement ->
+            statement.executeQuery().toList { rs ->
+                Pair(
+                    rs.getInt("ID"),
+                    rs.getString("SIGNATURE")
+                )
+            }
+        }
+        val schemaErrors: List<Pair<Int, String>> = errorQuery.use { statement ->
+            statement.executeQuery().toList { rs ->
+                Pair(
+                    rs.getInt("SCHEMAID"),
+                    rs.getString("MESSAGE")
+                )
+            }
+        }
+
+        schemata.map { (id, name) ->
+            SchemaRecord(
+                id,
+                name,
+                schemaErrors.filter { (errId, _) ->
+                    errId == id
+                }.map {(_, message) -> message }
+            )
+        }
     }
 
     private val data: List<CacheEntry> = tableQuery.use { statement ->
@@ -131,7 +155,9 @@ class CacheView(private val path: Path) : ToolPanel() {
             CacheEntry(
                 id = resultSet.getInt("ID"),
                 schemaId = resultSet.getInt("SCHEMAID"),
-                schemaName = schemata[resultSet.getInt("SCHEMAID")] ?: "null",
+                schemaName = schemaRecords.find {
+                    it.id == resultSet.getInt("SCHEMAID")
+                }?.name ?: "null",
                 timestamp = resultSet.getString("T_STAMP"),
                 attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
                 dataCount = resultSet.getInt("DATA_COUNT"),
@@ -139,14 +165,74 @@ class CacheView(private val path: Path) : ToolPanel() {
         }
     }
 
-    private val details = DetailsPane()
+    private fun tableSchemaFilter(entry: CacheEntry): Boolean {
+        return schemaRecords.find { it.id == entry.schemaId } in schemaList.checkBoxListSelectedValues
+    }
+
+    private val details = DetailsPane().apply {
+        isExtraButtonsEnabled = false
+    }
+    private val arrayToTableButton = JButton(
+        Action(icon = FlatSVGIcon("icons/bx-detail.svg")) {
+            val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
+            /*
+            * A few assumptions are made:
+            * 1. The currently selected table row matches the entry in the Details pane.
+            * 2. There is only row selected
+            * 3. The entry is already in the cache, since it's been selected.
+            *
+            * We need the ID to get the table data and the schemaName to get the table columns and table name
+
+            Get data with ID.
+            Data is parsed from the array string stored in the Detail object.
+            We could alternatively get it from the DB and deserialize it again, but the existing functions
+            don't allow that.
+            */
+            val id = table.model[table.selectedRow, CacheModel.Id]
+            val lines = deserializedCache[id]?.body ?: return@Action
+            val data = transpose(
+                Array(lines.size) { i ->
+                    val rowString = lines[i].text
+                    val rowList = rowString.substring(1, rowString.length - 1).split(", ")
+                    rowList.toTypedArray()
+                }
+            )
+
+            // Get table name and column names with schemaName
+            val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
+            val matcher = columnNameRegex.find(schemaName) ?: return@Action
+            val tableName by matcher.groups
+            val columnsString by matcher.groups
+            val columns = columnsString.value.split(",").toTypedArray()
+
+            // Use data and columns to create a simple table model
+            val model = DefaultTableModel(data, columns) // TODO: Add export functionality? Not sure if useful
+
+            JFrame(tableName.value).apply {
+                setSize(900, 500)
+                isResizable = true
+                setLocationRelativeTo(null)
+                contentPane.add(
+                    FlatScrollPane(JXTable(model))
+                )
+                isVisible = true
+            }
+        }
+    )
     private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
     private val table = ReifiedJXTable(model, CacheModel)
+    private val schemaList = SchemaFilterList(schemaRecords)
 
     private val settingsMenu = FlatPopupMenu().apply {
         add(
-            JMenuItem("Test Item 1")
+            Action("Toggle show Schema Records") {
+                val isVisible = mainSplitPane.bottomComponent.isVisible
+                mainSplitPane.bottomComponent.isVisible = !isVisible
+                if (!isVisible) {
+                    mainSplitPane.setDividerLocation(0.75)
+                }
+            }
         )
     }
     private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
@@ -157,6 +243,20 @@ class CacheView(private val path: Path) : ToolPanel() {
                 }
             },
         )
+    }
+
+    private val mainSplitPane = JSplitPane(
+        SwingConstants.HORIZONTAL,
+        JSplitPane(
+            SwingConstants.VERTICAL,
+            FlatScrollPane(table),
+            details
+        ).apply {
+            resizeWeight = 0.5
+        },
+        FlatScrollPane(schemaList)
+    ).apply {
+        resizeWeight = 0.75
     }
 
     private fun deserialize(data: ByteArray): Detail {
@@ -246,21 +346,14 @@ class CacheView(private val path: Path) : ToolPanel() {
     init {
         name = path.name
         toolTipText = path.toString()
+        val numEntriesLabel = JLabel("${data.size} ${if (data.size == 1) "entry" else "entries"}")
 
+        add(numEntriesLabel)
         add(settings, "right, wrap")
 
-        add(SchemaFilterList(schemata), "w 300!, pushy, growy")
+        add(mainSplitPane, "push, grow, span")
 
-        add(
-            JSplitPane(
-                SwingConstants.VERTICAL,
-                FlatScrollPane(table),
-                details,
-            ).apply {
-                resizeWeight = 0.3
-            },
-            "dock center",
-        )
+        details.addSideButton(arrayToTableButton)
 
         table.selectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {
@@ -271,6 +364,21 @@ class CacheView(private val path: Path) : ToolPanel() {
                             queryForData(id)
                         }
                     }
+                details.isExtraButtonsEnabled = details.events.size == 1 &&
+                                                details.events.first().title == "Java 2D Array"
+            }
+        }
+
+        schemaList.checkBoxListSelectionModel.addListSelectionListener {
+            updateData()
+        }
+    }
+
+    private fun updateData() {
+        BACKGROUND.launch {
+            val filteredData = data.filter(::tableSchemaFilter)
+            EDT_SCOPE.launch {
+                table.model = CacheModel(filteredData)
             }
         }
     }
@@ -278,6 +386,7 @@ class CacheView(private val path: Path) : ToolPanel() {
     override val icon: Icon = CacheViewer.icon
 
     companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
         val LOGGER = getLogger<CacheView>()
         val cacheFileExtensions = listOf("data", "script", "log", "backup", "properties")
     }
