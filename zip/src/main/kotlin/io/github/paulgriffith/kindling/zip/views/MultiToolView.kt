@@ -4,7 +4,6 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
-import io.github.paulgriffith.kindling.zip.MultiPathView
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -12,9 +11,22 @@ import javax.swing.JPopupMenu
 import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
-class MultiToolView(override val provider: FileSystemProvider, override val paths: List<Path>) : MultiPathView() {
+class MultiToolView(
+    override val provider: FileSystemProvider,
+    override val paths: List<Path>,
+) : PathView("ins 0, fill") {
     private val multiTool: MultiTool
     private val toolPanel: ToolPanel
+
+    override val tabName by lazy {
+        val roots = paths.mapTo(mutableSetOf()) { path ->
+            path.name.trimEnd { it.isDigit() || it == '-' || it == '.' }
+        }
+        "[${paths.size}] ${roots.joinToString()}"
+    }
+    override val tabTooltip by lazy { paths.joinToString("\n") { it.toString().substring(1) } }
+
+    override fun toString(): String = "MultiToolView(paths=$paths)"
 
     init {
         val tempFiles = paths.map { path ->

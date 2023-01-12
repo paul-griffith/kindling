@@ -1,7 +1,6 @@
 package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.zip.SinglePathView
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.imageio.ImageIO
@@ -29,7 +28,7 @@ class ImageView(override val provider: FileSystemProvider, override val path: Pa
         )
     }
 
-    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-image.svg")
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-image.svg").derive(16, 16)
 
     companion object {
         private val KNOWN_EXTENSIONS = setOf(

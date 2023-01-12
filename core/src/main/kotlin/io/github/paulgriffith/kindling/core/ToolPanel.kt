@@ -2,10 +2,11 @@ package io.github.paulgriffith.kindling.core
 
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FileExtensionFilter
+import io.github.paulgriffith.kindling.utils.FloatableComponent
+import io.github.paulgriffith.kindling.utils.PopupMenuCustomizer
 import io.github.paulgriffith.kindling.utils.Properties
 import io.github.paulgriffith.kindling.utils.exportToCSV
 import io.github.paulgriffith.kindling.utils.exportToXLSX
-import io.github.paulgriffith.kindling.utils.homeLocation
 import net.miginfocom.swing.MigLayout
 import java.io.File
 import javax.swing.Icon
@@ -19,10 +20,12 @@ import javax.swing.table.TableModel
 
 abstract class ToolPanel(
     layoutConstraints: String = "ins 6, fill, hidemode 3",
-) : JPanel(MigLayout(layoutConstraints)) {
-    abstract val icon: Icon
+) : JPanel(MigLayout(layoutConstraints)), FloatableComponent, PopupMenuCustomizer {
+    abstract override val icon: Icon?
+    override val tabName: String get() = name
+    override val tabTooltip: String get() = toolTipText
 
-    open fun customizePopupMenu(menu: JPopupMenu) = Unit
+    override fun customizePopupMenu(menu: JPopupMenu) = Unit
 
     protected fun exportMenu(defaultFileName: String = "", modelSupplier: () -> TableModel): JMenu =
         JMenu("Export").apply {
@@ -49,7 +52,7 @@ abstract class ToolPanel(
         }
 
     companion object {
-        val exportFileChooser = JFileChooser(homeLocation).apply {
+        val exportFileChooser = JFileChooser(Kindling.homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileView = CustomIconView()

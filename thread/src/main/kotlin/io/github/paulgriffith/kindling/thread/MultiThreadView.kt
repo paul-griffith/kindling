@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
@@ -452,7 +453,7 @@ object MultiThreadViewer : MultiTool {
     override val extensions = listOf("json", "txt")
     override fun open(path: Path): ToolPanel = open(listOf(path))
     override fun open(paths: List<Path>): ToolPanel {
-        return MultiThreadView(paths.sorted())
+        return MultiThreadView(paths.sortedWith(compareBy(AlphanumComparator(), Path::name)))
     }
     // TODO: Implement Clipboard tool
 }

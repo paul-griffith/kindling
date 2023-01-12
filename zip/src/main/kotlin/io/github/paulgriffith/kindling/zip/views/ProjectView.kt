@@ -1,8 +1,7 @@
 package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.utils.homeLocation
-import io.github.paulgriffith.kindling.zip.SinglePathView
+import io.github.paulgriffith.kindling.core.Kindling
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.JButton
@@ -19,7 +18,7 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
 
     init {
         exportButton.addActionListener {
-            exportDirectoryChooser.selectedFile = homeLocation.resolve(path.name)
+            exportDirectoryChooser.selectedFile = Kindling.homeLocation.resolve(path.name)
             if (exportDirectoryChooser.showSaveDialog(this@ProjectView) == JFileChooser.APPROVE_OPTION) {
                 val exportLocation = exportDirectoryChooser.selectedFile.toPath()
                 path.copyToRecursively(exportLocation, followLinks = false, overwrite = true)
@@ -30,10 +29,10 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
         add(TextFileView(provider, path / "project.json"), "push, grow")
     }
 
-    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg")
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg").derive(16, 16)
 
     companion object {
-        val exportDirectoryChooser = JFileChooser(homeLocation).apply {
+        val exportDirectoryChooser = JFileChooser(Kindling.homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY

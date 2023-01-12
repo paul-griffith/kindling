@@ -1,6 +1,7 @@
 
 package io.github.paulgriffith.kindling.utils
 
+import com.jidesoft.comparator.AlphanumComparator
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import javax.swing.JTree
@@ -10,6 +11,7 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.PathWalkOption.INCLUDE_DIRECTORIES
 import kotlin.io.path.div
 import kotlin.io.path.isDirectory
+import kotlin.io.path.name
 import kotlin.io.path.walk
 
 data class PathNode(override val userObject: Path) : TypedTreeNode<Path>()
@@ -17,7 +19,7 @@ data class PathNode(override val userObject: Path) : TypedTreeNode<Path>()
 @OptIn(ExperimentalPathApi::class)
 class RootNode(zipFile: FileSystem) : AbstractTreeNode() {
     init {
-        val pathComparator = compareBy<Path> { it.isDirectory() }.thenBy { it.fileName }
+        val pathComparator = compareBy<Path> { it.isDirectory() }.thenBy(AlphanumComparator()) { it.name }
         val zipFilePaths = zipFile.rootDirectories.asSequence()
             .flatMap { it.walk(INCLUDE_DIRECTORIES) }
             .sortedWith(pathComparator)

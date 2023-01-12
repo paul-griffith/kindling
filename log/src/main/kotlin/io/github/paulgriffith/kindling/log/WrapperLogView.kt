@@ -16,10 +16,10 @@ import kotlin.io.path.useLines
 
 class WrapperLogView(
     events: List<WrapperLogEvent>,
-    private val tabName: String,
-    private val fromFile: Boolean
+    tabName: String,
+    private val fromFile: Boolean,
 ) : ToolPanel() {
-    private val logPanel: LogPanel = LogPanel(events)
+    private val logPanel = LogPanel(events)
 
     init {
         name = tabName
@@ -32,14 +32,14 @@ class WrapperLogView(
 
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.add(
-            exportMenu { logPanel.table.model }
+            exportMenu { logPanel.table.model },
         )
         if (fromFile) {
             menu.addSeparator()
             menu.add(
                 Action(name = "Open in External Editor") {
                     Desktop.getDesktop().open(File(tabName))
-                }
+                },
             )
         }
     }
@@ -59,7 +59,7 @@ object LogViewer : MultiClipboardTool {
         return WrapperLogView(
             events = events,
             tabName = paths.first().name,
-            fromFile = true
+            fromFile = true,
         )
     }
 
@@ -67,7 +67,7 @@ object LogViewer : MultiClipboardTool {
         return WrapperLogView(
             events = LogPanel.parseLogs(data.lineSequence()),
             tabName = "Paste at ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))}",
-            fromFile = false
+            fromFile = false,
         )
     }
 }

@@ -33,7 +33,7 @@ inline fun <reified T> getLogger(): Logger {
  * Exhausts (and closes) a ResultSet into a list using [transform].
  */
 fun <T> ResultSet.toList(
-    transform: (ResultSet) -> T
+    transform: (ResultSet) -> T,
 ): List<T> {
     return use { rs ->
         buildList {
@@ -51,7 +51,7 @@ inline fun StringBuilder.tag(tag: String, content: StringBuilder.() -> Unit) {
 }
 
 fun StringBuilder.tag(tag: String, content: String) {
-    tag(tag) { append( content) }
+    tag(tag) { append(content) }
 }
 
 /**
@@ -106,11 +106,7 @@ fun Long.toFileSizeLabel(): String = when {
     this == 0L -> "0B"
     else -> {
         val digits = log2(toDouble()).toInt() / 10
-        val precision = when (digits) {
-            0 -> 0
-            1 -> 1
-            else -> 2
-        }
+        val precision = digits.coerceIn(0, 2)
         "%,.${precision}f${prefix[digits]}b".format(toDouble() / 2.0.pow(digits * 10.0))
     }
 }
@@ -119,15 +115,18 @@ operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>
     return requireNotNull(get(property.name))
 }
 
+val TableModel.rowIndices get() = 0 until rowCount
+val TableModel.columnIndices get() = 0 until columnCount
+
 fun TableModel.exportToCSV(file: File) {
     file.printWriter().use { out ->
-        (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
+        columnIndices.joinTo(buffer = out, separator = ",") { col ->
             getColumnName(col)
         }
         out.println()
-        (0 until rowCount).forEach { row ->
-            (0 until columnCount).joinTo(buffer = out, separator = ",") { col ->
-                """"${getValueAt(row, col)?.toString().orEmpty()}""""
+        for (row in rowIndices) {
+            columnIndices.joinTo(buffer = out, separator = ",") { col ->
+                "\"${getValueAt(row, col)?.toString().orEmpty()}\""
             }
             out.println()
         }
@@ -138,19 +137,19 @@ fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
     workbook {
         sheet("Sheet 1") { // TODO: Some way to pipe in a more useful sheet name (or multiple sheets?)
             row {
-                (0 until columnCount).forEach { col ->
+                for (col in columnIndices) {
                     cell(getColumnName(col))
                 }
             }
-            (0 until rowCount).forEach { row ->
+            for (row in rowIndices) {
                 row {
-                    (0 until columnCount).forEach { col ->
+                    for (col in columnIndices) {
                         when (val value = getValueAt(row, col)) {
                             is Double -> cell(
                                 value,
                                 createCellStyle {
                                     dataFormat = xssfWorkbook.createDataFormat().getFormat("0.00")
-                                }
+                                },
                             )
 
                             else -> cell(value ?: "")
@@ -177,4 +176,3 @@ fun String.escapeHtml(): String {
         }
     }
 }
-

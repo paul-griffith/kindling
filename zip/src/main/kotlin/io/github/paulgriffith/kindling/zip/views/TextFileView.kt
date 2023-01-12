@@ -2,7 +2,6 @@ package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.zip.SinglePathView
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -15,6 +14,8 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_PYTHON
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_XML
 import org.fife.ui.rsyntaxtextarea.Theme
 import org.fife.ui.rtextarea.RTextScrollPane
+import java.awt.EventQueue
+import java.awt.Rectangle
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.UIManager
@@ -34,7 +35,7 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
         theme.theme.apply(this)
     }
 
-    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-file.svg")
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-file.svg").derive(16, 16)
 
     init {
         val text = provider.newInputStream(path).use {
@@ -57,6 +58,9 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
         }
 
         add(RTextScrollPane(textArea), "push, grow")
+        EventQueue.invokeLater {
+            textArea.scrollRectToVisible(Rectangle(0, 0))
+        }
     }
 
     enum class Themes(private val themeName: String) {
@@ -85,6 +89,7 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
             "css" to SYNTAX_STYLE_CSS,
             "txt" to SYNTAX_STYLE_NONE,
             "md" to SYNTAX_STYLE_NONE,
+            "p7b" to SYNTAX_STYLE_NONE,
         )
 
         private val KNOWN_FILENAMES = setOf(
