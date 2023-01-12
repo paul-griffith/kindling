@@ -81,7 +81,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
                 if (event.details.isNotEmpty()) {
                     append("&nbsp;<object ")
                     event.details.entries.joinTo(buffer = this, separator = " ") { (key, value) ->
-                        "data-$key = \"$value\""
+                        "$detailPrefix$key = \"$value\""
                     }
                     append("/>")
                 }
@@ -118,6 +118,8 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
     }
 }
 
+private const val detailPrefix = "data-"
+
 class DetailsEditorKit : HTMLEditorKit() {
     init {
         styleSheet.apply {
@@ -147,7 +149,9 @@ class DetailsEditorKit : HTMLEditorKit() {
                     return object : ComponentView(elem) {
                         override fun createComponent(): Component {
                             val details: Map<String, String> =
-                                elem.attributes.attributeNames.toList().filterIsInstance<String>()
+                                elem.attributes.attributeNames.asSequence()
+                                    .filterIsInstance<String>()
+                                    .map { it.removePrefix(detailPrefix) }
                                     .associateWith { elem.attributes.getAttribute(it) as String }
                             return DetailsIcon(details)
                         }
