@@ -10,14 +10,22 @@ import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
+import io.github.paulgriffith.kindling.utils.Action
+import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.getLogger
+import io.github.paulgriffith.kindling.utils.getValue
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
+import io.github.paulgriffith.kindling.utils.transpose
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
+import org.jdesktop.swingx.JXTable
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.ObjectInputStream
@@ -26,9 +34,15 @@ import java.nio.file.Path
 import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
+import javax.swing.JButton
+import javax.swing.JFrame
+import javax.swing.JLabel
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
+import javax.swing.table.DefaultTableModel
+import kotlin.io.path.CopyActionResult
 import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.copyToRecursively
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
@@ -177,62 +191,15 @@ class CacheView(private val path: Path) : ToolPanel() {
     }
 
     private val details = DetailsPane().apply {
-        isExtraButtonsEnabled = false
+        isAllExtraButtonsEnabled = false
     }
-    private val arrayToTableButton = JButton(
-        Action(icon = FlatSVGIcon("icons/bx-detail.svg")) {
-            val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
-            /*
-            * A few assumptions are made:
-            * 1. The currently selected table row matches the entry in the Details pane.
-            * 2. There is only row selected
-            * 3. The entry is already in the cache, since it's been selected.
-            *
-            * We need the ID to get the table data and the schemaName to get the table columns and table name
-
-            Get data with ID.
-            Data is parsed from the array string stored in the Detail object.
-            We could alternatively get it from the DB and deserialize it again, but the existing functions
-            don't allow that.
-            */
-            val id = table.model[table.selectedRow, CacheModel.Id]
-            val lines = deserializedCache[id]?.body ?: return@Action
-            val data = transpose(
-                Array(lines.size) { i ->
-                    val rowString = lines[i].text
-                    val rowList = rowString.substring(1, rowString.length - 1).split(", ")
-                    rowList.toTypedArray()
-                }
-            )
-
-            // Get table name and column names with schemaName
-            val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
-            val matcher = columnNameRegex.find(schemaName) ?: return@Action
-            val tableName by matcher.groups
-            val columnsString by matcher.groups
-            val columns = columnsString.value.split(",").toTypedArray()
-
-            // Use data and columns to create a simple table model
-            val model = DefaultTableModel(data, columns) // TODO: Add export functionality? Not sure if useful
-
-            JFrame(tableName.value).apply {
-                setSize(900, 500)
-                isResizable = true
-                setLocationRelativeTo(null)
-                contentPane.add(
-                    FlatScrollPane(JXTable(model))
-                )
-                isVisible = true
-            }
-        }
-    )
     private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
     private val table = ReifiedJXTable(model, CacheModel)
     private val schemaList = SchemaFilterList(schemaRecords).apply {
         selectionModel.addListSelectionListener {
             details.events = selectedValuesList.filterIsInstance<SchemaRecord>().map { it.toDetail() }
-            details.isExtraButtonsEnabled = false
+            details.isAllExtraButtonsEnabled = false
         }
     }
 
@@ -365,7 +332,51 @@ class CacheView(private val path: Path) : ToolPanel() {
 
         add(mainSplitPane, "push, grow, span")
 
-        details.addButton(arrayToTableButton)
+        details.addButton("2dArray", FlatSVGIcon("icons/bx-detail.svg")) {
+            val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
+            /*
+            * A few assumptions are made:
+            * 1. The currently selected table row matches the entry in the Details pane.
+            * 2. There is only row selected
+            * 3. The entry is already in the cache, since it's been selected.
+            *
+            * We need the ID to get the table data and the schemaName to get the table columns and table name
+
+            Get data with ID.
+            Data is parsed from the array string stored in the Detail object.
+            We could alternatively get it from the DB and deserialize it again, but the existing functions
+            don't allow that.
+            */
+            val id = table.model[table.selectedRow, CacheModel.Id]
+            val lines = deserializedCache[id]?.body ?: return@addButton
+            val data = transpose(
+                Array(lines.size) { i ->
+                    val rowString = lines[i].text
+                    val rowList = rowString.substring(1, rowString.length - 1).split(", ")
+                    rowList.toTypedArray()
+                }
+            )
+
+            // Get table name and column names with schemaName
+            val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
+            val matcher = columnNameRegex.find(schemaName) ?: return@addButton
+            val tableName by matcher.groups
+            val columnsString by matcher.groups
+            val columns = columnsString.value.split(",").toTypedArray()
+
+            // Use data and columns to create a simple table model
+            val model = DefaultTableModel(data, columns) // TODO: Add export functionality? Not sure if useful
+
+            JFrame(tableName.value).apply {
+                setSize(900, 500)
+                isResizable = true
+                setLocationRelativeTo(null)
+                contentPane.add(
+                    FlatScrollPane(JXTable(model))
+                )
+                isVisible = true
+            }
+        }
 
         table.selectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {
@@ -376,7 +387,7 @@ class CacheView(private val path: Path) : ToolPanel() {
                             queryForData(id)
                         }
                     }
-                details.isExtraButtonsEnabled = details.events.size == 1 &&
+                details.isAllExtraButtonsEnabled = details.events.size == 1 &&
                                                 details.events.first().title == "Java 2D Array"
             }
         }

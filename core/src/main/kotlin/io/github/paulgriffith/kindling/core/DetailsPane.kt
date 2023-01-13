@@ -13,7 +13,9 @@ import java.awt.EventQueue
 import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.awt.event.ActionEvent
 import javax.swing.AbstractButton
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JPanel
@@ -29,15 +31,6 @@ import javax.swing.text.html.HTMLEditorKit
 import kotlin.properties.Delegates
 
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
-
-    private val extraButtons = mutableListOf<AbstractButton>()
-    var isExtraButtonsEnabled: Boolean = true
-        set(value) {
-            field = value
-            extraButtons.onEach {
-                it.isEnabled = value
-            }
-        }
 
     var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
         textPane.text = newValue.toDisplayFormat()
@@ -79,16 +72,56 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         }
     }
 
+    private val extraButtons = mutableListOf<ButtonWrapper>()
+    var isAllExtraButtonsEnabled: Boolean = true
+        set(value) {
+            field = value
+            extraButtons.onEach {
+                it.button.isEnabled = value
+            }
+        }
+        get() = extraButtons.all { it.button.isEnabled }
+
     init {
         add(FlatScrollPane(textPane), "push, grow")
         add(JButton(copy), "cell 1 0, top, flowy, gap 0")
         add(JButton(save), "cell 1 0")
     }
 
-    fun addButton(button: AbstractButton) {
-        button.isEnabled = isExtraButtonsEnabled
+    fun addButton(id: String, button: AbstractButton): String {
+        button.isEnabled = isAllExtraButtonsEnabled
         add(button, "cell 1 0")
-        extraButtons.add(button)
+        extraButtons.add(ButtonWrapper(id, button))
+        return id
+    }
+
+    fun addButton(id: String, icon: Icon, action: (ActionEvent) -> Unit): String {
+        val button = JButton(Action(icon = icon, action = action))
+        return addButton(id, button)
+    }
+
+    fun setButtonEnabled(id: String) {
+        val buttonToEnable = extraButtons.find { it.id == id } ?: return
+        buttonToEnable.button.isEnabled = true
+    }
+
+    fun setButtonDisabled(id: String) {
+        val buttonToDisable = extraButtons.find { it.id == id } ?: return
+        buttonToDisable.button.isEnabled = false
+    }
+
+    @Suppress("unused")
+    fun removeButton(id: String?, button: AbstractButton?): Boolean {
+        val buttonToRemove = when {
+            id == null -> extraButtons.find { it.button == button }
+            button == null -> extraButtons.find { it.id == id }
+            else -> extraButtons.find { it == ButtonWrapper(id, button) }
+        }
+        if (extraButtons.remove(buttonToRemove)) {
+            remove(buttonToRemove?.button)
+            return true
+        }
+        return false
     }
 
     private fun List<Detail>.toDisplayFormat(): String {
@@ -134,6 +167,8 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         }
     }
 }
+
+class ButtonWrapper(val id: String, val button: AbstractButton)
 
 class DetailsEditorKit : HTMLEditorKit() {
     init {
