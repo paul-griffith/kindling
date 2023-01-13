@@ -169,6 +169,13 @@ class CacheView(private val path: Path) : ToolPanel() {
         return schemaRecords.find { it.id == entry.schemaId } in schemaList.checkBoxListSelectedValues
     }
 
+    private fun SchemaRecord.toDetail(): Detail {
+        return Detail(
+            title = name,
+            body = errors
+        )
+    }
+
     private val details = DetailsPane().apply {
         isExtraButtonsEnabled = false
     }
@@ -222,7 +229,12 @@ class CacheView(private val path: Path) : ToolPanel() {
     private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
     private val table = ReifiedJXTable(model, CacheModel)
-    private val schemaList = SchemaFilterList(schemaRecords)
+    private val schemaList = SchemaFilterList(schemaRecords).apply {
+        selectionModel.addListSelectionListener {
+            details.events = selectedValuesList.filterIsInstance<SchemaRecord>().map { it.toDetail() }
+            details.isExtraButtonsEnabled = false
+        }
+    }
 
     private val settingsMenu = FlatPopupMenu().apply {
         add(
@@ -353,7 +365,7 @@ class CacheView(private val path: Path) : ToolPanel() {
 
         add(mainSplitPane, "push, grow, span")
 
-        details.addSideButton(arrayToTableButton)
+        details.addButton(arrayToTableButton)
 
         table.selectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {

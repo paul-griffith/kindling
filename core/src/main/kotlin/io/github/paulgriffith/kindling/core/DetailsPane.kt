@@ -13,8 +13,8 @@ import java.awt.EventQueue
 import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import javax.swing.AbstractButton
 import javax.swing.JButton
-import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JPanel
 import javax.swing.event.HyperlinkEvent
@@ -30,7 +30,7 @@ import kotlin.properties.Delegates
 
 class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
 
-    private val extraButtons = mutableListOf<JComponent>()
+    private val extraButtons = mutableListOf<AbstractButton>()
     var isExtraButtonsEnabled: Boolean = true
         set(value) {
             field = value
@@ -85,7 +85,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         add(JButton(save), "cell 1 0")
     }
 
-    fun addSideButton(button: JButton) {
+    fun addButton(button: AbstractButton) {
         button.isEnabled = isExtraButtonsEnabled
         add(button, "cell 1 0")
         extraButtons.add(button)

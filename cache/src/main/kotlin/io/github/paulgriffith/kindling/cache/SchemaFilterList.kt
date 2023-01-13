@@ -1,14 +1,11 @@
 package io.github.paulgriffith.kindling.cache
 
 import com.jidesoft.swing.CheckBoxList
-import io.github.paulgriffith.kindling.utils.NoSelectionModel
 import io.github.paulgriffith.kindling.utils.listCellRenderer
-import io.github.paulgriffith.kindling.utils.tag
 import java.awt.Font
 import java.awt.Font.MONOSPACED
 import javax.swing.AbstractListModel
-import javax.swing.JLabel
-import javax.swing.UIManager
+import javax.swing.DefaultListSelectionModel
 
 class SchemaModel(private val data: List<SchemaRecord>) : AbstractListModel<Any>() {
     private val comparator: Comparator<SchemaRecord> = compareBy(nullsFirst()) { it.id }
@@ -44,32 +41,29 @@ class SchemaModel(private val data: List<SchemaRecord>) : AbstractListModel<Any>
 class SchemaFilterList(modelData: List<SchemaRecord>) : CheckBoxList(SchemaModel(modelData)) {
 
     init {
-        selectionModel = NoSelectionModel()
-        isClickInCheckBoxOnly = false
+        selectionModel = DefaultListSelectionModel()
+        isClickInCheckBoxOnly = true
+        visibleRowCount = 0
 
-        cellRenderer = listCellRenderer<Any?> { _, value, _, _, _ ->
-            text = when (value) {
-//                is SchemaRecord -> "${"%4d".format(value.id)}: ${value.name}"
+        cellRenderer = listCellRenderer<Any?> { _, schemaEntry, _, _, _ ->
+            text = when (schemaEntry) {
                 is SchemaRecord -> {
+                    val txGroupRegex = """(.*)\{.*\}""".toRegex()
                     buildString {
-                        tag("html") {
-                            append("${"%4d".format(value.id)}: ${value.name}")
-                            if (value.errors.isNotEmpty()) {
-                                val color = UIManager.getColor("Component.warning.focusedBorderColor")
-                                val colorString = "rgb(${color.red},${color.green},${color.blue})"
-                                append("<br>errors:")
-                                append("<span style=\"color: $colorString;\">")
-                                value.errors.forEach { error ->
-                                    append("<br>$error")
-                                }
-                                append("</span>")
-                            }
+                        val name = txGroupRegex.find(schemaEntry.name)?.groups?.get(1)?.value ?: schemaEntry.name
+                        val schemaIdAndName = "${"%4d".format(schemaEntry.id)}: $name"
+
+                        append(schemaIdAndName)
+
+                        when (val size = schemaEntry.errors.size) {
+                            0 -> return@buildString
+                            1 -> append(" ($size error. Click to view.)")
+                            else -> append(" ($size errors. Click to view.)")
                         }
                     }
                 }
-                else -> value.toString()
+                else -> schemaEntry.toString()
             }
-            verticalTextPosition = JLabel.BOTTOM
             font = Font.decode(MONOSPACED).deriveFont(14.0F)
         }
         selectAll()
