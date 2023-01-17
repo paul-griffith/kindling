@@ -185,8 +185,8 @@ class CacheView(private val path: Path) : ToolPanel() {
 
     private fun SchemaRecord.toDetail(): Detail {
         return Detail(
-            title = name,
-            body = errors
+            title = "$name | ID = $id",
+            body = errors.ifEmpty { listOf("No errors associated with this schema.") }
         )
     }
 
