@@ -4,7 +4,6 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatButton
 import com.formdev.flatlaf.extras.components.FlatLabel
 import com.formdev.flatlaf.extras.components.FlatTextPane
-import com.formdev.flatlaf.swingx.ui.FlatTaskPaneUI
 import com.jidesoft.swing.JideButton
 import com.jidesoft.swing.JidePopupMenu
 import io.github.paulgriffith.kindling.core.DetailsPane
@@ -21,10 +20,8 @@ import io.github.paulgriffith.kindling.utils.tag
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
 import org.jdesktop.swingx.JXTaskPaneContainer
-import org.jdesktop.swingx.plaf.basic.BasicTaskPaneUI
 import java.awt.Color
 import java.awt.Desktop
-import java.awt.Graphics
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.text.DecimalFormat
@@ -33,7 +30,6 @@ import javax.swing.JCheckBoxMenuItem
 import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
-import javax.swing.border.Border
 import javax.swing.event.EventListenerList
 import javax.swing.event.HyperlinkEvent
 import javax.swing.text.html.HTMLEditorKit
@@ -92,22 +88,20 @@ class ThreadComparisonPane(
             header.setText(it)
         }
 
-        val onlyOneThread = threads.filterNotNull().size == 1
+        val moreThanOneThread = threads.filterNotNull().size > 1
 
-        val highestCpu = if (!onlyOneThread) {
-            threads.groupBy {
-                it?.cpuUsage ?: 0.0
-            }.maxByOrNull { it.key }?.takeIf {
-                it.value.size == 1
-            }?.key
+        val highestCpu = if (moreThanOneThread) {
+            val cpuUsages = threads.map { it?.cpuUsage ?: 0.0 }
+            cpuUsages.max().takeIf { maxVal ->
+                cpuUsages.count { it == maxVal } == 1
+            }
         } else null
 
-        val largestDepth = if (!onlyOneThread) {
-            threads.groupBy {
-                it?.stacktrace?.size ?: 0
-            }.maxByOrNull { it.key }?.takeIf {
-                it.value.size == 1
-            }?.key
+        val largestDepth = if (moreThanOneThread) {
+            val sizes = threads.map { it?.stacktrace?.size ?: 0 }
+            sizes.max().takeIf { maxVal ->
+                sizes.count { it == maxVal } == 1
+            }
         } else null
 
         for ((container, thread) in threadContainers.zip(threads)) {
@@ -233,14 +227,6 @@ class ThreadComparisonPane(
     }
 
     private class DetailContainer(val prefix: String) : JXTaskPane() {
-        var setup = true
-        override fun updateUI() {
-            try {
-                contentPane
-            }  catch (e: NullPointerException) { return }
-            super.setUI(DetailContainerUI(THREAD_HIGHLIGHT_COLOR))
-        }
-
         var itemCount = 0
             set(value) {
                 title = "$prefix: $value"
@@ -263,27 +249,6 @@ class ThreadComparisonPane(
             isAnimated = false
 
             add(scrollingTextPane)
-        }
-    }
-
-    /* Provides the ability to change the*/
-    class DetailContainerUI(val titleForegroundHighlightColor: Color) : FlatTaskPaneUI() {
-        var highlightTitle = false
-        override fun createPaneBorder(): Border {
-            return object : BasicTaskPaneUI.PaneBorder() {
-                override fun paintTitle(
-                    group: JXTaskPane?,
-                    g: Graphics?,
-                    textColor: Color?,
-                    x: Int,
-                    y: Int,
-                    width: Int,
-                    height: Int
-                ) {
-                    val newColor = if (highlightTitle) titleForegroundHighlightColor else textColor
-                    super.paintTitle(group, g, newColor, x, y, width, height)
-                }
-            }
         }
     }
 
@@ -364,7 +329,7 @@ class ThreadComparisonPane(
             }
 
             titleLabel.foreground = if (highlightCpu) {
-                 THREAD_HIGHLIGHT_COLOR
+                threadHighlightColor
             } else {
                 UIManager.getColor("Label.foreground")
             }
@@ -422,7 +387,7 @@ class ThreadComparisonPane(
                                 text
                             }
                         }
-                    (ui as DetailContainerUI).highlightTitle = highlightStacktrace
+                    isSpecial = highlightStacktrace
                 }
             }
         }
@@ -437,6 +402,7 @@ class ThreadComparisonPane(
         private const val SHOW_NULL_THREADS_DEFAULT = false
         private const val SHOW_EMPTY_VALUES_DEFAULT = false
 
-        private val THREAD_HIGHLIGHT_COLOR  = UIManager.getColor("Component.warning.focusedBorderColor")
+        private val threadHighlightColor: Color
+            get() = UIManager.getColor("Component.warning.focusedBorderColor")
     }
 }
