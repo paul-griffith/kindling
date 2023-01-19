@@ -6,5 +6,5 @@ data class CacheEntry(
     val schemaName: String,
     val timestamp: String,
     val attemptCount: Int,
-    val dataCount: Int
+    val dataCount: Int,
 )

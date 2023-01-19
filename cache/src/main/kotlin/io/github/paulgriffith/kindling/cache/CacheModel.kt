@@ -5,7 +5,7 @@ import io.github.paulgriffith.kindling.utils.ColumnList
 import org.jdesktop.swingx.renderer.DefaultTableRenderer
 import javax.swing.table.AbstractTableModel
 
-class CacheModel(val entries: List<CacheEntry>) : AbstractTableModel() {
+class CacheModel(private val entries: List<CacheEntry>) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = CacheColumns[column].header
     override fun getRowCount(): Int = entries.size
     override fun getColumnCount(): Int = size
@@ -24,7 +24,7 @@ class CacheModel(val entries: List<CacheEntry>) : AbstractTableModel() {
             column = {
                 cellRenderer = DefaultTableRenderer(Any?::toString)
             },
-            value = CacheEntry::id
+            value = CacheEntry::id,
         )
         val SchemaId by column { it.schemaId }
         val Timestamp by column { it.timestamp }
@@ -34,7 +34,7 @@ class CacheModel(val entries: List<CacheEntry>) : AbstractTableModel() {
             column = {
                 isVisible = false
             },
-            value = CacheEntry::schemaName
+            value = CacheEntry::schemaName,
         )
     }
 }
