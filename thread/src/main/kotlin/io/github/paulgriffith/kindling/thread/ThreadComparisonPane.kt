@@ -20,14 +20,16 @@ import io.github.paulgriffith.kindling.utils.tag
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
 import org.jdesktop.swingx.JXTaskPaneContainer
+import java.awt.Color
 import java.awt.Desktop
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.text.NumberFormat
+import java.text.DecimalFormat
 import java.util.EventListener
 import javax.swing.JCheckBoxMenuItem
 import javax.swing.JFrame
 import javax.swing.JPanel
+import javax.swing.UIManager
 import javax.swing.event.EventListenerList
 import javax.swing.event.HyperlinkEvent
 import javax.swing.text.html.HTMLEditorKit
@@ -85,7 +87,26 @@ class ThreadComparisonPane(
         threads.firstOrNull { it != null }?.let {
             header.setText(it)
         }
+
+        val moreThanOneThread = threads.filterNotNull().size > 1
+
+        val highestCpu = if (moreThanOneThread) {
+            val cpuUsages = threads.map { it?.cpuUsage ?: 0.0 }
+            cpuUsages.max().takeIf { maxVal ->
+                cpuUsages.count { it == maxVal } == 1
+            }
+        } else null
+
+        val largestDepth = if (moreThanOneThread) {
+            val sizes = threads.map { it?.stacktrace?.size ?: 0 }
+            sizes.max().takeIf { maxVal ->
+                sizes.count { it == maxVal } == 1
+            }
+        } else null
+
         for ((container, thread) in threadContainers.zip(threads)) {
+            container.highlightCpu = highestCpu != null && thread?.cpuUsage == highestCpu
+            container.highlightStacktrace = largestDepth != null && thread?.stacktrace?.size == largestDepth
             container.thread = thread
         }
     }
@@ -248,6 +269,9 @@ class ThreadComparisonPane(
                 updateThreadInfo()
             }
 
+        var highlightCpu: Boolean = false
+        var highlightStacktrace: Boolean = true
+
         private val titleLabel = FlatLabel()
         private val detailsButton = FlatButton().apply {
             icon = detailIcon
@@ -294,15 +318,20 @@ class ThreadComparisonPane(
         private fun updateThreadInfo() {
             isVisible = thread != null || isShowNulls
 
-            // Update label text
             titleLabel.text = buildString {
                 tag("html") {
                     tag("div") {
                         tag("b", (thread?.state?.toString() ?: "NO THREAD"))
                         append(" - ")
-                        append(percent.format((thread?.cpuUsage ?: 0.0) / 100))
+                        append(percent.format(thread?.cpuUsage ?: 0.0))
                     }
                 }
+            }
+
+            titleLabel.foreground = if (highlightCpu) {
+                threadHighlightColor
+            } else {
+                UIManager.getColor("Label.foreground")
             }
 
             blockerButton.blocker = thread?.blocker?.owner
@@ -358,6 +387,7 @@ class ThreadComparisonPane(
                                 text
                             }
                         }
+                    isSpecial = highlightStacktrace
                 }
             }
         }
@@ -367,9 +397,12 @@ class ThreadComparisonPane(
         private val blockedIcon = FlatSVGIcon("icons/bx-block.svg").derive(12, 12)
         private val detailIcon = FlatSVGIcon("icons/bx-link-external.svg").derive(12, 12)
 
-        private val percent = NumberFormat.getPercentInstance()
+        private val percent = DecimalFormat("0.000'%'")
 
-        private const val SHOW_NULL_THREADS_DEFAULT = true
+        private const val SHOW_NULL_THREADS_DEFAULT = false
         private const val SHOW_EMPTY_VALUES_DEFAULT = false
+
+        private val threadHighlightColor: Color
+            get() = UIManager.getColor("Component.warning.focusedBorderColor")
     }
 }
