@@ -90,11 +90,17 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
             "txt" to SYNTAX_STYLE_NONE,
             "md" to SYNTAX_STYLE_NONE,
             "p7b" to SYNTAX_STYLE_NONE,
+            "log" to SYNTAX_STYLE_NONE,
         )
 
         private val KNOWN_FILENAMES = setOf(
             "README",
             ".uuid",
+            "wrapper.log.1",
+            "wrapper.log.2",
+            "wrapper.log.3",
+            "wrapper.log.4",
+            "wrapper.log.5",
         )
 
         fun isTextFile(path: Path) = path.extension in KNOWN_EXTENSIONS || path.name in KNOWN_FILENAMES

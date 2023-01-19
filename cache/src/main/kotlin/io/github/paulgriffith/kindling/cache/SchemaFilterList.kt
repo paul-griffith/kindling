@@ -7,7 +7,7 @@ import java.awt.Font.MONOSPACED
 import javax.swing.AbstractListModel
 import javax.swing.DefaultListSelectionModel
 
-class SchemaModel(private val data: List<SchemaRecord>) : AbstractListModel<Any>() {
+class SchemaModel(data: List<SchemaRecord>) : AbstractListModel<Any>() {
     private val comparator: Comparator<SchemaRecord> = compareBy(nullsFirst()) { it.id }
     private val values = data.sortedWith(comparator)
 
@@ -22,41 +22,26 @@ class SchemaModel(private val data: List<SchemaRecord>) : AbstractListModel<Any>
             values[index - 1]
         }
     }
-
-    fun getSchemaRecordAt(index: Int): SchemaRecord {
-        require(index > 0)
-        return values[index - 1]
-    }
-
-    fun indexOf(value: SchemaRecord): Int {
-        val indexOf = values.indexOf(value)
-        return if (indexOf >= 0) {
-            indexOf + 1
-        } else {
-            -1
-        }
-    }
 }
 
 class SchemaFilterList(modelData: List<SchemaRecord>) : CheckBoxList(SchemaModel(modelData)) {
-
     init {
         selectionModel = DefaultListSelectionModel()
         isClickInCheckBoxOnly = true
         visibleRowCount = 0
 
+        val txGroupRegex = """(.*)\{.*}""".toRegex()
+
         cellRenderer = listCellRenderer<Any?> { _, schemaEntry, _, _, _ ->
             text = when (schemaEntry) {
                 is SchemaRecord -> {
-                    val txGroupRegex = """(.*)\{.*\}""".toRegex()
                     buildString {
+                        append("%4d".format(schemaEntry.id))
                         val name = txGroupRegex.find(schemaEntry.name)?.groups?.get(1)?.value ?: schemaEntry.name
-                        val schemaIdAndName = "${"%4d".format(schemaEntry.id)}: $name"
-
-                        append(schemaIdAndName)
+                        append(": ").append(name)
 
                         when (val size = schemaEntry.errors.size) {
-                            0 -> return@buildString
+                            0 -> Unit
                             1 -> append(" ($size error. Click to view.)")
                             else -> append(" ($size errors. Click to view.)")
                         }
@@ -64,14 +49,9 @@ class SchemaFilterList(modelData: List<SchemaRecord>) : CheckBoxList(SchemaModel
                 }
                 else -> schemaEntry.toString()
             }
-            font = Font.decode(MONOSPACED).deriveFont(14.0F)
+            font = Font(MONOSPACED, Font.PLAIN, 14)
         }
         selectAll()
-    }
-
-    fun select(value: SchemaRecord) {
-        val rowToSelect = model.indexOf(value)
-        checkBoxListSelectionModel.setSelectionInterval(rowToSelect, rowToSelect)
     }
 
     override fun getModel() = super.getModel() as SchemaModel

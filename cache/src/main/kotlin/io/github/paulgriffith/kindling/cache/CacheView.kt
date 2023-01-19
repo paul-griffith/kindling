@@ -16,6 +16,7 @@ import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.getValue
+import io.github.paulgriffith.kindling.utils.jFrame
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
 import io.github.paulgriffith.kindling.utils.transpose
@@ -29,13 +30,12 @@ import org.jdesktop.swingx.JXTable
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.ObjectInputStream
+import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.PreparedStatement
 import java.util.zip.GZIPInputStream
 import javax.swing.Icon
-import javax.swing.JButton
-import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JSplitPane
 import javax.swing.SwingConstants
@@ -104,116 +104,101 @@ class CacheView(private val path: Path) : ToolPanel() {
         "SELECT data FROM datastore_data WHERE id = ?",
     )
 
-    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
-    @Language("HSQLDB")
-    private val tableQuery: PreparedStatement = connection.prepareStatement(
-        "SELECT id, schemaid, t_stamp, attemptcount, data_count FROM datastore_data",
-    )
-
-    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
-    @Language("HSQLDB")
-    private val schemaQuery: PreparedStatement = connection.prepareStatement(
-        "SELECT id, signature FROM datastore_schema"
-    )
-
-    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
-    @Language("HSQLDB")
-    private val errorQuery: PreparedStatement = connection.prepareStatement(
-        "SELECT schemaid, message FROM datastore_errors"
-    )
-
-    private fun queryForData(id: Int): Detail {
+    private fun queryForData(id: Int): ByteArray {
         dataQuery.apply {
             setInt(1, id)
             executeQuery().use { resultSet ->
                 resultSet.next()
-                resultSet.getBytes(1).let { binary ->
-                    val decompressed = GZIPInputStream(binary.inputStream()).readAllBytes()
-                    return deserialize(decompressed)
-                }
+                val bytes = resultSet.getBytes(1)
+                return GZIPInputStream(bytes.inputStream()).readAllBytes()
             }
         }
     }
 
-    private val schemaRecords = run {
-        val schemata = schemaQuery.use { statement ->
-            statement.executeQuery().toList { rs ->
-                Pair(
-                    rs.getInt("ID"),
-                    rs.getString("SIGNATURE")
-                )
-            }
-        }
-        val schemaErrors: List<Pair<Int, String>> = errorQuery.use { statement ->
-            statement.executeQuery().toList { rs ->
-                Pair(
-                    rs.getInt("SCHEMAID"),
-                    rs.getString("MESSAGE")
-                )
-            }
-        }
-
-        schemata.map { (id, name) ->
-            SchemaRecord(
-                id,
-                name,
-                schemaErrors.filter { (errId, _) ->
-                    errId == id
-                }.map {(_, message) -> message }
+    @Language("HSQLDB")
+    private val schemaRecords = connection.prepareStatement(
+        """
+            SELECT
+                schema.id,
+                schema.signature,
+                errors.message
+            FROM datastore_schema schema
+                LEFT JOIN datastore_errors errors
+                ON errors.schemaid = schema.id
+        """.trimMargin(),
+    ).use { statement ->
+        statement.executeQuery().toList { rs ->
+            Triple(
+                rs.getInt("id"),
+                rs.getString("signature"),
+                rs.getString("message"),
             )
         }
     }
+        .groupBy { it.first }
+        .map { (id, rows) ->
+            SchemaRecord(
+                id = id,
+                name = rows.first().second,
+                errors = rows.map { it.third },
+            )
+        }
 
-    private val data: List<CacheEntry> = tableQuery.use { statement ->
+    @Language("HSQLDB")
+    private val data: List<CacheEntry> = connection.prepareStatement(
+        """
+            SELECT
+                data.id,
+                data.schemaid,
+                schema.signature AS name,
+                data.t_stamp,
+                data.attemptcount,
+                data.data_count
+            FROM
+                datastore_data data
+                LEFT JOIN datastore_schema schema ON schema.id = data.schemaid
+        """.trimIndent(),
+    ).use { statement ->
         statement.executeQuery().toList { resultSet ->
             CacheEntry(
-                id = resultSet.getInt("ID"),
-                schemaId = resultSet.getInt("SCHEMAID"),
-                schemaName = schemaRecords.find {
-                    it.id == resultSet.getInt("SCHEMAID")
-                }?.name ?: "null",
-                timestamp = resultSet.getString("T_STAMP"),
-                attemptCount = resultSet.getInt("ATTEMPTCOUNT"),
-                dataCount = resultSet.getInt("DATA_COUNT"),
+                id = resultSet.getInt("id"),
+                schemaId = resultSet.getInt("schemaid"),
+                schemaName = resultSet.getString("name") ?: "null",
+                timestamp = resultSet.getString("t_stamp"),
+                attemptCount = resultSet.getInt("attemptcount"),
+                dataCount = resultSet.getInt("data_count"),
             )
         }
-    }
-
-    private fun tableSchemaFilter(entry: CacheEntry): Boolean {
-        return schemaRecords.find { it.id == entry.schemaId } in schemaList.checkBoxListSelectedValues
     }
 
     private fun SchemaRecord.toDetail(): Detail {
         return Detail(
-            title = "$name | ID = $id",
-            body = errors.ifEmpty { listOf("No errors associated with this schema.") }
+            title = name,
+            body = errors.ifEmpty { listOf("No errors associated with this schema.") },
+            details = mapOf(
+                "ID" to id.toString(),
+            ),
         )
     }
 
-    private val details = DetailsPane().apply {
-        isAllExtraButtonsEnabled = false
-    }
+    private val details = DetailsPane()
     private val deserializedCache = mutableMapOf<Int, Detail>()
     private val model = CacheModel(data)
     private val table = ReifiedJXTable(model, CacheModel)
-    private val schemaList = SchemaFilterList(schemaRecords).apply {
-        selectionModel.addListSelectionListener {
-            details.events = selectedValuesList.filterIsInstance<SchemaRecord>().map { it.toDetail() }
-            details.isAllExtraButtonsEnabled = false
-        }
-    }
+    private val schemaList = SchemaFilterList(schemaRecords)
 
     private val settingsMenu = FlatPopupMenu().apply {
         add(
-            Action("Toggle show Schema Records") {
+            Action("Show Schema Records") {
                 val isVisible = mainSplitPane.bottomComponent.isVisible
                 mainSplitPane.bottomComponent.isVisible = !isVisible
                 if (!isVisible) {
                     mainSplitPane.setDividerLocation(0.75)
                 }
-            }
+            },
         )
     }
+
     private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
         addMouseListener(
             object : MouseAdapter() {
@@ -229,53 +214,56 @@ class CacheView(private val path: Path) : ToolPanel() {
         JSplitPane(
             SwingConstants.VERTICAL,
             FlatScrollPane(table),
-            details
+            details,
         ).apply {
             resizeWeight = 0.5
         },
-        FlatScrollPane(schemaList)
+        FlatScrollPane(schemaList),
     ).apply {
         resizeWeight = 0.75
     }
 
-    private fun deserialize(data: ByteArray): Detail {
-        return try {
-            // Try to decode the thing directly
-            when (val obj = ObjectInputStream(data.inputStream()).readObject()) {
-                is BasicHistoricalRecord -> obj.toDetail()
-                is ScanclassHistorySet -> obj.toDetail()
-                is Array<*> -> {
-                    // 2D array
-                    if (obj.firstOrNull()?.javaClass?.isArray == true) {
-                        Detail(
-                            title = "Java 2D Array",
-                            body = obj.map { row ->
-                                (row as Array<*>).contentToString()
-                            },
-                        )
-                    } else {
-                        Detail(
-                            title = "Java Array",
-                            body = obj.map(Any?::toString),
-                        )
-                    }
-                }
-
-                else -> Detail(
-                    title = obj::class.java.name,
-                    message = obj.toString(),
+    private fun Serializable.toDetail(): Detail = when (this) {
+        is BasicHistoricalRecord -> toDetail()
+        is ScanclassHistorySet -> toDetail()
+        is Array<*> -> {
+            // 2D array
+            if (firstOrNull()?.javaClass?.isArray == true) {
+                Detail(
+                    title = "Java 2D Array",
+                    body = map { row ->
+                        (row as Array<*>).contentToString()
+                    },
+                )
+            } else {
+                Detail(
+                    title = "Java Array",
+                    body = map(Any?::toString),
                 )
             }
-        } catch (e: ClassNotFoundException) {
-            // It's not serialized with a class in the public API, or some other problem;
-            // give up, and try to just dump the serialized data in a friendlier format
-            val serializationDumper = deser.SerializationDumper(data)
-
-            Detail(
-                title = "Serialization dump of ${data.size} bytes:",
-                body = serializationDumper.parseStream().lines(),
-            )
         }
+
+        else -> Detail(
+            title = this::class.java.name,
+            message = toString(),
+        )
+    }
+//    } catch (e: ClassNotFoundException) {
+//        // It's not serialized with a class in the public API, or some other problem;
+//        // give up, and try to just dump the serialized data in a friendlier format
+//        val serializationDumper = deser.SerializationDumper(data)
+//
+//        Detail(
+//            title = "Serialization dump of ${data.size} bytes:",
+//            body = serializationDumper.parseStream().lines(),
+//        )
+//    }
+
+    /**
+     * @throws ClassNotFoundException
+     */
+    private fun ByteArray.deserialize(): Serializable {
+        return ObjectInputStream(inputStream()).readObject() as Serializable
     }
 
     private fun ScanclassHistorySet.toDetail(): Detail {
@@ -332,7 +320,14 @@ class CacheView(private val path: Path) : ToolPanel() {
 
         add(mainSplitPane, "push, grow, span")
 
-        details.addButton("2dArray", FlatSVGIcon("icons/bx-detail.svg")) {
+        schemaList.selectionModel.addListSelectionListener {
+            details.events = schemaList.selectedValuesList.filterIsInstance<SchemaRecord>().map { it.toDetail() }
+        }
+
+        val openArrayFrame = Action(
+            "2dArray",
+            icon = FlatSVGIcon("icons/bx-detail.svg"),
+        ) {
             val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
             /*
             * A few assumptions are made:
@@ -348,18 +343,18 @@ class CacheView(private val path: Path) : ToolPanel() {
             don't allow that.
             */
             val id = table.model[table.selectedRow, CacheModel.Id]
-            val lines = deserializedCache[id]?.body ?: return@addButton
+            val lines = deserializedCache[id]?.body ?: return@Action
             val data = transpose(
                 Array(lines.size) { i ->
                     val rowString = lines[i].text
                     val rowList = rowString.substring(1, rowString.length - 1).split(", ")
                     rowList.toTypedArray()
-                }
+                },
             )
 
             // Get table name and column names with schemaName
             val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
-            val matcher = columnNameRegex.find(schemaName) ?: return@addButton
+            val matcher = columnNameRegex.find(schemaName) ?: return@Action
             val tableName by matcher.groups
             val columnsString by matcher.groups
             val columns = columnsString.value.split(",").toTypedArray()
@@ -367,16 +362,12 @@ class CacheView(private val path: Path) : ToolPanel() {
             // Use data and columns to create a simple table model
             val model = DefaultTableModel(data, columns) // TODO: Add export functionality? Not sure if useful
 
-            JFrame(tableName.value).apply {
-                setSize(900, 500)
-                isResizable = true
-                setLocationRelativeTo(null)
-                contentPane.add(
-                    FlatScrollPane(JXTable(model))
-                )
-                isVisible = true
+            jFrame(tableName.value, 900, 500) {
+                contentPane = FlatScrollPane(JXTable(model))
             }
         }
+
+        details.actions.add(openArrayFrame)
 
         table.selectionModel.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) {
@@ -384,11 +375,22 @@ class CacheView(private val path: Path) : ToolPanel() {
                     .map { index -> data[index].id }
                     .map { id ->
                         deserializedCache.getOrPut(id) {
-                            queryForData(id)
+                            val bytes = queryForData(id)
+                            try {
+                                bytes.deserialize().toDetail()
+                            } catch (e: ClassNotFoundException) {
+                                // It's not serialized with a class in the public API, or some other problem;
+                                // give up, and try to just dump the serialized data in a friendlier format
+                                val serializationDumper = deser.SerializationDumper(bytes)
+
+                                Detail(
+                                    title = "Serialization dump of ${data.size} bytes:",
+                                    body = serializationDumper.parseStream().lines(),
+                                )
+                            }
                         }
                     }
-                details.isAllExtraButtonsEnabled = details.events.size == 1 &&
-                                                details.events.first().title == "Java 2D Array"
+                openArrayFrame.isEnabled = details.events.singleOrNull()?.title == "Java 2D Array"
             }
         }
 
@@ -399,7 +401,9 @@ class CacheView(private val path: Path) : ToolPanel() {
 
     private fun updateData() {
         BACKGROUND.launch {
-            val filteredData = data.filter(::tableSchemaFilter)
+            val filteredData = data.filter { entry ->
+                schemaRecords.find { it.id == entry.schemaId } in schemaList.checkBoxListSelectedValues
+            }
             EDT_SCOPE.launch {
                 table.model = CacheModel(filteredData)
             }

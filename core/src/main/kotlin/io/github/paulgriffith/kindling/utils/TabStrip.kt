@@ -1,9 +1,7 @@
 package io.github.paulgriffith.kindling.utils
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
-import io.github.paulgriffith.kindling.core.Kindling
-import java.awt.Component
-import java.awt.Dimension
+import java.awt.Container
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JFrame
@@ -94,12 +92,9 @@ class TabStrip : FlatTabbedPane() {
         }
     }
 
-    private fun <T> createPopupFrame(tab: T): JFrame where T : Component, T : FloatableComponent {
-        return JFrame(tab.name).apply {
-            preferredSize = Dimension(1024, 768)
-            iconImage = Kindling.frameIcon
-            defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
-            add(tab)
+    private fun <T> createPopupFrame(tab: T): JFrame where T : Container, T : FloatableComponent {
+        return jFrame(tab.name, 1024, 768) {
+            contentPane = tab
 
             jMenuBar = JMenuBar().apply {
                 add(
@@ -118,7 +113,6 @@ class TabStrip : FlatTabbedPane() {
                     },
                 )
             }
-            pack()
         }
     }
 }
