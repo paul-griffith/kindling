@@ -69,6 +69,11 @@ class ThreadComparisonPane(
                 container.isShowEmptyValues = event.newValue as Boolean
             }
         }
+        header.addPropertyChangeListener("enableHyperlinks") { event ->
+            for (container in threadContainers) {
+                container.showHyperlinks = event.newValue as Boolean
+            }
+        }
 
         add(header, "growx, spanx")
         add(
@@ -166,6 +171,13 @@ class ThreadComparisonPane(
                         this@HeaderPanel.firePropertyChange("showEmptyValues", !isSelected, isSelected)
                     }
                 },
+            )
+            add(
+                JCheckBoxMenuItem("Enable Hyperlinks", ENABLE_HYPERLINKS_DEFAULT).apply {
+                    addActionListener {
+                        this@HeaderPanel.firePropertyChange("enableHyperlinks", !isSelected, isSelected)
+                    }
+                }
             )
         }
         private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
@@ -271,6 +283,11 @@ class ThreadComparisonPane(
 
         var highlightCpu: Boolean = false
         var highlightStacktrace: Boolean = true
+        var showHyperlinks: Boolean = ENABLE_HYPERLINKS_DEFAULT
+            set(value) {
+                field = value
+                updateThreadInfo()
+            }
 
         private val titleLabel = FlatLabel()
         private val detailsButton = FlatButton().apply {
@@ -381,7 +398,7 @@ class ThreadComparisonPane(
                             prefix = "<html><pre>",
                             postfix = "</pre></html>",
                         ) { (text, link) ->
-                            if (link != null) {
+                            if (link != null && showHyperlinks) {
                                 """<a href="$link">$text</a>"""
                             } else {
                                 text
@@ -401,6 +418,7 @@ class ThreadComparisonPane(
 
         private const val SHOW_NULL_THREADS_DEFAULT = false
         private const val SHOW_EMPTY_VALUES_DEFAULT = false
+        private const val ENABLE_HYPERLINKS_DEFAULT = true
 
         private val threadHighlightColor: Color
             get() = UIManager.getColor("Component.warning.focusedBorderColor")

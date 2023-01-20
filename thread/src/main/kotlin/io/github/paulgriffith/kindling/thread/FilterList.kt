@@ -7,9 +7,11 @@ import java.text.DecimalFormat
 import javax.swing.AbstractListModel
 import javax.swing.ListModel
 
-class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
-    private val comparator: Comparator<Map.Entry<String?, Int>> = compareByDescending(nullsFirst()) { it.value }
-    private val values = rawData.entries.sortedWith(comparator).map { it.key }
+class FilterModel(
+    val rawData: Map<String?, Int>,
+    comparator: Comparator<Map.Entry<String?, Int>> = DEFAULT_COMPARATOR
+) : AbstractListModel<Any>() {
+    private var values = rawData.entries.sortedWith(comparator).map { it.key }
 
     override fun getSize(): Int = values.size + 1
     override fun getElementAt(index: Int): Any? {
@@ -27,6 +29,17 @@ class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
         } else {
             -1
         }
+    }
+
+    companion object {
+        val byNameAsc: Comparator<Map.Entry<String?, Int>> =
+            compareBy(nullsFirst(String.CASE_INSENSITIVE_ORDER)) { it.key }
+        val byNameDesc: Comparator<Map.Entry<String?, Int>> =
+            compareByDescending(nullsFirst(String.CASE_INSENSITIVE_ORDER)) { it.key }
+        val byCountAsc: Comparator<Map.Entry<String?, Int>> = compareBy { it.value }
+        val byCountDesc: Comparator<Map.Entry<String?, Int>> = compareByDescending { it.value }
+
+        private val DEFAULT_COMPARATOR = byCountDesc
     }
 }
 

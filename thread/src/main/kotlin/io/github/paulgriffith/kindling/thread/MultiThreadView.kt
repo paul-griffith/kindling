@@ -9,6 +9,10 @@ import io.github.paulgriffith.kindling.core.MultiClipboardTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
+import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byCountAsc
+import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byCountDesc
+import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byNameAsc
+import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byNameDesc
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
@@ -37,12 +41,15 @@ import java.awt.Desktop
 import java.awt.Rectangle
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.swing.ButtonGroup
+import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JMenu
 import javax.swing.JMenuBar
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
+import javax.swing.JToggleButton
 import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.UIManager
@@ -62,6 +69,11 @@ class MultiThreadView(
     private val systemList = FilterList("Unassigned")
     private val stateList = FilterList("")
     private val searchField = JXSearchField("Search")
+    private var filterComparator: Comparator<Map.Entry<String?, Int>> = byCountDesc
+        set(value) {
+            poolList.model = FilterModel(poolList.model.rawData, value)
+            systemList.model = FilterModel(systemList.model.rawData, value)
+        }
 
     private var visibleThreadDumps: List<ThreadDump?> = emptyList()
         set(value) {
@@ -74,9 +86,9 @@ class MultiThreadView(
             field = value
             val allThreads = value.flatten().filterNotNull()
             if (allThreads.isNotEmpty()) {
-                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
+                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount(), filterComparator)
                 stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
-                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
+                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount(), filterComparator)
             }
             if (initialized) {
                 updateData()
@@ -338,6 +350,16 @@ class MultiThreadView(
             }
         }
 
+        val buttonGroup = ButtonGroup()
+
+        val defaultButton = sortButton(NUMERIC_SORT_DESCENDING, "Sort by count (descending)", byCountDesc)
+        val sortButtons = listOf(
+            defaultButton,
+            sortButton(NUMERIC_SORT_ASCENDING, "Sort by count (ascending)", byCountAsc),
+            sortButton(NATURAL_SORT_ASCENDING, "Sort A-Z", byNameAsc),
+            sortButton(NATURAL_SORT_DESCENDING, "Sort Z-A", byNameDesc),
+        )
+
         add(JLabel("Version: ${threadDumps[0].version}"))
         add(threadDumpCheckboxList, "gapleft 20px, pushx, growx, shpx 200")
         add(exportButton, "gapright 8")
@@ -346,10 +368,18 @@ class MultiThreadView(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill, flowy")).apply {
+                    add(
+                        JPanel(MigLayout("fill")).apply {
+                            for (button in sortButtons) {
+                                add(button, "cell 0 0")
+                                buttonGroup.add(button)
+                            }
+                        }, "w 220"
+                    )
                     add(FlatScrollPane(stateList), "w 220, h 100!")
                     add(FlatScrollPane(systemList), "w 220, growy")
                     add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
-                    add(FlatScrollPane(mainTable), "newline, spany 3, pushx, grow")
+                    add(FlatScrollPane(mainTable), "newline, spany 4, pushx, grow")
                 },
                 comparison,
             ).apply {
@@ -358,11 +388,25 @@ class MultiThreadView(
             },
             "push, grow, span",
         )
+
+        buttonGroup.setSelected(defaultButton.model, true)
     }
 
     private val initialized = true
 
     override val icon = MultiThreadViewer.icon
+
+    private fun sortButton(
+        icon: Icon,
+        description: String,
+        comparator: Comparator<Map.Entry<String?, Int>>): JToggleButton {
+        return JToggleButton(
+            Action(
+                description = description,
+                icon = icon,
+            ) { filterComparator = comparator }
+        )
+    }
 
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.addSeparator()
@@ -384,6 +428,11 @@ class MultiThreadView(
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
+
+        private val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg")
+        private val NATURAL_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-z-a.svg")
+        private val NUMERIC_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-up.svg")
+        private val NUMERIC_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-down.svg")
 
         private fun List<ThreadDump?>.toLifespanList(): List<ThreadLifespan> {
             val idsToLifespans = mutableMapOf<Int, Array<Thread?>>()
