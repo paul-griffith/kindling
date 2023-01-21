@@ -1,15 +1,24 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.jidesoft.swing.CheckBoxList
+import com.jidesoft.swing.ListSearchable
 import io.github.paulgriffith.kindling.utils.NoSelectionModel
 import io.github.paulgriffith.kindling.utils.listCellRenderer
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
 import javax.swing.ListModel
 
+typealias FilterComparator = Comparator<Map.Entry<String?, Int>>
+
 class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
-    private val comparator: Comparator<Map.Entry<String?, Int>> = compareByDescending(nullsFirst()) { it.value }
-    private val values = rawData.entries.sortedWith(comparator).map { it.key }
+    var comparator: FilterComparator = byCountDesc
+        set(value) {
+            values = rawData.entries.sortedWith(comparator).map { it.key }
+            fireContentsChanged(this, 0, size)
+            field = value
+        }
+
+    private var values = rawData.entries.sortedWith(comparator).map { it.key }
 
     override fun getSize(): Int = values.size + 1
     override fun getElementAt(index: Int): Any? {
@@ -27,6 +36,13 @@ class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
         } else {
             -1
         }
+    }
+
+    companion object {
+        val byNameAsc: FilterComparator = compareBy(nullsFirst(String.CASE_INSENSITIVE_ORDER)) { it.key }
+        val byNameDesc: FilterComparator = byNameAsc.reversed()
+        val byCountAsc: FilterComparator = compareBy { it.value }
+        val byCountDesc: FilterComparator = byCountAsc.reversed()
     }
 }
 
@@ -47,6 +63,20 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
                 else -> value.toString()
             }
         }
+
+        object : ListSearchable(this) {
+            init {
+                isCaseSensitive = false
+                isRepeats = true
+                isCountMatch = true
+            }
+
+            override fun convertElementToString(element: Any?): String = element.toString()
+
+            override fun setSelectedIndex(index: Int, incremental: Boolean) {
+                checkBoxListSelectedIndex = index
+            }
+        }
     }
 
     fun select(value: String) {
@@ -59,21 +89,25 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
     override fun setModel(model: ListModel<*>) {
         require(model is FilterModel)
         val currentSelection = checkBoxListSelectedValues
-        val selection = if (currentSelection.isEmpty()) {
+        lastSelection = if (currentSelection.isEmpty()) {
             lastSelection
         } else {
             currentSelection
         }
-        lastSelection = selection
 
-        checkBoxListSelectionModel.valueIsAdjusting = true
-        super.setModel(model)
-        total = model.rawData.values.sum()
-        percentages = model.rawData.mapValues { (_, count) ->
-            val percentage = count.toFloat() / total
-            DecimalFormat.getPercentInstance().format(percentage)
+        try {
+            checkBoxListSelectionModel.valueIsAdjusting = true
+
+            super.setModel(model)
+
+            total = model.rawData.values.sum()
+            percentages = model.rawData.mapValues { (_, count) ->
+                val percentage = count.toFloat() / total
+                DecimalFormat.getPercentInstance().format(percentage)
+            }
+            addCheckBoxListSelectedValues(lastSelection)
+        } finally {
+            checkBoxListSelectionModel.valueIsAdjusting = false
         }
-        addCheckBoxListSelectedValues(selection)
-        checkBoxListSelectionModel.valueIsAdjusting = false
     }
 }
