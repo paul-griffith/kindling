@@ -19,14 +19,12 @@ import io.github.paulgriffith.kindling.utils.getValue
 import io.github.paulgriffith.kindling.utils.jFrame
 import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import io.github.paulgriffith.kindling.utils.toList
-import io.github.paulgriffith.kindling.utils.transpose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.lingala.zip4j.ZipFile
 import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
-import org.jdesktop.swingx.JXTable
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.ObjectInputStream
@@ -46,6 +44,8 @@ import kotlin.io.path.copyToRecursively
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
+
+private const val TRANSACTION_GROUP_DATA = "Transaction Group Data"
 
 @OptIn(ExperimentalPathApi::class)
 class CacheView(private val path: Path) : ToolPanel() {
@@ -115,6 +115,7 @@ class CacheView(private val path: Path) : ToolPanel() {
         }
     }
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val schemaRecords = connection.prepareStatement(
         """
@@ -144,6 +145,7 @@ class CacheView(private val path: Path) : ToolPanel() {
             )
         }
 
+    @Suppress("SqlNoDataSourceInspection", "SqlResolve")
     @Language("HSQLDB")
     private val data: List<CacheEntry> = connection.prepareStatement(
         """
@@ -230,7 +232,7 @@ class CacheView(private val path: Path) : ToolPanel() {
             // 2D array
             if (firstOrNull()?.javaClass?.isArray == true) {
                 Detail(
-                    title = "Java 2D Array",
+                    title = TRANSACTION_GROUP_DATA,
                     body = map { row ->
                         (row as Array<*>).contentToString()
                     },
@@ -248,16 +250,6 @@ class CacheView(private val path: Path) : ToolPanel() {
             message = toString(),
         )
     }
-//    } catch (e: ClassNotFoundException) {
-//        // It's not serialized with a class in the public API, or some other problem;
-//        // give up, and try to just dump the serialized data in a friendlier format
-//        val serializationDumper = deser.SerializationDumper(data)
-//
-//        Detail(
-//            title = "Serialization dump of ${data.size} bytes:",
-//            body = serializationDumper.parseStream().lines(),
-//        )
-//    }
 
     /**
      * @throws ClassNotFoundException
@@ -310,61 +302,56 @@ class CacheView(private val path: Path) : ToolPanel() {
         )
     }
 
+    private val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
+
+    private val openArrayFrame = Action(
+        name = TRANSACTION_GROUP_DATA,
+        icon = FlatSVGIcon("icons/bx-detail.svg"),
+    ) {
+        /*
+            * A few assumptions are made:
+            * 1. The currently selected table row matches the entry in the Details pane.
+            * 2. There is only row selected
+            *
+            * We need the ID to get the table data and the schemaName to get the table columns and table name
+        */
+        val id = table.model[table.selectedRow, CacheModel.Id]
+        val raw = queryForData(id).deserialize()
+        val originalData = raw as Array<*>
+        val cols = (originalData[0] as Array<*>).size
+        val rows = originalData.size
+        val data = Array(cols) { j ->
+            Array(rows) { i ->
+                (originalData[i] as Array<*>)[j]
+            }
+        }
+
+        // Get table name and column names with schemaName
+        val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
+        val matcher = columnNameRegex.find(schemaName) ?: return@Action
+        val tableName by matcher.groups
+        val columnsString by matcher.groups
+        val columns = columnsString.value.split(",").toTypedArray()
+
+        // Use data and columns to create a simple table model
+        val model = DefaultTableModel(data, columns)
+
+        jFrame(tableName.value, 900, 500) {
+            contentPane = FlatScrollPane(ReifiedJXTable(model))
+        }
+    }
+
     init {
         name = path.name
         toolTipText = path.toString()
-        val numEntriesLabel = JLabel("${data.size} ${if (data.size == 1) "entry" else "entries"}")
 
-        add(numEntriesLabel)
+        add(JLabel("${data.size} ${if (data.size == 1) "entry" else "entries"}"))
         add(settings, "right, wrap")
 
         add(mainSplitPane, "push, grow, span")
 
         schemaList.selectionModel.addListSelectionListener {
             details.events = schemaList.selectedValuesList.filterIsInstance<SchemaRecord>().map { it.toDetail() }
-        }
-
-        val openArrayFrame = Action(
-            "2dArray",
-            icon = FlatSVGIcon("icons/bx-detail.svg"),
-        ) {
-            val columnNameRegex = """(?<tableName>.*)\{(?<columnsString>.*)}""".toRegex()
-            /*
-            * A few assumptions are made:
-            * 1. The currently selected table row matches the entry in the Details pane.
-            * 2. There is only row selected
-            * 3. The entry is already in the cache, since it's been selected.
-            *
-            * We need the ID to get the table data and the schemaName to get the table columns and table name
-
-            Get data with ID.
-            Data is parsed from the array string stored in the Detail object.
-            We could alternatively get it from the DB and deserialize it again, but the existing functions
-            don't allow that.
-            */
-            val id = table.model[table.selectedRow, CacheModel.Id]
-            val lines = deserializedCache[id]?.body ?: return@Action
-            val data = transpose(
-                Array(lines.size) { i ->
-                    val rowString = lines[i].text
-                    val rowList = rowString.substring(1, rowString.length - 1).split(", ")
-                    rowList.toTypedArray()
-                },
-            )
-
-            // Get table name and column names with schemaName
-            val schemaName = table.model[table.selectedRow, CacheModel.SchemaName]
-            val matcher = columnNameRegex.find(schemaName) ?: return@Action
-            val tableName by matcher.groups
-            val columnsString by matcher.groups
-            val columns = columnsString.value.split(",").toTypedArray()
-
-            // Use data and columns to create a simple table model
-            val model = DefaultTableModel(data, columns) // TODO: Add export functionality? Not sure if useful
-
-            jFrame(tableName.value, 900, 500) {
-                contentPane = FlatScrollPane(JXTable(model))
-            }
         }
 
         details.actions.add(openArrayFrame)
@@ -390,7 +377,7 @@ class CacheView(private val path: Path) : ToolPanel() {
                             }
                         }
                     }
-                openArrayFrame.isEnabled = details.events.singleOrNull()?.title == "Java 2D Array"
+                openArrayFrame.isEnabled = details.events.singleOrNull()?.title == TRANSACTION_GROUP_DATA
             }
         }
 

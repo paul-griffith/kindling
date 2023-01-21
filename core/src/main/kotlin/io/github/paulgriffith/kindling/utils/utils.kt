@@ -111,16 +111,6 @@ fun Long.toFileSizeLabel(): String = when {
     }
 }
 
-inline fun <reified T> transpose(xs: Array<Array<T>>): Array<Array<T>> {
-    val cols = xs[0].size
-    val rows = xs.size
-    return Array(cols) { j ->
-        Array(rows) { i ->
-            xs[i][j]
-        }
-    }
-}
-
 operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>): MatchGroup {
     return requireNotNull(get(property.name))
 }
