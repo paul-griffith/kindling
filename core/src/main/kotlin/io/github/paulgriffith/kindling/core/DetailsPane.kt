@@ -51,7 +51,7 @@ class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout(
         icon = FlatSVGIcon("icons/bx-clipboard.svg"),
     ) {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        clipboard.setContents(StringSelection(initialEvents.toClipboardFormat()), null)
+        clipboard.setContents(StringSelection(events.toClipboardFormat()), null)
     }
 
     private val save = Action(
@@ -63,7 +63,7 @@ class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout(
             fileFilter = FileNameExtensionFilter("Text File", "txt")
             val save = showSaveDialog(this@DetailsPane)
             if (save == JFileChooser.APPROVE_OPTION) {
-                selectedFile.writeText(initialEvents.toClipboardFormat())
+                selectedFile.writeText(events.toClipboardFormat())
             }
         }
     }
@@ -97,7 +97,7 @@ class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout(
                 if (event.details.isNotEmpty()) {
                     append("&nbsp;<object ")
                     event.details.entries.joinTo(buffer = this, separator = " ") { (key, value) ->
-                        "data-$key = \"$value\""
+                        "$detailPrefix$key = \"$value\""
                     }
                     append("/>")
                 }
@@ -134,6 +134,8 @@ class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout(
     }
 }
 
+private const val detailPrefix = "data-"
+
 class DetailsEditorKit : HTMLEditorKit() {
     init {
         styleSheet.apply {
@@ -163,7 +165,9 @@ class DetailsEditorKit : HTMLEditorKit() {
                     return object : ComponentView(elem) {
                         override fun createComponent(): Component {
                             val details: Map<String, String> =
-                                elem.attributes.attributeNames.toList().filterIsInstance<String>()
+                                elem.attributes.attributeNames.asSequence()
+                                    .filterIsInstance<String>()
+                                    .map { it.removePrefix(detailPrefix) }
                                     .associateWith { elem.attributes.getAttribute(it) as String }
                             return DetailsIcon(details)
                         }
