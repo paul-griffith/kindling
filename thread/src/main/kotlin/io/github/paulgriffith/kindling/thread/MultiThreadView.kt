@@ -69,11 +69,6 @@ class MultiThreadView(
     private val systemList = FilterList("Unassigned")
     private val stateList = FilterList("")
     private val searchField = JXSearchField("Search")
-    private var filterComparator: Comparator<Map.Entry<String?, Int>> = byCountDesc
-        set(value) {
-            poolList.model = FilterModel(poolList.model.rawData, value)
-            systemList.model = FilterModel(systemList.model.rawData, value)
-        }
 
     private var visibleThreadDumps: List<ThreadDump?> = emptyList()
         set(value) {
@@ -86,9 +81,9 @@ class MultiThreadView(
             field = value
             val allThreads = value.flatten().filterNotNull()
             if (allThreads.isNotEmpty()) {
-                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount(), filterComparator)
                 stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
-                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount(), filterComparator)
+                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
+                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
             }
             if (initialized) {
                 updateData()
@@ -350,15 +345,15 @@ class MultiThreadView(
             }
         }
 
-        val buttonGroup = ButtonGroup()
+        val sortButtons = ButtonGroup().apply {
+            val countDescButton = sortButton(NUMERIC_SORT_DESCENDING, "Sort by count (descending)", byCountDesc)
+            add(countDescButton)
+            setSelected(countDescButton.model, true)
 
-        val defaultButton = sortButton(NUMERIC_SORT_DESCENDING, "Sort by count (descending)", byCountDesc)
-        val sortButtons = listOf(
-            defaultButton,
-            sortButton(NUMERIC_SORT_ASCENDING, "Sort by count (ascending)", byCountAsc),
-            sortButton(NATURAL_SORT_ASCENDING, "Sort A-Z", byNameAsc),
-            sortButton(NATURAL_SORT_DESCENDING, "Sort Z-A", byNameDesc),
-        )
+            add(sortButton(NUMERIC_SORT_ASCENDING, "Sort by count (ascending)", byCountAsc))
+            add(sortButton(NATURAL_SORT_ASCENDING, "Sort A-Z", byNameAsc))
+            add(sortButton(NATURAL_SORT_DESCENDING, "Sort Z-A", byNameDesc))
+        }
 
         add(JLabel("Version: ${threadDumps[0].version}"))
         add(threadDumpCheckboxList, "gapleft 20px, pushx, growx, shpx 200")
@@ -368,18 +363,15 @@ class MultiThreadView(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 JPanel(MigLayout("ins 0, fill, flowy")).apply {
-                    add(
-                        JPanel(MigLayout("fill")).apply {
-                            for (button in sortButtons) {
-                                add(button, "cell 0 0")
-                                buttonGroup.add(button)
-                            }
-                        }, "w 220"
-                    )
+                    val sortGroupEnumeration = sortButtons.elements
+                    add(sortGroupEnumeration.nextElement(), "split ${sortButtons.buttonCount}, flowx")
+                    for (element in sortGroupEnumeration) {
+                        add(element)
+                    }
                     add(FlatScrollPane(stateList), "w 220, h 100!")
                     add(FlatScrollPane(systemList), "w 220, growy")
                     add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
-                    add(FlatScrollPane(mainTable), "newline, spany 4, pushx, grow")
+                    add(FlatScrollPane(mainTable), "newline, spany, pushx, grow")
                 },
                 comparison,
             ).apply {
@@ -388,23 +380,22 @@ class MultiThreadView(
             },
             "push, grow, span",
         )
-
-        buttonGroup.setSelected(defaultButton.model, true)
     }
 
     private val initialized = true
 
     override val icon = MultiThreadViewer.icon
 
-    private fun sortButton(
-        icon: Icon,
-        description: String,
-        comparator: Comparator<Map.Entry<String?, Int>>): JToggleButton {
+    private fun sortButton(icon: Icon, description: String, comparator: FilterComparator): JToggleButton {
         return JToggleButton(
             Action(
                 description = description,
                 icon = icon,
-            ) { filterComparator = comparator }
+            ) {
+                stateList.model.comparator = comparator
+                poolList.model.comparator = comparator
+                systemList.model.comparator = comparator
+            },
         )
     }
 
@@ -517,6 +508,7 @@ object MultiThreadViewer : MultiClipboardTool {
     override fun open(paths: List<Path>): ToolPanel {
         return MultiThreadView(paths.sortedWith(compareBy(AlphanumComparator(), Path::name)))
     }
+
     override fun open(data: String): ToolPanel {
         val tempFile = Files.createTempFile("kindling", "cb")
         data.byteInputStream().use { threadDump ->

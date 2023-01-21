@@ -71,7 +71,7 @@ class ThreadComparisonPane(
         }
         header.addPropertyChangeListener("enableHyperlinks") { event ->
             for (container in threadContainers) {
-                container.showHyperlinks = event.newValue as Boolean
+                container.isHyperlinksEnabled = event.newValue as Boolean
             }
         }
 
@@ -145,7 +145,7 @@ class ThreadComparisonPane(
                 object { 
                     padding-left: 16px; 
                 }
-                """.trimIndent(),
+                    """.trimIndent(),
                 )
             }
         }
@@ -177,7 +177,7 @@ class ThreadComparisonPane(
                     addActionListener {
                         this@HeaderPanel.firePropertyChange("enableHyperlinks", !isSelected, isSelected)
                     }
-                }
+                },
             )
         }
         private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
@@ -281,13 +281,14 @@ class ThreadComparisonPane(
                 updateThreadInfo()
             }
 
-        var highlightCpu: Boolean = false
-        var highlightStacktrace: Boolean = true
-        var showHyperlinks: Boolean = ENABLE_HYPERLINKS_DEFAULT
+        var isHyperlinksEnabled: Boolean = ENABLE_HYPERLINKS_DEFAULT
             set(value) {
                 field = value
                 updateThreadInfo()
             }
+
+        var highlightCpu: Boolean = false
+        var highlightStacktrace: Boolean = true
 
         private val titleLabel = FlatLabel()
         private val detailsButton = FlatButton().apply {
@@ -398,7 +399,7 @@ class ThreadComparisonPane(
                             prefix = "<html><pre>",
                             postfix = "</pre></html>",
                         ) { (text, link) ->
-                            if (link != null && showHyperlinks) {
+                            if (link != null && isHyperlinksEnabled) {
                                 """<a href="$link">$text</a>"""
                             } else {
                                 text
