@@ -16,6 +16,7 @@ import io.github.paulgriffith.kindling.utils.ScrollingTextPane
 import io.github.paulgriffith.kindling.utils.add
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import io.github.paulgriffith.kindling.utils.getAll
+import io.github.paulgriffith.kindling.utils.jFrame
 import io.github.paulgriffith.kindling.utils.tag
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
@@ -27,7 +28,6 @@ import java.awt.event.MouseEvent
 import java.text.DecimalFormat
 import java.util.EventListener
 import javax.swing.JCheckBoxMenuItem
-import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.UIManager
 import javax.swing.event.EventListenerList
@@ -296,16 +296,8 @@ class ThreadComparisonPane(
             toolTipText = "Open in details popup"
             addActionListener {
                 thread?.let {
-                    JFrame("Thread ${it.id} Details").apply {
-                        setSize(900, 500)
-                        isResizable = true
-                        setLocationRelativeTo(null)
-                        add(
-                            DetailsPane().apply {
-                                events = listOf(it.toDetail(version))
-                            },
-                        )
-                        isVisible = true
+                    jFrame("Thread ${it.id} Details", 900, 500) {
+                        contentPane = DetailsPane(listOf(it.toDetail(version)))
                     }
                 }
             }

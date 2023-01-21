@@ -24,11 +24,17 @@ class CacheModel(private val entries: List<CacheEntry>) : AbstractTableModel() {
             column = {
                 cellRenderer = DefaultTableRenderer(Any?::toString)
             },
-            value = CacheEntry::id
+            value = CacheEntry::id,
         )
         val SchemaId by column { it.schemaId }
         val Timestamp by column { it.timestamp }
         val AttemptCount by column(name = "Attempt Count") { it.attemptCount }
         val DataCount by column(name = "Data Count") { it.dataCount }
+        val SchemaName by column(
+            column = {
+                isVisible = false
+            },
+            value = CacheEntry::schemaName,
+        )
     }
 }

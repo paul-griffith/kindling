@@ -27,8 +27,8 @@ import javax.swing.text.html.HTML
 import javax.swing.text.html.HTMLEditorKit
 import kotlin.properties.Delegates
 
-class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
-    var events: List<Detail> by Delegates.observable(emptyList()) { _, _, newValue ->
+class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout("ins 0, fill")) {
+    var events: List<Detail> by Delegates.observable(initialEvents) { _, _, newValue ->
         textPane.text = newValue.toDisplayFormat()
         EventQueue.invokeLater {
             textPane.scrollRectToVisible(Rectangle(0, 0, 0, 0))
@@ -51,7 +51,7 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
         icon = FlatSVGIcon("icons/bx-clipboard.svg"),
     ) {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        clipboard.setContents(StringSelection(events.toClipboardFormat()), null)
+        clipboard.setContents(StringSelection(initialEvents.toClipboardFormat()), null)
     }
 
     private val save = Action(
@@ -63,15 +63,31 @@ class DetailsPane : JPanel(MigLayout("ins 0, fill")) {
             fileFilter = FileNameExtensionFilter("Text File", "txt")
             val save = showSaveDialog(this@DetailsPane)
             if (save == JFileChooser.APPROVE_OPTION) {
-                selectedFile.writeText(events.toClipboardFormat())
+                selectedFile.writeText(initialEvents.toClipboardFormat())
             }
+        }
+    }
+
+    private val actionPanel = JPanel(MigLayout("flowy, top, ins 0"))
+
+    val actions: MutableList<Action> = object : ArrayList<Action>() {
+        init {
+            add(copy)
+            add(save)
+        }
+
+        override fun add(element: Action) = super.add(element).also {
+            actionPanel.add(
+                JButton(element).apply {
+                    hideActionText = true
+                },
+            )
         }
     }
 
     init {
         add(FlatScrollPane(textPane), "push, grow")
-        add(JButton(copy), "cell 1 0, top, flowy, gap 0")
-        add(JButton(save), "cell 1 0")
+        add(actionPanel, "east")
     }
 
     private fun List<Detail>.toDisplayFormat(): String {

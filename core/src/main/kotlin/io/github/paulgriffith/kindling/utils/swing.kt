@@ -10,6 +10,7 @@ import com.formdev.flatlaf.themes.FlatMacDarkLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
 import com.jidesoft.swing.ListSearchable
+import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JFileChooser
+import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPopupMenu
@@ -364,4 +366,21 @@ inline fun <reified T : EventListener> EventListenerList.add(listener: T) {
 
 inline fun <reified T : EventListener> EventListenerList.getAll(): Array<T> {
     return getListeners(T::class.java)
+}
+
+/**
+ * Constructs and immediately displays a JFrame of the given dimensions, centered on the screen.
+ */
+inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Unit): JFrame {
+    return JFrame(title).apply {
+        setSize(width, height)
+        iconImage = Kindling.frameIcon
+        defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
+
+        setLocationRelativeTo(null)
+
+        block()
+
+        isVisible = true
+    }
 }
