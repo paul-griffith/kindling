@@ -275,11 +275,13 @@ class ReifiedJXTable<T : TableModel>(
             require(model::class.java == modelClass) { "Expected $modelClass but got ${model::class.java}" }
         }
         val sortedColumn = sortedColumnIndex
+        val sortedColumnIsVisible = convertColumnIndexToView(sortedColumn) != -1
+
         val sortOrder = if (sortedColumn >= 0) (rowSorter as SortController<*>).getSortOrder(sortedColumn) else null
 
         super.setModel(model)
 
-        if (sortOrder != null) {
+        if (sortOrder != null && sortedColumnIsVisible) {
             setSortOrder(sortedColumn, sortOrder)
         }
         if (setup) {
