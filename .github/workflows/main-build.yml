@@ -64,17 +64,9 @@ jobs:
           files: |
             artifacts/*
             kindling-bundle.jar
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '17'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      - name: Install JDeploy
-        run: npm install
       - name: Set package version
         run: npm --no-git-tag-version version ${{github.ref_name}}
-      - name: JDeploy Publish
-        run: npx jdeploy publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Build App Installer Bundles
+        uses: actions/jdeploy@master
+        with:
+          github_token: ${{ github.token }}
