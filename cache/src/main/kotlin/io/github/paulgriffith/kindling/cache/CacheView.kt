@@ -5,6 +5,7 @@ import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import com.jidesoft.swing.JideButton
+import io.github.paulgriffith.kindling.cache.model.AuditProfileData
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
@@ -27,7 +28,6 @@ import org.hsqldb.jdbc.JDBCDataSource
 import org.intellij.lang.annotations.Language
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.io.ObjectInputStream
 import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -228,6 +228,7 @@ class CacheView(private val path: Path) : ToolPanel() {
     private fun Serializable.toDetail(): Detail = when (this) {
         is BasicHistoricalRecord -> toDetail()
         is ScanclassHistorySet -> toDetail()
+        is AuditProfileData -> toDetail()
         is Array<*> -> {
             // 2D array
             if (firstOrNull()?.javaClass?.isArray == true) {
@@ -255,7 +256,9 @@ class CacheView(private val path: Path) : ToolPanel() {
      * @throws ClassNotFoundException
      */
     private fun ByteArray.deserialize(): Serializable {
-        return ObjectInputStream(inputStream()).readObject() as Serializable
+        return AliasingObjectInputStream(inputStream()).apply {
+            put("com.inductiveautomation.ignition.gateway.audit.AuditProfileData", AuditProfileData::class.java)
+        }.readObject() as Serializable
     }
 
     private fun ScanclassHistorySet.toDetail(): Detail {
@@ -286,7 +289,7 @@ class CacheView(private val path: Path) : ToolPanel() {
 
     private fun BasicHistoricalRecord.toDetail(): Detail {
         return Detail(
-            title = this::class.java.simpleName,
+            title = "BasicHistoricalRecord",
             message = "INSERT INTO $tablename",
             body = columns.map { column ->
                 buildString {
@@ -299,6 +302,30 @@ class CacheView(private val path: Path) : ToolPanel() {
             details = mapOf(
                 "quoteColumnNames" to quoteColumnNames().toString(),
             ),
+        )
+    }
+
+    private fun AuditProfileData.toDetail(): Detail {
+        return Detail(
+            title = "Audit Profile Data",
+            message = insertQuery,
+            body = mapOf(
+                "actor" to auditRecord.actor,
+                "action" to auditRecord.action,
+                "actionValue" to auditRecord.actionValue,
+                "actionTarget" to auditRecord.actionTarget,
+                "actorHost" to auditRecord.actorHost,
+                "originatingContext" to when (auditRecord.originatingContext) {
+                    1 -> "Gateway"
+                    2 -> "Designer"
+                    4 -> "Client"
+                    else -> "Unknown"
+                },
+                "originatingSystem" to auditRecord.originatingSystem,
+                "timestamp" to auditRecord.timestamp.toString(),
+            ).map { (key, value) ->
+                "$key: $value"
+            },
         )
     }
 
