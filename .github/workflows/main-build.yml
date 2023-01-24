@@ -67,6 +67,6 @@ jobs:
       - name: Set package version
         run: npm --no-git-tag-version version ${{github.ref_name}}
       - name: Build App Installer Bundles
-        uses: actions/jdeploy@master
+        uses: shannah/jdeploy@4.0.1
         with:
           github_token: ${{ github.token }}
