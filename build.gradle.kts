@@ -5,6 +5,7 @@ import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.ktlint)
+    `maven-publish` apply false
 }
 
 repositories {
@@ -31,6 +32,25 @@ subprojects {
         }
         maven {
             url = uri("https://nexus.inductiveautomation.com/repository/inductiveautomation-thirdparty/")
+        }
+    }
+
+    apply(plugin = "maven-publish")
+    configure<PublishingExtension> {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/paul-griffith/kindling")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+        publications {
+            register<MavenPublication>("gpr") {
+                from(components["java"])
+            }
         }
     }
 }

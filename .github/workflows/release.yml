@@ -1,4 +1,4 @@
-name: Publish new version upon tag commit
+name: Release new version upon tag commit
 on:
   push:
     tags:
@@ -35,6 +35,8 @@ jobs:
         with:
           name: fatjar
           path: app/build/libs/kindling-bundle.jar
+      - name: Publish core to Github Packages
+        run: ./gradlew -Pversion=${{github.ref_name}} :core:publish
   release:
     runs-on: ubuntu-latest
     needs: [build]
