@@ -15,3 +15,5 @@ jobs:
           cache: 'gradle'
       - name: Execute Gradle build and publish to Github Packages
         run: ./gradlew -Pversion=${{github.ref_name}} :core:build :core:publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
