@@ -16,8 +16,8 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - name: Execute Gradle build & JPackage
-        run: ./gradlew build jpackage
+      - name: Execute Gradle build, JPackage, publish to Github Packages
+        run: ./gradlew -Pversion=${{github.ref_name}} build jpackage :core:publish
         env:
           TAG_VERSION: ${{github.ref_name}}
       - name: Upload artifacts
@@ -35,8 +35,6 @@ jobs:
         with:
           name: fatjar
           path: app/build/libs/kindling-bundle.jar
-      - name: Publish core to Github Packages
-        run: ./gradlew -Pversion=${{github.ref_name}} :core:publish
   release:
     runs-on: ubuntu-latest
     needs: [build]
