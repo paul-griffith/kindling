@@ -1,4 +1,4 @@
-name: Publish new version for every commit to main
+name: Publish snapshot package on commit to main
 on:
   push:
     branches:

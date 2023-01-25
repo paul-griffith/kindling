@@ -13,8 +13,6 @@ tasks {
     }
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-    }
+kotlin {
+    jvmToolchain(libs.versions.java.map(String::toInt).get())
 }

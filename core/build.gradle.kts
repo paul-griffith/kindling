@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    `maven-publish`
 }
 
 apply {
@@ -27,8 +28,25 @@ dependencies {
     implementation(libs.excelkt)
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
+kotlin {
+    jvmToolchain(libs.versions.java.map(String::toInt).get())
+}
+
+apply(plugin = "maven-publish")
+configure<PublishingExtension> {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/paul-griffith/kindling")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+    publications {
+        register<MavenPublication>("gpr") {
+            from(components["java"])
+        }
     }
 }
