@@ -23,6 +23,7 @@ jobs:
           package-version-ids: ${{ env.project_version }}
           package-name: 'io.github.paulgriffith.kindling.core'
           package-type: 'maven'
+        continue-on-error: true
       - name: Publish to Github Packages
         run: ./gradlew :core:publish
         env:
