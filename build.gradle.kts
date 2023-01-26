@@ -43,6 +43,11 @@ tasks {
     clean {
         finalizedBy(cleanupJDeploy)
     }
+    register("printVersion") {
+        doLast { // add a task action
+            println(project.version)
+        }
+    }
 }
 
 kotlin {

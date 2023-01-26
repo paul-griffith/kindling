@@ -13,7 +13,17 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - name: Execute Gradle build and publish to Github Packages
-        run: ./gradlew :core:build :core:publish
+      - name: Execute Gradle build
+        run: ./gradlew :core:build
+      - name: Echo project version
+        run: echo "{project_version}=`./gradlew printVersion`" >> $GITHUB_ENV
+      - name: Delete existing snapshot, if any
+        uses: actions/delete-package-versions@v4
+        with:
+          package-version-ids: ${{ env.project_version }}
+          package-name: 'io.github.paulgriffith.kindling.core'
+          package-type: 'maven'
+      - name: Publish to Github Packages
+        run: ./gradlew :core:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
