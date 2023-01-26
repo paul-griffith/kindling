@@ -8,7 +8,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.JPopupMenu
+import kotlin.io.path.extension
 import kotlin.io.path.name
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 class MultiToolView(
@@ -20,9 +22,9 @@ class MultiToolView(
 
     override val tabName by lazy {
         val roots = paths.mapTo(mutableSetOf()) { path ->
-            path.name.trimEnd { it.isDigit() || it == '-' || it == '.' }
+            path.nameWithoutExtension.trimEnd { it.isDigit() || it == '-' || it == '.' }
         }
-        "[${paths.size}] ${roots.joinToString()}"
+        "[${paths.size}] ${roots.joinToString()}.${paths.first().extension}"
     }
     override val tabTooltip by lazy { paths.joinToString("\n") { it.toString().substring(1) } }
 
