@@ -1,7 +1,6 @@
 package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.ui.FlatScrollBarUI
-import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +62,7 @@ class LogPanel(
         verticalScrollBar = densityDisplay
     }
 
-    private val details = DetailsPane()
+    private val details = LogDetailsPane()
     private val loggerNamesSidebar = LoggerNamesPanel(rawData)
     private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
 
@@ -130,7 +129,7 @@ class LogPanel(
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                    JPanel(MigLayout("fill")).apply {
+                    JPanel(MigLayout("ins 0, fill")).apply {
                         add(loggerNamesSidebar, "grow, h 100:1000, wrap")
                         add(loggerLevelsSidebar, "growx, h 120!")
                     },
@@ -164,7 +163,7 @@ class LogPanel(
                                 )
 
                                 is WrapperLogEvent -> DetailEvent(
-                                    title = dateFormatter.format(event.timestamp),
+                                    title = event.level.toString() + "   -   " + dateFormatter.format(event.timestamp) + "   -   " + event.logger.split(".").last(),
                                     message = event.message,
                                     body = event.stacktrace
                                 )
