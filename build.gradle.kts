@@ -171,9 +171,11 @@ configure<PublishingExtension> {
         }
     }
     publications {
-        register<MavenPublication>("gpr") {
+        register<MavenPublication>("kindling") {
             from(components["java"])
-            version = rootProject.version.toString()
+            pom {
+                description.set("Kindling core API and first-party tools, packaged for ease of extension by third parties.")
+            }
         }
     }
 }
