@@ -1,6 +1,8 @@
+@Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
     kotlin("jvm")
     `maven-publish`
+    alias(libs.plugins.serialization)
 }
 
 apply {
@@ -26,10 +28,20 @@ dependencies {
     }
     runtimeOnly(libs.bundles.ia.transitive)
     implementation(libs.excelkt)
+    implementation(libs.jfreechart)
+    implementation(libs.rsyntaxtextarea)
+
+    testImplementation(libs.bundles.kotest)
 }
 
 kotlin {
     jvmToolchain(libs.versions.java.map(String::toInt).get())
+}
+
+tasks {
+    test {
+        useJUnitPlatform()
+    }
 }
 
 apply(plugin = "maven-publish")

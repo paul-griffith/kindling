@@ -20,11 +20,6 @@ repositories {
 
 dependencies {
     implementation(projects.core)
-    implementation(projects.idb)
-    implementation(projects.log)
-    implementation(projects.thread)
-    implementation(projects.cache)
-    implementation(projects.zip)
     implementation(libs.osthemedetector)
 }
 

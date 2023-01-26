@@ -10,10 +10,5 @@ rootProject.name = "kindling"
 
 include(
     "core",
-    "idb",
-    "log",
-    "thread",
-    "cache",
-    "zip",
     "app",
 )
