@@ -7,8 +7,3 @@ pluginManagement {
 }
 
 rootProject.name = "kindling"
-
-include(
-    "core",
-    "app",
-)
