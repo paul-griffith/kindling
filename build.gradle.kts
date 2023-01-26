@@ -59,7 +59,7 @@ dependencies {
     testImplementation(libs.bundles.kotest)
 }
 
-group = "io.github.paulgriffith.kindling"
+group = "io.github.paulgriffith"
 
 application {
     mainClass.set("io.github.paulgriffith.kindling.MainPanel")
