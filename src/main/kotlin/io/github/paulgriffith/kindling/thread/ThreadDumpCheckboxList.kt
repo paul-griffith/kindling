@@ -9,7 +9,6 @@ import javax.swing.JList
 import javax.swing.ListModel
 import kotlin.io.path.name
 
-
 class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<Any>() {
     override fun getSize(): Int = values.size + 1
     override fun getElementAt(index: Int): Any? = when (index) {

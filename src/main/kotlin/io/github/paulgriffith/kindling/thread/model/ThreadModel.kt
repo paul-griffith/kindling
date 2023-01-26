@@ -329,4 +329,3 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
         )
     }
 }
-
