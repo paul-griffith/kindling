@@ -16,7 +16,7 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew :core:build
       - name: Echo project version
-        run: echo "{project_version}=`./gradlew printVersion`" >> $GITHUB_ENV
+        run: echo "{project_version}=`./gradlew printVersion --quiet`" >> $GITHUB_ENV
       - name: Delete existing snapshot, if any
         uses: actions/delete-package-versions@v4
         with:
