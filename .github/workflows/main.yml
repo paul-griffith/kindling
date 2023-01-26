@@ -14,17 +14,17 @@ jobs:
           java-version: 17
           cache: 'gradle'
       - name: Execute Gradle build
-        run: ./gradlew :core:build
+        run: ./gradlew build
       - name: Echo project version
         run: echo "{project_version}=`./gradlew printVersion --quiet`" >> $GITHUB_ENV
       - name: Delete existing snapshot, if any
         uses: actions/delete-package-versions@v4
         with:
           package-version-ids: ${{ env.project_version }}
-          package-name: 'io.github.paulgriffith.kindling.core'
+          package-name: 'io.github.paulgriffith.kindling'
           package-type: 'maven'
         continue-on-error: true
       - name: Publish to Github Packages
-        run: ./gradlew :core:publish
+        run: ./gradlew publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

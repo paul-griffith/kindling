@@ -47,7 +47,7 @@ the [Releases page](https://github.com/paul-griffith/kindling/releases).
 Kindling uses Java Swing as a GUI framework, but is written almost exclusively in Kotlin, an alternate JVM language.
 Gradle is used as the build tool, and will automatically download the appropriate Gradle and Java version (via the
 Gradle wrapper). Most IDEs (Eclipse, IntelliJ) should figure out the project structure automatically. You can directly
-run the main class in your IDE ([`MainPanel`](app/src/main/kotlin/io/github/paulgriffith/kindling/MainPanel.kt)), or you
+run the main class in your IDE ([`MainPanel`](src/main/kotlin/io/github/paulgriffith/kindling/MainPanel.kt)), or you
 can run the application via`./gradlew run` at the command line.
 
 ## Extension
@@ -55,7 +55,7 @@ can run the application via`./gradlew run` at the command line.
 Kindling uses
 the [`ServiceLoader`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceLoader.html)
 mechanism to register tools. Simply provide an implementation
-of [`io.github.paulgriffith.kindling.core.Tool`](core/src/main/kotlin/io/github/paulgriffith/kindling/core/Tool.kt) (or
+of [`io.github.paulgriffith.kindling.core.Tool`](src/main/kotlin/io/github/paulgriffith/kindling/core/Tool.kt) (or
 any of its extensions), appropriately registered on the classpath, to add tools at runtime.
 
 ## Contribution
