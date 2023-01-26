@@ -47,7 +47,7 @@ configure<PublishingExtension> {
     publications {
         register<MavenPublication>("gpr") {
             from(components["java"])
-            version = project.version.toString()
+            version = rootProject.version.toString()
         }
     }
 }
