@@ -5,6 +5,7 @@ import io.github.paulgriffith.kindling.utils.FileExtensionFilter
 import io.github.paulgriffith.kindling.utils.loadService
 import java.io.File
 import java.nio.file.Path
+import javax.management.MBeanServerConnection
 import javax.swing.filechooser.FileFilter
 
 interface Tool {
@@ -48,6 +49,12 @@ interface ClipboardTool : Tool {
     fun open(data: String): ToolPanel
 }
 
+interface JvmTool : Tool {
+    fun open(connection: MBeanServerConnection): ToolPanel
+}
+
 interface MultiClipboardTool : MultiTool, ClipboardTool // "union" interface for usage downstream
+
+interface MultiClipboardJvmTool : MultiClipboardTool, JvmTool
 
 class ToolOpeningException(message: String, cause: Throwable? = null) : Exception(message, cause)

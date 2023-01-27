@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.thread
 
 import com.jidesoft.swing.CheckBoxList
+import io.github.paulgriffith.kindling.thread.model.ThreadDump
 import io.github.paulgriffith.kindling.utils.NoSelectionModel
 import io.github.paulgriffith.kindling.utils.listCellRenderer
 import java.nio.file.Path
@@ -9,7 +10,7 @@ import javax.swing.JList
 import javax.swing.ListModel
 import kotlin.io.path.name
 
-class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<Any>() {
+class ThreadDumpListModel(private val values: List<ThreadDump>) : AbstractListModel<Any>() {
     override fun getSize(): Int = values.size + 1
     override fun getElementAt(index: Int): Any? = when (index) {
         0 -> CheckBoxList.ALL_ENTRY
@@ -17,7 +18,7 @@ class ThreadDumpListModel(private val values: List<Path>) : AbstractListModel<An
     }
 }
 
-class ThreadDumpCheckboxList(data: List<Path>) : CheckBoxList(ThreadDumpListModel(data)) {
+class ThreadDumpCheckboxList(data: List<ThreadDump>) : CheckBoxList(ThreadDumpListModel(data)) {
     init {
         layoutOrientation = JList.HORIZONTAL_WRAP
         visibleRowCount = 0

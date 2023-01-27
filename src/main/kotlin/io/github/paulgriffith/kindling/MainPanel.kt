@@ -4,8 +4,11 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
+import com.sun.tools.attach.VirtualMachineDescriptor
+import com.sun.tools.attach.spi.AttachProvider
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
+import io.github.paulgriffith.kindling.core.JvmTool
 import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
@@ -20,6 +23,7 @@ import io.github.paulgriffith.kindling.utils.TabStrip
 import io.github.paulgriffith.kindling.utils.chooseFiles
 import io.github.paulgriffith.kindling.utils.display
 import io.github.paulgriffith.kindling.utils.getLogger
+import io.github.paulgriffith.kindling.utils.jFrame
 import io.github.paulgriffith.kindling.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -32,9 +36,12 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.desktop.QuitStrategy
 import java.awt.event.ItemEvent
 import java.io.File
+import javax.management.remote.JMXConnectorFactory
+import javax.management.remote.JMXServiceURL
 import javax.swing.ButtonGroup
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
+import javax.swing.JComboBox
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JMenu
@@ -129,6 +136,42 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                             }
                         }
                         group.add(this)
+                    },
+                )
+            },
+        )
+        add(
+            JMenu("Attach").apply {
+                add(
+                    Action("Show Attach Menu") {
+                        jFrame("Attach", 800, 600) {
+                            contentPane = JPanel(MigLayout("ins 0")).apply {
+                                val provider = AttachProvider.providers().first()
+                                val vms = provider.listVirtualMachines().toTypedArray()
+                                val vmCombo = JComboBox(vms)
+                                add(vmCombo)
+                                val attachButton = JButton(
+                                    Action("Attach") {
+                                        val selectedVm = (vmCombo.selectedItem as VirtualMachineDescriptor)
+                                        val attachedVm = provider.attachVirtualMachine(selectedVm)
+                                        val url = JMXServiceURL(attachedVm.startLocalManagementAgent())
+                                        val jmxConnector = JMXConnectorFactory.connect(url)
+                                        val jvmTool = Tool.tools.filterIsInstance<JvmTool>().first()
+                                        val mBean = jmxConnector.mBeanServerConnection
+
+                                        openOrError(selectedVm.displayName(), selectedVm.id()) {
+                                            jvmTool.open(mBean)
+                                        }
+
+                                        val queryResult = mBean.queryNames(null, null)
+                                        for (objectName in queryResult) {
+                                            println(objectName.canonicalName)
+                                        }
+                                    },
+                                )
+                                add(attachButton, "newline")
+                            }
+                        }
                     },
                 )
             },

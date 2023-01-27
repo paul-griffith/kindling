@@ -5,7 +5,7 @@ import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
-import io.github.paulgriffith.kindling.core.MultiClipboardTool
+import io.github.paulgriffith.kindling.core.MultiClipboardJvmTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
@@ -39,8 +39,14 @@ import org.jdesktop.swingx.table.ColumnControlButton
 import org.jdesktop.swingx.table.TableColumnExt
 import java.awt.Desktop
 import java.awt.Rectangle
+import java.io.File
+import java.lang.Thread.State
+import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.management.MBeanServerConnection
+import javax.management.ObjectName
+import javax.management.openmbean.CompositeData
 import javax.swing.ButtonGroup
 import javax.swing.Icon
 import javax.swing.JLabel
@@ -55,15 +61,19 @@ import javax.swing.SortOrder
 import javax.swing.UIManager
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
-import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 class MultiThreadView(
-    private val paths: List<Path>,
+    private val names: List<String>,
+    private val threadDumps: List<ThreadDump>,
 ) : ToolPanel() {
-    private val threadDumps = paths.map { path ->
-        ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
-    }
+    constructor(paths: List<Path>) : this(
+        paths.map { it.name },
+        paths.map { path ->
+            ThreadDump.fromStream(path.inputStream())
+                ?: throw ToolOpeningException("Failed to open $path as a thread dump")
+        },
+    )
 
     private val poolList = FilterList("(No Pool)")
     private val systemList = FilterList("Unassigned")
@@ -197,7 +207,7 @@ class MultiThreadView(
 
     private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
 
-    private val threadDumpCheckboxList = ThreadDumpCheckboxList(paths).apply {
+    private val threadDumpCheckboxList = ThreadDumpCheckboxList(threadDumps).apply {
         isVisible = !mainTable.model.isSingleContext
     }
 
@@ -282,15 +292,8 @@ class MultiThreadView(
     }
 
     init {
-        name = if (mainTable.model.isSingleContext) {
-            paths.first().name
-        } else {
-            "[${paths.size}] " + paths.fold(paths.first().nameWithoutExtension) { acc, next ->
-                acc.commonPrefixWith(next.nameWithoutExtension)
-            }
-        }
-
-        toolTipText = paths.joinToString("\n", transform = Path::name)
+        name = threadDumps.toString()
+        toolTipText = threadDumps.toString()
 
         poolList.selectAll()
         poolList.checkBoxListSelectionModel.bind()
@@ -404,7 +407,7 @@ class MultiThreadView(
         menu.add(
             Action(name = "Open in External Editor") {
                 val desktop = Desktop.getDesktop()
-                paths.forEach { desktop.open(it.toFile()) }
+                names.forEach { desktop.open(File(it)) }
             },
         )
     }
@@ -499,7 +502,7 @@ class MultiThreadView(
     }
 }
 
-object MultiThreadViewer : MultiClipboardTool {
+object MultiThreadViewer : MultiClipboardJvmTool {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
@@ -516,6 +519,33 @@ object MultiThreadViewer : MultiClipboardTool {
         }
         return open(tempFile)
     }
+
+    override fun open(connection: MBeanServerConnection): ToolPanel {
+        val objectName = ObjectName.getInstance(ManagementFactory.THREAD_MXBEAN_NAME)
+        val rawReturn = connection.invoke(objectName, "dumpAllThreads", arrayOf(true, true), arrayOf("boolean", "boolean"))
+        val asJmxComposites = rawReturn as Array<CompositeData>
+        val threads = asJmxComposites.map {
+            Thread(
+                id = (it["threadId"] as Long).toInt(),
+                name = it["threadName"] as String,
+                state = State.valueOf(it["threadState"] as String),
+                isDaemon = it["daemon"] as Boolean,
+                system = null,
+                scope = null,
+                cpuUsage = null,
+            )
+        }
+        return MultiThreadView(
+            names = listOf("Remote JVM"),
+            threadDumps = listOf(
+                ThreadDump(
+                    version = "(unknown)",
+                    threads = threads,
+                    deadlockIds = emptyList(),
+                ),
+            ),
+        )
+    }
 }
 
-class ThreadViewerProxy : MultiClipboardTool by MultiThreadViewer
+class ThreadViewerProxy : MultiClipboardJvmTool by MultiThreadViewer
