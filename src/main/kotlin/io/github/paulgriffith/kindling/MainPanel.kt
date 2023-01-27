@@ -4,10 +4,10 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
-import com.sun.tools.attach.spi.AttachProvider
+import com.sun.tools.attach.VirtualMachine
+import io.github.paulgriffith.kindling.attach.AttachedPanel
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
-import io.github.paulgriffith.kindling.core.JvmTool
 import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.Tool
@@ -35,8 +35,6 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.desktop.QuitStrategy
 import java.awt.event.ItemEvent
 import java.io.File
-import javax.management.remote.JMXConnectorFactory
-import javax.management.remote.JMXServiceURL
 import javax.swing.ButtonGroup
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
@@ -142,25 +140,14 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
             JMenu("Attach").apply {
                 onMenuSelected {
                     removeAll()
-
-                    val attachProvider = AttachProvider.providers().first()
-                    val virtualMachines = attachProvider.listVirtualMachines()
-                    for (vmDescriptor in virtualMachines) {
+                    for (descriptor in VirtualMachine.list()) {
                         add(
-                            JMenu(vmDescriptor.displayName().truncate(30)).apply {
-                                for (tool in Tool.tools.filterIsInstance<JvmTool>()) {
-                                    add(
-                                        Action(tool.title) {
-                                            val attachedVm = attachProvider.attachVirtualMachine(vmDescriptor)
-                                            val url = JMXServiceURL(attachedVm.startLocalManagementAgent())
-
-                                            JMXConnectorFactory.connect(url).use { connector ->
-                                                openOrError("PID ${vmDescriptor.displayName()}", tool.description) {
-                                                    tool.open(vmDescriptor, connector.mBeanServerConnection)
-                                                }
-                                            }
-                                        },
-                                    )
+                            Action(
+                                name = descriptor.displayName().truncate(50),
+                                description = descriptor.displayName(),
+                            ) {
+                                openOrError("attached JVM", descriptor.displayName()) {
+                                    AttachedPanel(descriptor)
                                 }
                             },
                         )
@@ -194,10 +181,10 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         runCatching {
             val toolPanel = openFunction()
             tabs.addTab(
-                toolPanel.name.truncate(),
+                toolPanel.tabName,
                 toolPanel.icon,
                 toolPanel,
-                toolPanel.toolTipText,
+                toolPanel.tabTooltip,
             )
         }.getOrElse { ex ->
             LOGGER.error("Failed to open $description as a $title", ex)

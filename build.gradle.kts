@@ -159,6 +159,12 @@ runtime {
     }
 }
 
+//sourceSets {
+//    getByName("main").resources {
+//        srcDir(projects.agent.dependencyProject.tasks.jar.get().archiveFile)
+//    }
+//}
+
 configure<PublishingExtension> {
     repositories {
         maven {

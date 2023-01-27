@@ -7,3 +7,5 @@ pluginManagement {
 }
 
 rootProject.name = "kindling"
+
+include("agent")

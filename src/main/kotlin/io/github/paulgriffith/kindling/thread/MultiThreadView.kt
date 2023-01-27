@@ -530,12 +530,24 @@ object MultiThreadViewer : MultiClipboardJvmTool {
     }
 
     private val threadBeanName = ObjectName.getInstance(ManagementFactory.THREAD_MXBEAN_NAME)
+    private inline operator fun <reified T> MBeanServerConnection.invoke(operation: String, vararg values: Any): T {
+        return invoke(
+            threadBeanName,
+            operation,
+            values,
+            Array(values.size) {
+                val kClass = values[it]::class
+                (kClass.javaPrimitiveType ?: kClass.javaObjectType).name
+            },
+        ) as T
+    }
 
     override fun open(descriptor: VirtualMachineDescriptor, connection: MBeanServerConnection): ToolPanel {
-        val threadMXBean = JMX.newMBeanProxy(connection, threadBeanName, ThreadMXBean::class.java)
+        val threadMXBean = JMX.newMXBeanProxy(connection, threadBeanName, ThreadMXBean::class.java)
 
         val threads = threadMXBean.allThreadIds.map {
-            Thread(threadMXBean.getThreadInfo(it))
+            val data = threadMXBean.getThreadInfo(it)
+            Thread(data)
         }
         val deadlocks = threadMXBean.findDeadlockedThreads()
 
