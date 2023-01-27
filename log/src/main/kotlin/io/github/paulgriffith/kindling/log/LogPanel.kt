@@ -83,6 +83,13 @@ class LogPanel(
                     .mapTo(mutableSetOf()) { it.name }
         }
         add { event ->
+            if (header.isOnlyShowMarkedLogs) {
+                event.marked
+            } else {
+                true
+            }
+        }
+        add { event ->
             val text = header.search.text
             if (text.isNullOrEmpty()) {
                 true
@@ -208,6 +215,11 @@ class LogPanel(
         header.addPropertyChangeListener("isShowTimeFilter") {
             table.model.fireTableDataChanged()
             timeline.isVisible = it.newValue as Boolean
+        }
+
+        header.addPropertyChangeListener("isOnlyShowMarkedLogs") {
+            table.model.fireTableDataChanged()
+            updateData()
         }
     }
 
@@ -340,7 +352,8 @@ class LogPanel(
                             timestamp = time,
                             message = message.value.trim(),
                             logger = logger.value.trim(),
-                            level = Level.valueOf(level.value.single())
+                            level = Level.valueOf(level.value.single()),
+                            marked = false
                         )
                     } else {
                         val stack by match.groups
@@ -354,7 +367,8 @@ class LogPanel(
                             events += WrapperLogEvent(
                                 timestamp = time,
                                 message = stack.value,
-                                level = Level.INFO
+                                level = Level.INFO,
+                                marked = false
                             )
                         }
                     }

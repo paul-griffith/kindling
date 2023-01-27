@@ -3,6 +3,7 @@ package io.github.paulgriffith.kindling.log
 import java.time.Instant
 
 sealed interface LogEvent {
+    var marked: Boolean
     val timestamp: Instant
     val message: String
     val logger: String
@@ -10,6 +11,7 @@ sealed interface LogEvent {
 }
 
 data class WrapperLogEvent(
+    override var marked: Boolean,
     override val timestamp: Instant,
     override val message: String,
     override val logger: String = STDOUT,
@@ -22,6 +24,7 @@ data class WrapperLogEvent(
 }
 
 data class SystemLogsEvent(
+    override var marked: Boolean,
     override val timestamp: Instant,
     override val message: String,
     override val logger: String,
