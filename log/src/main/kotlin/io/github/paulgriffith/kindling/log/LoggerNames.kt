@@ -16,7 +16,8 @@ import javax.swing.ListModel
 
 data class LoggerName(
     val name: String,
-    val eventCount: Int
+    val eventCount: Int,
+    val subName: String
 )
 
 class LoggerNamesModel(val data: List<LoggerName>) : AbstractListModel<Any>() {
@@ -70,7 +71,6 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
                 }
             }
         }
-
         selectAll()
     }
 
@@ -91,59 +91,62 @@ class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")
         val loggerNames: List<LoggerName> = events.groupingBy { it.logger }
             .eachCount()
             .entries
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key })
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.substringAfterLast(".") })
             .map { (key, value) -> LoggerName(key, value) }
         LoggerNamesList(LoggerNamesModel(loggerNames))
     }
 
-    init {
-        val sortButtons = ButtonGroup()
+    private fun LoggerName(name: String, eventCount: Int): LoggerName {
+        return LoggerName(name, eventCount, name.substringAfterLast("."))
+    }
 
-        fun sortButton(icon: FlatSVGIcon, tooltip: String, comparator: Comparator<LoggerName>): JToggleButton {
-            return JToggleButton(
-                Action(
-                    description = tooltip,
-                    icon = icon
-                ) {
-                    list.model = LoggerNamesModel(list.model.data.sortedWith(comparator))
-                }
-            )
-        }
-
-        val naturalAsc = sortButton(
+    private val sortButtons = ButtonGroup()
+    private val naturalAsc = JToggleButton(configSortAction(
             icon = NATURAL_SORT_ASCENDING,
             tooltip = "Sort A-Z",
-            comparator = byName
-        )
+            comparator = bySubName
+    ))
+    private val naturalDesc = JToggleButton(configSortAction(
+            icon = NATURAL_SORT_DESCENDING,
+            tooltip = "Sort Z-A",
+            comparator = bySubName.reversed()
+    ))
+    private fun configSortAction(icon: FlatSVGIcon, tooltip: String, comparator: Comparator<LoggerName>):Action {
+        return Action(description = tooltip, icon = icon) {
+            list.model = LoggerNamesModel(list.model.data.sortedWith(comparator))
+        }
+    }
+
+    fun sortByFullName(isFullName: Boolean) {
+        naturalAsc.action = configSortAction(NATURAL_SORT_ASCENDING, "Sort A-Z", if(isFullName) { byName } else { bySubName})
+        naturalDesc.action = configSortAction(NATURAL_SORT_DESCENDING, "Sort Z-A", if(isFullName) { byName.reversed() } else { bySubName.reversed()})
+    }
+
+    init {
         listOf(
             naturalAsc,
-            sortButton(
-                icon = NATURAL_SORT_DESCENDING,
-                tooltip = "Sort Z-A",
-                comparator = byName.reversed()
-            ),
-            sortButton(
+            naturalDesc,
+                JToggleButton(configSortAction(
                 icon = NUMERIC_SORT_DESCENDING,
                 tooltip = "Sort by Count",
                 comparator = byCount.reversed() then byName
-            ),
-            sortButton(
+            )),
+                JToggleButton(configSortAction(
                 icon = NUMERIC_SORT_ASCENDING,
                 tooltip = "Sort by Count (ascending)",
                 comparator = byCount then byName
-            )
+            ))
         ).forEach { sortButton ->
             sortButtons.add(sortButton)
             add(sortButton, "cell 0 0")
         }
-
         sortButtons.setSelected(naturalAsc.model, true)
-
         add(FlatScrollPane(list), "newline, push, grow")
     }
 
     companion object {
         private val byName = compareBy(String.CASE_INSENSITIVE_ORDER, LoggerName::name)
+        private val bySubName = compareBy(String.CASE_INSENSITIVE_ORDER, LoggerName::subName)
         private val byCount = compareBy(LoggerName::eventCount)
 
         private val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg")

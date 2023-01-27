@@ -163,7 +163,7 @@ class LogPanel(
                                 )
 
                                 is WrapperLogEvent -> DetailEvent(
-                                    title = event.level.toString() + "   -   " + dateFormatter.format(event.timestamp) + "   -   " + event.logger.split(".").last(),
+                                    title = event.level.toString() + "   -   " + dateFormatter.format(event.timestamp) + "   -   " + event.logger.substringAfterLast("."),
                                     message = event.message,
                                     body = event.stacktrace
                                 )
@@ -202,6 +202,7 @@ class LogPanel(
         header.addPropertyChangeListener("isShowFullLoggerName") {
             table.model.fireTableDataChanged()
             loggerNamesSidebar.list.isShowFullLoggerName = it.newValue as Boolean
+            loggerNamesSidebar.sortByFullName(it.newValue as Boolean)
         }
 
         header.addPropertyChangeListener("isShowTimeFilter") {
