@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.core
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import com.sun.tools.attach.VirtualMachineDescriptor
 import io.github.paulgriffith.kindling.utils.FileExtensionFilter
 import io.github.paulgriffith.kindling.utils.loadService
 import java.io.File
@@ -50,7 +51,7 @@ interface ClipboardTool : Tool {
 }
 
 interface JvmTool : Tool {
-    fun open(connection: MBeanServerConnection): ToolPanel
+    fun open(descriptor: VirtualMachineDescriptor, connection: MBeanServerConnection): ToolPanel
 }
 
 interface MultiClipboardTool : MultiTool, ClipboardTool // "union" interface for usage downstream

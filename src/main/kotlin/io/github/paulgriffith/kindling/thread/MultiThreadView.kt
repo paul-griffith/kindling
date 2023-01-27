@@ -3,6 +3,7 @@ package io.github.paulgriffith.kindling.thread
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
+import com.sun.tools.attach.VirtualMachineDescriptor
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
 import io.github.paulgriffith.kindling.core.MultiClipboardJvmTool
@@ -40,13 +41,13 @@ import org.jdesktop.swingx.table.TableColumnExt
 import java.awt.Desktop
 import java.awt.Rectangle
 import java.io.File
-import java.lang.Thread.State
 import java.lang.management.ManagementFactory
+import java.lang.management.ThreadMXBean
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.management.JMX
 import javax.management.MBeanServerConnection
 import javax.management.ObjectName
-import javax.management.openmbean.CompositeData
 import javax.swing.ButtonGroup
 import javax.swing.Icon
 import javax.swing.JLabel
@@ -61,6 +62,7 @@ import javax.swing.SortOrder
 import javax.swing.UIManager
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 class MultiThreadView(
@@ -68,7 +70,7 @@ class MultiThreadView(
     private val threadDumps: List<ThreadDump>,
 ) : ToolPanel() {
     constructor(paths: List<Path>) : this(
-        paths.map { it.name },
+        paths.map { it.nameWithoutExtension },
         paths.map { path ->
             ThreadDump.fromStream(path.inputStream())
                 ?: throw ToolOpeningException("Failed to open $path as a thread dump")
@@ -292,8 +294,15 @@ class MultiThreadView(
     }
 
     init {
-        name = threadDumps.toString()
-        toolTipText = threadDumps.toString()
+        name = if (mainTable.model.isSingleContext) {
+            names.first()
+        } else {
+            "[${names.size}] " + names.fold(names.first()) { acc, next ->
+                acc.commonPrefixWith(next)
+            }
+        }
+
+        toolTipText = names.joinToString("\n")
 
         poolList.selectAll()
         poolList.checkBoxListSelectionModel.bind()
@@ -520,28 +529,23 @@ object MultiThreadViewer : MultiClipboardJvmTool {
         return open(tempFile)
     }
 
-    override fun open(connection: MBeanServerConnection): ToolPanel {
-        val objectName = ObjectName.getInstance(ManagementFactory.THREAD_MXBEAN_NAME)
-        val rawReturn = connection.invoke(objectName, "dumpAllThreads", arrayOf(true, true), arrayOf("boolean", "boolean"))
-        val asJmxComposites = rawReturn as Array<CompositeData>
-        val threads = asJmxComposites.map {
-            Thread(
-                id = (it["threadId"] as Long).toInt(),
-                name = it["threadName"] as String,
-                state = State.valueOf(it["threadState"] as String),
-                isDaemon = it["daemon"] as Boolean,
-                system = null,
-                scope = null,
-                cpuUsage = null,
-            )
+    private val threadBeanName = ObjectName.getInstance(ManagementFactory.THREAD_MXBEAN_NAME)
+
+    override fun open(descriptor: VirtualMachineDescriptor, connection: MBeanServerConnection): ToolPanel {
+        val threadMXBean = JMX.newMBeanProxy(connection, threadBeanName, ThreadMXBean::class.java)
+
+        val threads = threadMXBean.allThreadIds.map {
+            Thread(threadMXBean.getThreadInfo(it))
         }
+        val deadlocks = threadMXBean.findDeadlockedThreads()
+
         return MultiThreadView(
-            names = listOf("Remote JVM"),
+            names = listOf(descriptor.displayName()),
             threadDumps = listOf(
                 ThreadDump(
                     version = "(unknown)",
                     threads = threads,
-                    deadlockIds = emptyList(),
+                    deadlockIds = deadlocks?.map(Long::toInt).orEmpty(),
                 ),
             ),
         )

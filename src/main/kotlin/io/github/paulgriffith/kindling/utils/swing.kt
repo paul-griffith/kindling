@@ -40,12 +40,15 @@ import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.JMenu
 import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
 import javax.swing.UIManager
 import javax.swing.event.EventListenerList
+import javax.swing.event.MenuEvent
+import javax.swing.event.MenuListener
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 import javax.swing.text.Document
@@ -383,4 +386,12 @@ inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Un
 
         isVisible = true
     }
+}
+
+fun JMenu.onMenuSelected(listener: (MenuEvent) -> Unit) {
+    addMenuListener(object : MenuListener {
+        override fun menuSelected(e: MenuEvent) = listener(e)
+        override fun menuDeselected(e: MenuEvent) = Unit
+        override fun menuCanceled(e: MenuEvent) = Unit
+    })
 }

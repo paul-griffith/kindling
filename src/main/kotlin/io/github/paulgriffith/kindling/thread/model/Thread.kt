@@ -3,6 +3,7 @@ package io.github.paulgriffith.kindling.thread.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.lang.Thread.State
+import java.lang.management.ThreadInfo
 
 typealias Stacktrace = List<String>
 
@@ -23,6 +24,28 @@ data class Thread(
     val blocker: Blocker? = null,
     val stacktrace: Stacktrace = emptyList(),
 ) {
+    constructor(data: ThreadInfo) : this(
+        id = data.threadId.toInt(),
+        name = data.threadName,
+        state = data.threadState,
+        isDaemon = data.isDaemon,
+//        cpuUsage = null,
+//        lockedMonitors = data.lockedMonitors.map {
+//            Monitors(
+//                lock = it.toString(),
+//                frame = it.lockedStackFrame?.toString(),
+//            )
+//        },
+//        lockedSynchronizers = data.lockedSynchronizers.map(LockInfo::toString),
+        stacktrace = data.stackTrace.map(StackTraceElement::toString),
+        blocker = data.lockInfo?.let { lockInfo ->
+            Blocker(
+                lock = lockInfo.toString(),
+                owner = data.lockOwnerId.takeIf { it != -1L }?.toInt(),
+            )
+        },
+    )
+
     var marked: Boolean = false
 
     val pool: String? = extractPool(name)
