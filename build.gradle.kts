@@ -53,7 +53,7 @@ dependencies {
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
-    implementation(libs.osthemedetector)
+    api(libs.osthemedetector)
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
@@ -115,6 +115,7 @@ runtime {
             "java.naming",
             "java.xml",
             "jdk.zipfs",
+            "jdk.management",
         ),
     )
 
@@ -158,12 +159,6 @@ runtime {
         mainJar = "kindling-bundle.jar"
     }
 }
-
-//sourceSets {
-//    getByName("main").resources {
-//        srcDir(projects.agent.dependencyProject.tasks.jar.get().archiveFile)
-//    }
-//}
 
 configure<PublishingExtension> {
     repositories {
