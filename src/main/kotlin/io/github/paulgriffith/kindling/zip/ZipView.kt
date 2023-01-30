@@ -223,5 +223,3 @@ object ZipViewer : Tool {
 
     private val logger = getLogger<ZipViewer>()
 }
-
-class ZipViewerProxy : Tool by ZipViewer

@@ -440,5 +440,3 @@ object CacheViewer : Tool {
     override val extensions = listOf("data", "script", "zip")
     override fun open(path: Path): ToolPanel = CacheView(path)
 }
-
-class CacheViewerProxy : Tool by CacheViewer

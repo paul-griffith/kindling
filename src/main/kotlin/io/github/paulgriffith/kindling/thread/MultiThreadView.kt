@@ -3,10 +3,10 @@ package io.github.paulgriffith.kindling.thread
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
-import com.sun.tools.attach.VirtualMachineDescriptor
+import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
-import io.github.paulgriffith.kindling.core.MultiClipboardJvmTool
+import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
@@ -41,13 +41,8 @@ import org.jdesktop.swingx.table.TableColumnExt
 import java.awt.Desktop
 import java.awt.Rectangle
 import java.io.File
-import java.lang.management.ManagementFactory
-import java.lang.management.ThreadMXBean
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.management.JMX
-import javax.management.MBeanServerConnection
-import javax.management.ObjectName
 import javax.swing.ButtonGroup
 import javax.swing.Icon
 import javax.swing.JLabel
@@ -381,7 +376,10 @@ class MultiThreadView(
                         add(element)
                     }
                     add(FlatScrollPane(stateList), "w 220, h 100!")
-                    add(FlatScrollPane(systemList), "w 220, growy")
+                    // thread dumps from an attached JVM won't have system info, so no point displaying
+                    if (systemList.model.size > 2) {
+                        add(FlatScrollPane(systemList), "w 220, growy")
+                    }
                     add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
                     add(FlatScrollPane(mainTable), "newline, spany, pushx, grow")
                 },
@@ -511,7 +509,7 @@ class MultiThreadView(
     }
 }
 
-object MultiThreadViewer : MultiClipboardJvmTool {
+object MultiThreadViewer : MultiTool, ClipboardTool {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
@@ -528,40 +526,4 @@ object MultiThreadViewer : MultiClipboardJvmTool {
         }
         return open(tempFile)
     }
-
-    private val threadBeanName = ObjectName.getInstance(ManagementFactory.THREAD_MXBEAN_NAME)
-    private inline operator fun <reified T> MBeanServerConnection.invoke(operation: String, vararg values: Any): T {
-        return invoke(
-            threadBeanName,
-            operation,
-            values,
-            Array(values.size) {
-                val kClass = values[it]::class
-                (kClass.javaPrimitiveType ?: kClass.javaObjectType).name
-            },
-        ) as T
-    }
-
-    override fun open(descriptor: VirtualMachineDescriptor, connection: MBeanServerConnection): ToolPanel {
-        val threadMXBean = JMX.newMXBeanProxy(connection, threadBeanName, ThreadMXBean::class.java)
-
-        val threads = threadMXBean.allThreadIds.map {
-            val data = threadMXBean.getThreadInfo(it)
-            Thread(data)
-        }
-        val deadlocks = threadMXBean.findDeadlockedThreads()
-
-        return MultiThreadView(
-            names = listOf(descriptor.displayName()),
-            threadDumps = listOf(
-                ThreadDump(
-                    version = "(unknown)",
-                    threads = threads,
-                    deadlockIds = deadlocks?.map(Long::toInt).orEmpty(),
-                ),
-            ),
-        )
-    }
 }
-
-class ThreadViewerProxy : MultiClipboardJvmTool by MultiThreadViewer

@@ -1,12 +1,15 @@
 package io.github.paulgriffith.kindling.core
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.sun.tools.attach.VirtualMachineDescriptor
+import io.github.paulgriffith.kindling.cache.CacheViewer
+import io.github.paulgriffith.kindling.idb.IdbViewer
+import io.github.paulgriffith.kindling.log.LogViewer
+import io.github.paulgriffith.kindling.thread.MultiThreadViewer
 import io.github.paulgriffith.kindling.utils.FileExtensionFilter
 import io.github.paulgriffith.kindling.utils.loadService
+import io.github.paulgriffith.kindling.zip.ZipViewer
 import java.io.File
 import java.nio.file.Path
-import javax.management.MBeanServerConnection
 import javax.swing.filechooser.FileFilter
 
 interface Tool {
@@ -21,7 +24,16 @@ interface Tool {
         get() = FileExtensionFilter(description, extensions)
 
     companion object {
-        val tools: List<Tool> by lazy { loadService<Tool>().sortedBy { it.title } }
+        val tools: List<Tool> by lazy {
+            listOf(
+                ZipViewer,
+                MultiThreadViewer,
+                LogViewer,
+                IdbViewer,
+                CacheViewer,
+            ) + loadService<Tool>().sortedBy { it.title }
+        }
+
         val byFilter: Map<FileFilter, Tool> by lazy { tools.associateBy(Tool::filter) }
 
         val byExtension by lazy {
@@ -29,13 +41,11 @@ interface Tool {
         }
 
         operator fun get(file: File): Tool {
-            return requireNotNull(getOrNull(file)) { "No tool found for $file" }
-        }
-
-        fun getOrNull(file: File): Tool? {
-            return tools.firstOrNull { tool ->
-                tool.filter.accept(file)
-            }
+            return checkNotNull(
+                tools.find { tool ->
+                    tool.filter.accept(file)
+                },
+            ) { "No tool found for $file" }
         }
     }
 }
@@ -49,13 +59,5 @@ interface MultiTool : Tool {
 interface ClipboardTool : Tool {
     fun open(data: String): ToolPanel
 }
-
-interface JvmTool : Tool {
-    fun open(descriptor: VirtualMachineDescriptor, connection: MBeanServerConnection): ToolPanel
-}
-
-interface MultiClipboardTool : MultiTool, ClipboardTool // "union" interface for usage downstream
-
-interface MultiClipboardJvmTool : MultiClipboardTool, JvmTool
 
 class ToolOpeningException(message: String, cause: Throwable? = null) : Exception(message, cause)

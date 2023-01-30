@@ -5,7 +5,7 @@ import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.jthemedetecor.OsThemeDetector
 import com.sun.tools.attach.VirtualMachine
-import io.github.paulgriffith.kindling.attach.AttachedPanel
+import io.github.paulgriffith.kindling.attach.VirtualMachinePanel
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
 import io.github.paulgriffith.kindling.core.Kindling
@@ -147,7 +147,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                                 description = descriptor.displayName(),
                             ) {
                                 openOrError("attached JVM", descriptor.displayName()) {
-                                    AttachedPanel(descriptor)
+                                    VirtualMachinePanel(descriptor)
                                 }
                             },
                         )
