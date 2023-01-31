@@ -6,7 +6,6 @@ import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 import javax.swing.JButton
 import javax.swing.JFileChooser
-import javax.swing.UIManager
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.copyToRecursively
 import kotlin.io.path.div
@@ -36,10 +35,9 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            UIManager.addPropertyChangeListener { e ->
-                if (e.propertyName == "lookAndFeel") {
-                    updateUI()
-                }
+
+            Kindling.addThemeChangeListener {
+                updateUI()
             }
         }
 

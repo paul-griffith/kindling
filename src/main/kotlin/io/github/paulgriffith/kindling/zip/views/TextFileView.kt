@@ -1,7 +1,7 @@
 package io.github.paulgriffith.kindling.zip.views
 
-import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.paulgriffith.kindling.core.Kindling
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -12,13 +12,11 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_PROPERTIES_FILE
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_PYTHON
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_XML
-import org.fife.ui.rsyntaxtextarea.Theme
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.EventQueue
 import java.awt.Rectangle
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
-import javax.swing.UIManager
 import kotlin.io.path.extension
 import kotlin.io.path.name
 
@@ -27,12 +25,7 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
         isEditable = false
         syntaxEditingStyle = KNOWN_EXTENSIONS[path.extension] ?: SYNTAX_STYLE_NONE
 
-        updateTheme()
-    }
-
-    private fun RSyntaxTextArea.updateTheme() {
-        val theme = if (FlatLaf.isLafDark()) Themes.DARK else Themes.LIGHT
-        theme.theme.apply(this)
+        Kindling.theme.apply(this)
     }
 
     override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-file.svg").derive(16, 16)
@@ -51,24 +44,13 @@ class TextFileView(override val provider: FileSystemProvider, override val path:
             text
         }
 
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                textArea.updateTheme()
-            }
+        Kindling.addThemeChangeListener { theme ->
+            theme.apply(textArea)
         }
 
         add(RTextScrollPane(textArea), "push, grow")
         EventQueue.invokeLater {
             textArea.scrollRectToVisible(Rectangle(0, 0))
-        }
-    }
-
-    enum class Themes(private val themeName: String) {
-        LIGHT("idea.xml"),
-        DARK("dark.xml");
-
-        val theme: Theme by lazy {
-            Theme::class.java.getResourceAsStream("themes/$themeName").use(Theme::load)
         }
     }
 

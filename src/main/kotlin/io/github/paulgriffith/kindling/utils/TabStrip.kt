@@ -93,7 +93,7 @@ class TabStrip : FlatTabbedPane() {
     }
 
     private fun <T> createPopupFrame(tab: T): JFrame where T : Container, T : FloatableComponent {
-        return jFrame(tab.name, 1024, 768) {
+        return jFrame(tab.tabName, 1024, 768) {
             contentPane = tab
 
             jMenuBar = JMenuBar().apply {

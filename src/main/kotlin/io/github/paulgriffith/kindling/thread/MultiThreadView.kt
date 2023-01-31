@@ -3,9 +3,10 @@ package io.github.paulgriffith.kindling.thread
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.comparator.AlphanumComparator
 import com.jidesoft.swing.CheckBoxListSelectionModel
+import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.Detail.BodyLine
-import io.github.paulgriffith.kindling.core.MultiClipboardTool
+import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
@@ -369,7 +370,10 @@ class MultiThreadView(
                         add(element)
                     }
                     add(FlatScrollPane(stateList), "w 220, h 100!")
-                    add(FlatScrollPane(systemList), "w 220, growy")
+                    // if all the thread dumps are "unassigned", no need to add the system selector
+                    if (systemList.model.size > 2) {
+                        add(FlatScrollPane(systemList), "w 220, growy")
+                    }
                     add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
                     add(FlatScrollPane(mainTable), "newline, spany, pushx, grow")
                 },
@@ -499,7 +503,7 @@ class MultiThreadView(
     }
 }
 
-object MultiThreadViewer : MultiClipboardTool {
+object MultiThreadViewer : MultiTool, ClipboardTool {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
@@ -517,5 +521,3 @@ object MultiThreadViewer : MultiClipboardTool {
         return open(tempFile)
     }
 }
-
-class ThreadViewerProxy : MultiClipboardTool by MultiThreadViewer

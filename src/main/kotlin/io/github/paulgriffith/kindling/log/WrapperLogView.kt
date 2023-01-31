@@ -1,7 +1,8 @@
 package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import io.github.paulgriffith.kindling.core.MultiClipboardTool
+import io.github.paulgriffith.kindling.core.ClipboardTool
+import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
 import java.awt.Desktop
@@ -45,7 +46,7 @@ class WrapperLogView(
     }
 }
 
-object LogViewer : MultiClipboardTool {
+object LogViewer : MultiTool, ClipboardTool {
     override val title = "Wrapper Log"
     override val description = "wrapper.log(.n) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
@@ -71,5 +72,3 @@ object LogViewer : MultiClipboardTool {
         )
     }
 }
-
-class LogViewerProxy : MultiClipboardTool by LogViewer

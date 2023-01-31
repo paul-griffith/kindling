@@ -3,7 +3,6 @@ package io.github.paulgriffith.kindling
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
-import com.jthemedetecor.OsThemeDetector
 import io.github.paulgriffith.kindling.core.ClipboardTool
 import io.github.paulgriffith.kindling.core.CustomIconView
 import io.github.paulgriffith.kindling.core.Kindling
@@ -13,14 +12,10 @@ import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.internal.FileTransferHandler
 import io.github.paulgriffith.kindling.utils.Action
-import io.github.paulgriffith.kindling.utils.DARK_THEME
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
-import io.github.paulgriffith.kindling.utils.LIGHT_THEME
 import io.github.paulgriffith.kindling.utils.TabStrip
 import io.github.paulgriffith.kindling.utils.chooseFiles
-import io.github.paulgriffith.kindling.utils.display
 import io.github.paulgriffith.kindling.utils.getLogger
-import io.github.paulgriffith.kindling.utils.truncate
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
@@ -50,10 +45,8 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.tools.first().filter
 
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                updateUI()
-            }
+        Kindling.addThemeChangeListener {
+            updateUI()
         }
     }
 
@@ -110,31 +103,25 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         )
         add(
             JMenu("Theme").apply {
-                val group = ButtonGroup()
-                add(
-                    JCheckBoxMenuItem("Light", !THEME_DETECTOR.isDark).apply {
-                        addItemListener {
-                            if (it.stateChange == ItemEvent.SELECTED) {
-                                LIGHT_THEME.display(true)
+                val buttonGroup = ButtonGroup()
+
+                for (value in Kindling.Theme.values()) {
+                    add(
+                        JCheckBoxMenuItem(value.name, Kindling.theme == value).apply {
+                            addItemListener { e ->
+                                if (e.stateChange == ItemEvent.SELECTED) {
+                                    Kindling.theme = value
+                                }
                             }
-                        }
-                        group.add(this)
-                    },
-                )
-                add(
-                    JCheckBoxMenuItem("Dark", THEME_DETECTOR.isDark).apply {
-                        addItemListener {
-                            if (it.stateChange == ItemEvent.SELECTED) {
-                                DARK_THEME.display(true)
-                            }
-                        }
-                        group.add(this)
-                    },
-                )
+                            buttonGroup.add(this)
+                        },
+                    )
+                }
             },
         )
         add(
-            JMenu("Debug").apply {
+            JMenu("Debug").apply
+            {
                 add(
                     Action("UI Inspector") {
                         FlatUIDefaultsInspector.show()
@@ -158,10 +145,10 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         runCatching {
             val toolPanel = openFunction()
             tabs.addTab(
-                toolPanel.name.truncate(),
+                toolPanel.tabName,
                 toolPanel.icon,
                 toolPanel,
-                toolPanel.toolTipText,
+                toolPanel.tabTooltip,
             )
         }.getOrElse { ex ->
             LOGGER.error("Failed to open $description as a $title", ex)
@@ -218,8 +205,6 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
-        val THEME_DETECTOR: OsThemeDetector = OsThemeDetector.getDetector()
-
         val LOGGER = getLogger<MainPanel>()
 
         @JvmStatic
@@ -264,8 +249,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         }
 
         private fun setupLaf() {
-            val osTheme = if (THEME_DETECTOR.isDark) DARK_THEME else LIGHT_THEME
-            osTheme.display()
+            Kindling.initTheme()
 
             UIManager.getDefaults().apply {
                 put("ScrollBar.width", 16)
