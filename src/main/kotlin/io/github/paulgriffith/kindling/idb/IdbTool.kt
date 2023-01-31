@@ -114,5 +114,3 @@ object IdbViewer : Tool {
     override val extensions = listOf("idb")
     override fun open(path: Path): ToolPanel = IdbView(path)
 }
-
-class IdbViewerProxy : Tool by IdbViewer // https://youtrack.jetbrains.com/issue/KT-25892

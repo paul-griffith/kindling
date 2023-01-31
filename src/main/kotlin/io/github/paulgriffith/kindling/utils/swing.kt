@@ -1,14 +1,7 @@
 package io.github.paulgriffith.kindling.utils // ktlint-disable filename
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
-import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
-import com.formdev.flatlaf.themes.FlatMacDarkLaf
-import com.formdev.flatlaf.themes.FlatMacLightLaf
-import com.formdev.flatlaf.util.SystemInfo
 import com.jidesoft.swing.ListSearchable
 import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
@@ -311,22 +304,6 @@ data class FileExtensionFilter(
     }
 
     override fun getDescription(): String = description
-}
-
-val LIGHT_THEME = if (SystemInfo.isMacOS) FlatMacLightLaf() else FlatLightLaf()
-val DARK_THEME = if (SystemInfo.isMacOS) FlatMacDarkLaf() else FlatDarkLaf()
-
-fun FlatLaf.display(animate: Boolean = false) {
-    try {
-        if (animate) {
-            FlatAnimatedLafChange.showSnapshot()
-        }
-        UIManager.setLookAndFeel(this)
-        FlatLaf.updateUI()
-    } finally {
-        // Will no-op if not animated
-        FlatAnimatedLafChange.hideSnapshotWithAnimation()
-    }
 }
 
 fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {

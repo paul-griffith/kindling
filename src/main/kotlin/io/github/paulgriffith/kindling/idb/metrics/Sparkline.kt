@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
+import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.DATE_FORMAT
 import org.jfree.chart.ChartFactory
 import org.jfree.chart.JFreeChart
@@ -9,7 +10,6 @@ import org.jfree.data.time.FixedMillisecond
 import org.jfree.data.time.TimeSeries
 import org.jfree.data.time.TimeSeriesCollection
 import java.text.NumberFormat
-import javax.swing.UIManager
 
 fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
     return ChartFactory.createTimeSeriesChart(
@@ -45,21 +45,9 @@ fun sparkline(data: List<MetricData>, formatter: NumberFormat): JFreeChart {
         padding = RectangleInsets(10.0, 10.0, 10.0, 10.0)
         isBorderVisible = false
 
-        applyTheme()
-
-        UIManager.addPropertyChangeListener { e ->
-            if (e.propertyName == "lookAndFeel") {
-                applyTheme()
-            }
+        Kindling.theme.apply(this)
+        Kindling.addThemeChangeListener { theme ->
+            theme.apply(this)
         }
     }
-}
-
-private fun JFreeChart.applyTheme() {
-    xyPlot.apply {
-        backgroundPaint = UIManager.getColor("Panel.background")
-        domainAxis.tickLabelPaint = UIManager.getColor("ColorChooser.foreground")
-        rangeAxis.tickLabelPaint = UIManager.getColor("ColorChooser.foreground")
-    }
-    backgroundPaint = UIManager.getColor("Panel.background")
 }
