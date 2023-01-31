@@ -1,14 +1,7 @@
 package io.github.paulgriffith.kindling.utils // ktlint-disable filename
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
-import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
-import com.formdev.flatlaf.themes.FlatMacDarkLaf
-import com.formdev.flatlaf.themes.FlatMacLightLaf
-import com.formdev.flatlaf.util.SystemInfo
 import com.jidesoft.swing.ListSearchable
 import io.github.paulgriffith.kindling.core.Kindling
 import io.github.paulgriffith.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
@@ -40,15 +33,12 @@ import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JList
-import javax.swing.JMenu
 import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
 import javax.swing.UIManager
 import javax.swing.event.EventListenerList
-import javax.swing.event.MenuEvent
-import javax.swing.event.MenuListener
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.TableModel
 import javax.swing.text.Document
@@ -316,22 +306,6 @@ data class FileExtensionFilter(
     override fun getDescription(): String = description
 }
 
-val LIGHT_THEME = if (SystemInfo.isMacOS) FlatMacLightLaf() else FlatLightLaf()
-val DARK_THEME = if (SystemInfo.isMacOS) FlatMacDarkLaf() else FlatDarkLaf()
-
-fun FlatLaf.display(animate: Boolean = false) {
-    try {
-        if (animate) {
-            FlatAnimatedLafChange.showSnapshot()
-        }
-        UIManager.setLookAndFeel(this)
-        FlatLaf.updateUI()
-    } finally {
-        // Will no-op if not animated
-        FlatAnimatedLafChange.hideSnapshotWithAnimation()
-    }
-}
-
 fun JFileChooser.chooseFiles(parent: JComponent): List<File>? {
     return if (showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
         selectedFiles.toList()
@@ -386,12 +360,4 @@ inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Un
 
         isVisible = true
     }
-}
-
-fun JMenu.onMenuSelected(listener: (MenuEvent) -> Unit) {
-    addMenuListener(object : MenuListener {
-        override fun menuSelected(e: MenuEvent) = listener(e)
-        override fun menuDeselected(e: MenuEvent) = Unit
-        override fun menuCanceled(e: MenuEvent) = Unit
-    })
 }
