@@ -92,6 +92,7 @@ enum class IdbTool {
                     level = Level.valueOf(resultSet.getString("level_string")),
                     mdc = mdcKeys[eventId].orEmpty(),
                     stacktrace = stackTraces[eventId].orEmpty(),
+                    marked = false
                 )
             }
             return LogPanel(events)

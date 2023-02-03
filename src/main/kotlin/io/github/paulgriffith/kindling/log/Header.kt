@@ -25,11 +25,15 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
         firePropertyChange(property.name, oldValue, newValue)
     }
 
+    var isShowTimeFilter: Boolean by Delegates.observable(false) { property, oldValue, newValue ->
+        firePropertyChange(property.name, oldValue, newValue)
+    }
+
     var selectedTimeZone: String by Delegates.observable(ZoneId.systemDefault().id) { property, oldValue, newValue ->
         firePropertyChange(property.name, oldValue, newValue)
     }
 
-    var minimumLevel: Level by Delegates.observable(Level.INFO) { property, oldValue, newValue ->
+    var isOnlyShowMarkedLogs: Boolean by Delegates.observable(false) { property, oldValue, newValue ->
         firePropertyChange(property.name, oldValue, newValue)
     }
 
@@ -41,7 +45,20 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                 }
             }
         )
-
+        add(
+                JCheckBoxMenuItem("Show Time Filter").apply {
+                    addActionListener {
+                        isShowTimeFilter = !isShowTimeFilter
+                    }
+                }
+        )
+        add(
+                JCheckBoxMenuItem("Only Show Marked Logs").apply {
+                    addActionListener {
+                        isOnlyShowMarkedLogs = !isOnlyShowMarkedLogs
+                    }
+                }
+        )
         val tzGroup = ButtonGroup()
         add(
             JMenu("Timezone").apply {
@@ -50,20 +67,6 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                         tzGroup.add(timezoneItem)
                         timezoneItem.addActionListener {
                             selectedTimeZone = timezone
-                        }
-                    }
-                }
-            }
-        )
-
-        val levelGroup = ButtonGroup()
-        add(
-            JMenu("Minimum Level").apply {
-                for (level in Level.values()) {
-                    add(JCheckBoxMenuItem(level.toString(), level == minimumLevel)).also { levelItem ->
-                        levelGroup.add(levelItem)
-                        levelItem.addActionListener {
-                            minimumLevel = level
                         }
                     }
                 }

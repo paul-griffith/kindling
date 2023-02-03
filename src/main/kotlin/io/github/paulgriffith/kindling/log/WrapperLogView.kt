@@ -6,6 +6,8 @@ import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
 import java.awt.Desktop
 import java.io.File
+import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -54,7 +56,7 @@ object LogViewer : MultiClipboardTool {
     override fun open(paths: List<Path>): ToolPanel {
         require(paths.isNotEmpty()) { "Must provide at least one path" }
         val events = paths.flatMap { path ->
-            path.useLines { lines -> LogPanel.parseLogs(lines) }
+            path.useLines(Charsets.ISO_8859_1) { lines -> LogPanel.parseLogs(lines) }
         }
         return WrapperLogView(
             events = events,
