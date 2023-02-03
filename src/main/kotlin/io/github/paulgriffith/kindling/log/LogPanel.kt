@@ -68,9 +68,17 @@ class LogPanel(
     }
 
     private val details = LogDetailsPane()
+
     private val loggerNamesSidebar = LoggerNamesPanel(rawData)
     private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
-
+    private val loggerMDCsSidebar = if (rawData.first() is SystemLogsEvent) {LoggerMDCsPanel(rawData as List<SystemLogsEvent>)} else {null}
+    private val filterPane = JTabbedPane().apply {
+        addTab("Loggers", loggerNamesSidebar)
+        addTab("Levels", loggerLevelsSidebar)
+        if (loggerMDCsSidebar != null) {
+            addTab("MDC", loggerMDCsSidebar)
+        }
+    }
     private val filters: List<(LogEvent) -> Boolean> = buildList {
         add { event ->
             event.logger in loggerNamesSidebar.list.checkBoxListSelectedIndices
@@ -86,6 +94,16 @@ class LogPanel(
                     .map { loggerLevelsSidebar.list.model.getElementAt(it) }
                     .filterIsInstance<LoggerLevel>()
                     .mapTo(mutableSetOf()) { it.name }
+        }
+        add { event ->
+            if (event is SystemLogsEvent) {
+                event.mdc.toString() in loggerMDCsSidebar?.list?.checkBoxListSelectedIndices
+                        ?.map { loggerMDCsSidebar.list.model.getElementAt(it) }
+                        ?.filterIsInstance<LoggerMDC>()
+                        ?.mapTo(mutableSetOf()) { it.name }!!
+            } else {
+                true
+            }
         }
         add { event ->
             if (header.isOnlyShowMarkedLogs) {
@@ -201,8 +219,12 @@ class LogPanel(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                     JPanel(MigLayout("ins 0, fill")).apply {
-                        add(loggerNamesSidebar, "grow, h 100:1000, wrap")
-                        add(loggerLevelsSidebar, "growx, h 120!")
+//                        add(loggerNamesSidebar, "grow, h 100:1000, wrap")
+//                        add(loggerLevelsSidebar, "growx, h 120!, wrap")
+//                        if (loggerMDCsSidebar != null) {
+//                            add(loggerMDCsSidebar, "growx, h 120!")
+//                        }
+                                                           add(filterPane, "grow")
                     },
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
@@ -340,16 +362,15 @@ class LogPanel(
                                 }
                             })
                         }
-                        if (mdcFilter.isEmpty()) {
+                        if (!loggerMDCsSidebar?.isOnlySelected((this@table.model.data[rowAtPoint] as SystemLogsEvent).mdc.toString())!!) {
                             add(Action("MDC Key") {
-                                mdcFilter = (this@table.model.data[rowAtPoint] as SystemLogsEvent).mdc
-                                updateData()
+                                loggerMDCsSidebar.select((this@table.model.data[rowAtPoint] as SystemLogsEvent).mdc.toString())
                             })
-                        } else {
+                        }   else {
                             add(JCheckBoxMenuItem("MDC Key", true).apply {
                                 toolTipText = "Remove Filter"
                                 addActionListener{
-                                    mdcFilter = emptyMap()
+                                    loggerLevelsSidebar.list.checkBoxListSelectionModel.setSelectionInterval(0, 0)
                                     updateData()
                                 }
                             })
@@ -554,6 +575,7 @@ class LogPanel(
                 })
             }
         }
+
         table.addPropertyChangeListener("model") {
             header.displayedRows = table.model.rowCount
         }
@@ -565,6 +587,12 @@ class LogPanel(
         }
 
         loggerLevelsSidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                updateData()
+            }
+        }
+
+        loggerMDCsSidebar?.list?.checkBoxListSelectionModel?.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 updateData()
             }
