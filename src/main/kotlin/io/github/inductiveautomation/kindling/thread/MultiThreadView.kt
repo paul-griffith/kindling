@@ -42,8 +42,12 @@ import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
 import org.jdesktop.swingx.table.TableColumnExt
+import org.jpmml.evaluator.FieldValue
+import org.jpmml.evaluator.InputField
+import org.jpmml.evaluator.LoadingModelEvaluatorBuilder
 import java.awt.Desktop
 import java.awt.Rectangle
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.ButtonGroup
@@ -93,6 +97,45 @@ class MultiThreadView(
                 updateData()
             }
         }
+
+    val evaluator = LoadingModelEvaluatorBuilder().run {
+        val file = File("C:\\Users\\jhansen\\IdeaProjects\\kindling\\src\\main\\resources\\LogisticRegressionThread.pmml")
+        load(file)
+        build()
+    }
+
+    val inputFields: List<InputField> = evaluator.inputFields.onEach { println(it) }
+
+    private fun Thread.getPmmlProp(prop: String): Any? = when(prop) {
+        "thread_state" -> state.toString()
+        "system" -> system.toString()
+        "scope" -> scope
+        "stacktrace_depth" -> stacktrace.size
+        "cpu_usage" -> cpuUsage
+        "daemon" -> isDaemon
+        else -> null
+    }
+
+    init {
+        val thread = threadDumps.first().threads.first()
+        println(thread.toString())
+
+        val args = mutableMapOf<String, FieldValue>()
+
+        for (inputField in inputFields) {
+            val name = inputField.name
+            val value = thread.getPmmlProp(name)
+            println(value)
+            val inputValue = inputField.prepare(value)
+            println(inputValue)
+
+            args[name] = inputValue
+        }
+
+        val results = evaluator.evaluate(args).onEach { println(it) }
+
+        val targetFields = evaluator.targetFields.onEach { println(it) }
+    }
 
     private val mainTable: ReifiedJXTable<ThreadModel> = run {
         // populate initial state of all the filter lists

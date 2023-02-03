@@ -54,6 +54,7 @@ dependencies {
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
+    api(libs.jpmml)
     runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
