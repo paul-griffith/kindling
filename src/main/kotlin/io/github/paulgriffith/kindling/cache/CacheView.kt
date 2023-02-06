@@ -6,6 +6,7 @@ import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import com.jidesoft.swing.JideButton
 import io.github.paulgriffith.kindling.cache.model.AuditProfileData
+import io.github.paulgriffith.kindling.cache.model.ScriptedSFData
 import io.github.paulgriffith.kindling.core.Detail
 import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.Tool
@@ -229,6 +230,7 @@ class CacheView(private val path: Path) : ToolPanel() {
         is BasicHistoricalRecord -> toDetail()
         is ScanclassHistorySet -> toDetail()
         is AuditProfileData -> toDetail()
+        is ScriptedSFData -> toDetail()
         is Array<*> -> {
             // 2D array
             if (firstOrNull()?.javaClass?.isArray == true) {
@@ -258,6 +260,7 @@ class CacheView(private val path: Path) : ToolPanel() {
     private fun ByteArray.deserialize(): Serializable {
         return AliasingObjectInputStream(inputStream()).apply {
             put("com.inductiveautomation.ignition.gateway.audit.AuditProfileData", AuditProfileData::class.java)
+            put("com.inductiveautomation.ignition.gateway.script.ialabs.IALabsDatasourceFunctions\$QuerySFData", ScriptedSFData::class.java)
         }.readObject() as Serializable
     }
 
@@ -302,30 +305,6 @@ class CacheView(private val path: Path) : ToolPanel() {
             details = mapOf(
                 "quoteColumnNames" to quoteColumnNames().toString(),
             ),
-        )
-    }
-
-    private fun AuditProfileData.toDetail(): Detail {
-        return Detail(
-            title = "Audit Profile Data",
-            message = insertQuery,
-            body = mapOf(
-                "actor" to auditRecord.actor,
-                "action" to auditRecord.action,
-                "actionValue" to auditRecord.actionValue,
-                "actionTarget" to auditRecord.actionTarget,
-                "actorHost" to auditRecord.actorHost,
-                "originatingContext" to when (auditRecord.originatingContext) {
-                    1 -> "Gateway"
-                    2 -> "Designer"
-                    4 -> "Client"
-                    else -> "Unknown"
-                },
-                "originatingSystem" to auditRecord.originatingSystem,
-                "timestamp" to auditRecord.timestamp.toString(),
-            ).map { (key, value) ->
-                "$key: $value"
-            },
         )
     }
 
