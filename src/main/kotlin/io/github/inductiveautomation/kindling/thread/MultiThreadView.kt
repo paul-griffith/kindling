@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
+import org.apache.poi.sl.usermodel.Background
 import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
@@ -45,6 +46,8 @@ import org.jdesktop.swingx.table.TableColumnExt
 import org.jpmml.evaluator.FieldValue
 import org.jpmml.evaluator.InputField
 import org.jpmml.evaluator.LoadingModelEvaluatorBuilder
+import org.jpmml.evaluator.ModelEvaluator
+import org.jpmml.evaluator.ProbabilityDistribution
 import java.awt.Desktop
 import java.awt.Rectangle
 import java.io.File
@@ -97,45 +100,6 @@ class MultiThreadView(
                 updateData()
             }
         }
-
-    val evaluator = LoadingModelEvaluatorBuilder().run {
-        val file = File("C:\\Users\\jhansen\\IdeaProjects\\kindling\\src\\main\\resources\\LogisticRegressionThread.pmml")
-        load(file)
-        build()
-    }
-
-    val inputFields: List<InputField> = evaluator.inputFields.onEach { println(it) }
-
-    private fun Thread.getPmmlProp(prop: String): Any? = when(prop) {
-        "thread_state" -> state.toString()
-        "system" -> system.toString()
-        "scope" -> scope
-        "stacktrace_depth" -> stacktrace.size
-        "cpu_usage" -> cpuUsage
-        "daemon" -> isDaemon
-        else -> null
-    }
-
-    init {
-        val thread = threadDumps.first().threads.first()
-        println(thread.toString())
-
-        val args = mutableMapOf<String, FieldValue>()
-
-        for (inputField in inputFields) {
-            val name = inputField.name
-            val value = thread.getPmmlProp(name)
-            println(value)
-            val inputValue = inputField.prepare(value)
-            println(inputValue)
-
-            args[name] = inputValue
-        }
-
-        val results = evaluator.evaluate(args).onEach { println(it) }
-
-        val targetFields = evaluator.targetFields.onEach { println(it) }
-    }
 
     private val mainTable: ReifiedJXTable<ThreadModel> = run {
         // populate initial state of all the filter lists
@@ -244,6 +208,12 @@ class MultiThreadView(
                 }
             }
         }
+    }
+
+    private val evaluator: ModelEvaluator<*> = LoadingModelEvaluatorBuilder().run {
+        val pathToModel = "/LogisticRegressionThread.pmml"
+        javaClass.getResourceAsStream(pathToModel).use(this::load)
+        build()
     }
 
     private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
@@ -443,6 +413,37 @@ class MultiThreadView(
             },
             "push, grow, span",
         )
+        markThreadsOfInterest()
+    }
+
+    private fun markThreadsOfInterest() = BACKGROUND.launch {
+        val model = mainTable.model.threadData
+        val inputFields: List<InputField> = evaluator.inputFields
+
+        model.flatten().filterNotNull().forEach { thread ->
+            val map = mutableMapOf<String, FieldValue>()
+            for (inputField in inputFields) {
+                val name = inputField.name
+                val value = thread.getPmmlProperty(name)
+                val inputValue = inputField.prepare(value)
+
+                map[name] = inputValue
+            }
+            val evaluation = evaluator.evaluate(map)
+            val result = (evaluation["marked"] as ProbabilityDistribution<Int>).result
+
+            if (result == 1) thread.marked = true
+        }
+    }
+
+    private fun Thread.getPmmlProperty(prop: String): Any? = when(prop) {
+        "thread_state" -> state.toString()
+        "system" -> system
+        "scope" -> scope
+        "stacktrace_depth" -> stacktrace.size
+        "cpu_usage" -> cpuUsage
+        "daemon" -> isDaemon
+        else -> null
     }
 
     private val initialized = true
