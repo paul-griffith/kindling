@@ -121,7 +121,7 @@ runtime {
     jpackage {
         val currentOs = OperatingSystem.current()
         val imgType = if (currentOs.isWindows) "ico" else "png"
-        appVersion = System.getenv("TAG_VERSION") ?: "1.0.0"
+        appVersion = project.version.toString()
         imageOptions = listOf("--icon", "src/main/resources/icons/ignition.$imgType")
         @OptIn(ExperimentalStdlibApi::class)
         val options: Map<String, String?> = buildMap {

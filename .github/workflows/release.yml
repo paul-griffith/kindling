@@ -17,9 +17,7 @@ jobs:
           java-version: 17
           cache: 'gradle'
       - name: Execute Gradle build, JPackage, publish to Github Packages
-        run: ./gradlew -Pversion=${{github.ref_name}} build jpackage publish
-        env:
-          TAG_VERSION: ${{github.ref_name}}
+        run: './gradlew -Pversion="${{github.ref_name}}" build jpackage publish'
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
