@@ -5,6 +5,8 @@ import com.formdev.flatlaf.extras.components.FlatPopupMenu
 import com.inductiveautomation.ignition.gateway.history.BasicHistoricalRecord
 import com.inductiveautomation.ignition.gateway.history.ScanclassHistorySet
 import com.jidesoft.swing.JideButton
+import io.github.paulgriffith.kindling.cache.model.AlarmJournalData
+import io.github.paulgriffith.kindling.cache.model.AlarmJournalSFGroup
 import io.github.paulgriffith.kindling.cache.model.AuditProfileData
 import io.github.paulgriffith.kindling.cache.model.ScriptedSFData
 import io.github.paulgriffith.kindling.core.Detail
@@ -130,19 +132,19 @@ class CacheView(private val path: Path) : ToolPanel() {
         """.trimMargin(),
     ).use { statement ->
         statement.executeQuery().toList { rs ->
-            Triple(
+            SchemaRow(
                 rs.getInt("id"),
                 rs.getString("signature"),
                 rs.getString("message"),
             )
         }
     }
-        .groupBy { it.first }
+        .groupBy(SchemaRow::id)
         .map { (id, rows) ->
             SchemaRecord(
                 id = id,
-                name = rows.first().second,
-                errors = rows.map { it.third },
+                name = rows.firstNotNullOf(SchemaRow::signature),
+                errors = rows.mapNotNull(SchemaRow::message),
             )
         }
 
@@ -230,6 +232,8 @@ class CacheView(private val path: Path) : ToolPanel() {
         is BasicHistoricalRecord -> toDetail()
         is ScanclassHistorySet -> toDetail()
         is AuditProfileData -> toDetail()
+        is AlarmJournalData -> toDetail()
+        is AlarmJournalSFGroup -> toDetail()
         is ScriptedSFData -> toDetail()
         is Array<*> -> {
             // 2D array
@@ -258,9 +262,11 @@ class CacheView(private val path: Path) : ToolPanel() {
      * @throws ClassNotFoundException
      */
     private fun ByteArray.deserialize(): Serializable {
-        return AliasingObjectInputStream(inputStream()).apply {
+        return AliasingObjectInputStream(inputStream()) {
             put("com.inductiveautomation.ignition.gateway.audit.AuditProfileData", AuditProfileData::class.java)
             put("com.inductiveautomation.ignition.gateway.script.ialabs.IALabsDatasourceFunctions\$QuerySFData", ScriptedSFData::class.java)
+//            put("com.inductiveautomation.ignition.gateway.alarming.journal.DatabaseAlarmJournal\$AlarmJournalSFData", AlarmJournalData::class.java)
+//            put("com.inductiveautomation.ignition.gateway.alarming.journal.DatabaseAlarmJournal\$AlarmJournalSFGroup", AlarmJournalSFGroup::class.java)
         }.readObject() as Serializable
     }
 
@@ -370,14 +376,15 @@ class CacheView(private val path: Path) : ToolPanel() {
                         deserializedCache.getOrPut(id) {
                             val bytes = queryForData(id)
                             try {
-                                bytes.deserialize().toDetail()
-                            } catch (e: ClassNotFoundException) {
+                                val deserialized = bytes.deserialize()
+                                deserialized.toDetail()
+                            } catch (e: Exception) {
                                 // It's not serialized with a class in the public API, or some other problem;
                                 // give up, and try to just dump the serialized data in a friendlier format
                                 val serializationDumper = deser.SerializationDumper(bytes)
 
                                 Detail(
-                                    title = "Serialization dump of ${data.size} bytes:",
+                                    title = "Serialization dump of ${bytes.size} bytes:",
                                     body = serializationDumper.parseStream().lines(),
                                 )
                             }
