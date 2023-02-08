@@ -635,6 +635,7 @@ public class SerializationDumper {
                     case TC_REFERENCE -> readPrevObject();
                     case TC_NULL -> readNullReference();
                     case TC_STRING -> readTC_STRING();
+                    case TC_LONGSTRING -> readTC_LONGSTRING();
                     case TC_CLASS -> readNewClass();
                     case TC_ARRAY -> readNewArray();
                     case TC_ENUM -> readNewEnum();

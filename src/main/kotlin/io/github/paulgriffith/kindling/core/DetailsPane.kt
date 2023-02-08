@@ -167,8 +167,9 @@ class DetailsEditorKit : HTMLEditorKit() {
                             val details: Map<String, String> =
                                 elem.attributes.attributeNames.asSequence()
                                     .filterIsInstance<String>()
-                                    .map { it.removePrefix(detailPrefix) }
-                                    .associateWith { elem.attributes.getAttribute(it) as String }
+                                    .associate { rawAttribute ->
+                                        rawAttribute.removePrefix(detailPrefix) to elem.attributes.getAttribute(rawAttribute) as String
+                                    }
                             return DetailsIcon(details)
                         }
                     }

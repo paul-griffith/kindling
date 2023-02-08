@@ -6,9 +6,9 @@ import java.io.ObjectStreamClass
 
 class AliasingObjectInputStream private constructor(
     inputStream: InputStream,
-    private val aliases: MutableMap<String, Class<*>>,
-) : ObjectInputStream(inputStream), MutableMap<String, Class<*>> by aliases {
-    constructor(inputStream: InputStream) : this(inputStream, mutableMapOf())
+    private val aliases: Map<String, Class<*>>,
+) : ObjectInputStream(inputStream) {
+    constructor(inputStream: InputStream, block: MutableMap<String, Class<*>>.() -> Unit) : this(inputStream, buildMap(block))
 
     override fun readClassDescriptor(): ObjectStreamClass {
         val baseDescriptor = super.readClassDescriptor()
