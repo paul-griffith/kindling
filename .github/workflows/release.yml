@@ -27,12 +27,14 @@ jobs:
             build/jpackage/*.rpm
             build/jpackage/*.exe
             build/jpackage/*.msi
-      - name: Upload jar and publish to Github packages
+      - name: Upload jar
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v3
         with:
           name: fatjar
           path: build/libs/kindling-bundle.jar
+      - name: Publish to Github packages
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: './gradlew -Pversion="${{github.ref_name}}" publish'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
