@@ -88,6 +88,7 @@ class DetailsPane(initialEvents: List<Detail> = emptyList()) : JPanel(MigLayout(
     init {
         add(FlatScrollPane(textPane), "push, grow")
         add(actionPanel, "east")
+        textPane.text = events.toDisplayFormat()
     }
 
     private fun List<Detail>.toDisplayFormat(): String {
