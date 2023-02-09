@@ -18,6 +18,7 @@ import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
 import javax.swing.*
 import io.github.paulgriffith.kindling.utils.Action
+import org.intellij.lang.annotations.JdkConstants.TabLayoutPolicy
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
@@ -73,12 +74,15 @@ class LogPanel(
     private val loggerNamesSidebar = LoggerNamesPanel(rawData)
     private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
     private val loggerMDCsSidebar = if (rawData.first() is SystemLogsEvent) {LoggerMDCPanel(rawData as List<SystemLogsEvent>)} else {null}
+    private val loggerTimesSidebar = LoggerTimesPanel(rawData)
     private val filterPane = JTabbedPane().apply {
+
         addTab("Loggers", loggerNamesSidebar)
         addTab("Levels", loggerLevelsSidebar)
         if (loggerMDCsSidebar != null) {
             addTab("MDC", loggerMDCsSidebar)
         }
+        addTab("Time", loggerTimesSidebar)
     }
     private val filters: List<(LogEvent) -> Boolean> = buildList {
         add { event ->
@@ -215,7 +219,8 @@ class LogPanel(
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                JPanel(MigLayout("ins 0, fill")).apply { add(filterPane, "grow") },
+                JPanel(MigLayout("ins 0, fill")).apply {
+                    add(filterPane, "grow") },
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     tableScrollPane,
@@ -224,6 +229,7 @@ class LogPanel(
                     resizeWeight = 0.6
                 }
             ).apply {
+                isOneTouchExpandable = true
                 resizeWeight = 0.1
             },
             "push, grow"
