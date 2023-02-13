@@ -1,17 +1,21 @@
 package io.github.paulgriffith.kindling.idb
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
-import io.github.paulgriffith.kindling.utils.Action
+import io.github.paulgriffith.kindling.idb.generic.GenericView
+import io.github.paulgriffith.kindling.idb.metrics.MetricsView
+import io.github.paulgriffith.kindling.log.Level
+import io.github.paulgriffith.kindling.log.LogPanel
+import io.github.paulgriffith.kindling.log.SystemLogsEvent
 import io.github.paulgriffith.kindling.utils.SQLiteConnection
+import io.github.paulgriffith.kindling.utils.TabStrip
 import io.github.paulgriffith.kindling.utils.getLogger
 import io.github.paulgriffith.kindling.utils.toList
 import java.nio.file.Path
-import javax.swing.JMenu
-import javax.swing.JOptionPane
-import javax.swing.JPopupMenu
+import java.sql.Connection
+import java.time.Instant
 import kotlin.io.path.name
-import kotlin.properties.Delegates
 
 class IdbView(path: Path) : ToolPanel() {
     private val connection = SQLiteConnection(path)
@@ -20,73 +24,42 @@ class IdbView(path: Path) : ToolPanel() {
         rs.getString(3)
     }
 
-    private var tool: IdbTool by Delegates.vetoable(
-        when {
-            "logging_event" in tables -> IdbTool.Log
-            "SYSTEM_METRICS" in tables -> IdbTool.Metrics
-            else -> IdbTool.Generic
-        },
-    ) { _, _, newValue ->
-        try {
-            val newPanel = newValue.openPanel(connection)
-            removeAll()
-            add(newPanel, "push, grow")
-            true
-        } catch (e: Exception) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Unable to open as a ${newValue.name}; ${e.message}",
-                "Error",
-                JOptionPane.ERROR_MESSAGE,
-                FlatSVGIcon("icons/bx-error.svg"),
-            )
-            LOGGER.error("Unable to swap tool to {}", newValue, e)
-            false
-        }
+    private val tabs = TabStrip().apply {
+        trailingComponent = null
+        isTabsClosable = false
     }
 
     init {
         name = path.name
         toolTipText = path.toString()
 
-        add(tool.openPanel(connection), "push, grow")
+        tabs.addTab(
+            tabName = "Tables",
+            component = GenericView(connection),
+            tabTooltip = "",
+            select = true,
+        )
+
+        if ("logging_event" in tables) {
+            tabs.addTab(
+                tabName = "Logs",
+                component = LogPanel(connection),
+                tabTooltip = "",
+                select = true,
+            )
+        } else if ("SYSTEM_METRICS" in tables) {
+            tabs.addTab(
+                tabName = "Metrics",
+                component = MetricsView(connection),
+                tabTooltip = "",
+                select = true,
+            )
+        }
+
+        add(tabs, "push, grow")
     }
 
     override val icon = IdbViewer.icon
-
-    override fun customizePopupMenu(menu: JPopupMenu) {
-        menu.addSeparator()
-        menu.add(
-            JMenu("View As").apply {
-                when (tool) {
-                    IdbTool.Log -> add(
-                        Action(name = "Generic View") {
-                            tool = IdbTool.Generic
-                        },
-                    )
-
-                    IdbTool.Metrics -> add(
-                        Action(name = "Generic View") {
-                            tool = IdbTool.Generic
-                        },
-                    )
-
-                    IdbTool.Generic -> {
-                        add(
-                            Action(name = "Log View") {
-                                tool = IdbTool.Log
-                            },
-                        )
-                        add(
-                            Action(name = "Metrics View") {
-                                tool = IdbTool.Metrics
-                            },
-                        )
-                    }
-                }
-            },
-        )
-    }
 
     override fun removeNotify() {
         super.removeNotify()
@@ -95,5 +68,96 @@ class IdbView(path: Path) : ToolPanel() {
 
     companion object {
         private val LOGGER = getLogger<IdbView>()
+
+        @Suppress("SqlResolve")
+        operator fun LogPanel.Companion.invoke(connection: Connection): LogPanel {
+            val stackTraces: Map<Int, List<String>> = connection.prepareStatement(
+                //language=sql
+                """
+                SELECT
+                    event_id,
+                    i,
+                    trace_line
+                FROM 
+                    logging_event_exception
+                ORDER BY
+                    event_id,
+                    i
+                """.trimIndent(),
+            ).executeQuery()
+                .toList { resultSet ->
+                    Pair(
+                        resultSet.getInt("event_id"),
+                        resultSet.getString("trace_line"),
+                    )
+                }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
+
+            val mdcKeys: Map<Int, Map<String, String>> = connection.prepareStatement(
+                //language=sql
+                """
+                SELECT 
+                    event_id,
+                    mapped_key,
+                    mapped_value
+                FROM 
+                    logging_event_property
+                ORDER BY 
+                    event_id
+                """.trimIndent(),
+            ).executeQuery()
+                .toList { resultSet ->
+                    Triple(
+                        resultSet.getInt("event_id"),
+                        resultSet.getString("mapped_key"),
+                        resultSet.getString("mapped_value"),
+                    )
+                }.groupingBy { it.first }
+                // TODO I bet this can be improved
+                .aggregateTo(mutableMapOf<Int, MutableMap<String, String>>()) { _, accumulator, element, _ ->
+                    val acc = accumulator ?: mutableMapOf()
+                    acc[element.second] = element.third ?: "null"
+                    acc
+                }
+
+            // Run an initial query (blocking) so if this isn't a log export we bail out
+            // This is unfortunate (it can be a little slow) but better UX overall
+            val events = connection.prepareStatement(
+                //language=sql
+                """
+                SELECT
+                       event_id,
+                       timestmp,
+                       formatted_message,
+                       logger_name,
+                       level_string,
+                       thread_name
+                FROM 
+                    logging_event
+                ORDER BY
+                    event_id
+                """.trimIndent(),
+            ).executeQuery()
+                .toList { resultSet ->
+                    val eventId = resultSet.getInt("event_id")
+                    SystemLogsEvent(
+                        timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
+                        message = resultSet.getString("formatted_message"),
+                        logger = resultSet.getString("logger_name"),
+                        thread = resultSet.getString("thread_name"),
+                        level = Level.valueOf(resultSet.getString("level_string")),
+                        mdc = mdcKeys[eventId].orEmpty(),
+                        stacktrace = stackTraces[eventId].orEmpty(),
+                    )
+                }
+            return LogPanel(events)
+        }
     }
+}
+
+object IdbViewer : Tool {
+    override val title = "Idb File"
+    override val description = ".idb (SQLite3) files"
+    override val icon = FlatSVGIcon("icons/bx-hdd.svg")
+    override val extensions = listOf("idb")
+    override fun open(path: Path): ToolPanel = IdbView(path)
 }

@@ -92,6 +92,19 @@ class TabStrip : FlatTabbedPane() {
         }
     }
 
+    fun <T> addTab(
+        component: T,
+        tabName: String = component.tabName,
+        tabTooltip: String = component.tabTooltip,
+        icon: Icon? = component.icon,
+        select: Boolean = true,
+    ) where T : Container, T : FloatableComponent {
+        addTab(tabName, icon, component, tabTooltip)
+        if (select) {
+            selectedIndex = tabCount - 1
+        }
+    }
+
     private fun <T> createPopupFrame(tab: T): JFrame where T : Container, T : FloatableComponent {
         return jFrame(tab.tabName, 1024, 768) {
             contentPane = tab

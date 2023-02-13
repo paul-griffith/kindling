@@ -160,13 +160,7 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
         if (existingTab == null) {
             val pathView = createView(provider, *paths)
             if (pathView != null) {
-                tabStrip.addTab(
-                    pathView.tabName,
-                    pathView.icon,
-                    pathView,
-                    pathView.tabTooltip,
-                )
-                tabStrip.selectedComponent = pathView
+                tabStrip.addTab(component = pathView, select = true)
             }
         } else {
             tabStrip.selectedComponent = existingTab

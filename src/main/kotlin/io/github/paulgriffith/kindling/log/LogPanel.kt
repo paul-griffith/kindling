@@ -2,6 +2,7 @@ package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.ui.FlatScrollBarUI
 import io.github.paulgriffith.kindling.core.DetailsPane
+import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
@@ -9,7 +10,6 @@ import io.github.paulgriffith.kindling.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.action.AbstractActionExt
 import java.awt.Dimension
 import java.awt.Graphics
@@ -24,8 +24,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
+import javax.swing.Icon
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.JSplitPane
 import javax.swing.SortOrder
@@ -36,7 +36,7 @@ import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
 class LogPanel(
     private val rawData: List<LogEvent>,
-) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
+) : ToolPanel("ins 0, fill, hidemode 3") {
     private val totalRows: Int = rawData.size
 
     var dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
@@ -265,6 +265,8 @@ class LogPanel(
             setUI(customUI)
         }
     }
+
+    override val icon: Icon? = null
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)

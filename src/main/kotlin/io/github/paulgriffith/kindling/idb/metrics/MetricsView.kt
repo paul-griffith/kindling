@@ -1,5 +1,6 @@
 package io.github.paulgriffith.kindling.idb.metrics
 
+import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.toList
@@ -8,9 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import java.sql.Connection
+import javax.swing.Icon
 import javax.swing.JPanel
 
-class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
+class MetricsView(connection: Connection) : ToolPanel("ins 0, fill, hidemode 3") {
     private val metrics: List<Metric> = connection.prepareStatement(
         //language=sql
         """
@@ -71,6 +73,8 @@ class MetricsView(connection: Connection) : JPanel(MigLayout("ins 0, fill, hidem
             }
         }
     }
+
+    override val icon: Icon? = null
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
