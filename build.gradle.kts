@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.serialization)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.conveyor)
     application
     alias(libs.plugins.shadow)
     alias(libs.plugins.runtime)
@@ -35,6 +36,7 @@ repositories {
 dependencies {
     // see gradle/libs.version.toml
     api(libs.serialization.json)
+    api(libs.serialization.csv)
     api(libs.xerial.jdbc)
     api(libs.hsql)
     api(libs.zip4j)
@@ -48,12 +50,14 @@ dependencies {
     api(libs.bundles.ktor)
     api(libs.bundles.ignition) {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
-        isTransitive = false
+        isTransitive = true
     }
     api(libs.bundles.ktor)
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
+    implementation(libs.bundles.ia.transitive)
+    implementation(libs.osthemedetector)
     api(libs.jpmml)
     runtimeOnly(libs.bundles.ia.transitive)
 
