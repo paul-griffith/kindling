@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList
 import io.github.inductiveautomation.kindling.core.CustomIconView
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.HomeLocation
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.sim.model.ProgramDataType
@@ -15,12 +16,16 @@ import io.github.inductiveautomation.kindling.sim.model.TagParser
 import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
 import io.github.inductiveautomation.kindling.utils.Action
+import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FloatableComponent
 import io.github.inductiveautomation.kindling.utils.TabStrip
 import io.github.inductiveautomation.kindling.utils.add
 import io.github.inductiveautomation.kindling.utils.getAll
 import io.github.inductiveautomation.kindling.utils.listCellRenderer
 import io.github.inductiveautomation.kindling.utils.tag
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
@@ -42,7 +47,7 @@ import kotlin.properties.Delegates
 import kotlin.reflect.KClass
 
 class SimulatorView(path: Path) : ToolPanel() {
-    override val icon: Icon = FlatSVGIcon("icons/bx-archive.svg")
+    override val icon: Icon = FlatSVGIcon("icons/bx-tag.svg")
 
     @OptIn(ExperimentalSerializationApi::class)
     private val tagParser = TagParser(path.inputStream().use(JSON::decodeFromStream))
@@ -163,33 +168,34 @@ class SimulatorView(path: Path) : ToolPanel() {
         add(tabs, "push, grow, span")
 
         addFunctionDataChangeListener {
-            // We only need to update the UI for "active" panels which have been initialized
-            val devicePanels = tabs.indices.asSequence().map {
-                (tabs.getComponentAt(it) as TabStrip.LazyTab).component
-            }.filter { component ->
-                component.isInitialized()
-            }.map { component ->
-                component.value as DeviceProgramPanel
-            }
+            BACKGROUND.launch {
+                // We only need to update the UI for "active" panels which have been initialized
+                val devicePanels = tabs.indices.asSequence().map {
+                    (tabs.getComponentAt(it) as TabStrip.LazyTab).component
+                }.filter { component ->
+                    component.isInitialized()
+                }.map { component ->
+                    component.value as DeviceProgramPanel
+                }
 
-            devicePanels.forEach { panel ->
-                panel.getListeners(FunctionDataChangeListener::class.java).forEach {
-                    it.functionDataChange()
+                EDT_SCOPE.launch {
+                    devicePanels.forEach { panel ->
+                        panel.getListeners(FunctionDataChangeListener::class.java).forEach {
+                            it.functionDataChange()
+                        }
+                    }
                 }
             }
         }
     }
 
     companion object {
+        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
         private const val MISSING_DEF_WARNING = "The following UDT definitions were not found in the tag export. Some bindings may not be resolved:\n"
-        val directoryChooser = JFileChooser(Kindling.homeLocation).apply {
+        val directoryChooser = JFileChooser(HomeLocation.currentValue.absolutePathString()).apply {
             isMultiSelectionEnabled = false
             fileView = CustomIconView()
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-
-            Kindling.addThemeChangeListener {
-                updateUI()
-            }
         }
     }
 
@@ -323,14 +329,16 @@ class SimulatorView(path: Path) : ToolPanel() {
         val deviceName: String,
         numberOfTags: Int,
         supplier: () -> Component,
-    ) : TabStrip.LazyTab(supplier), FloatableComponent {
-        override val icon: Icon? = null
-        override val tabName: String = "$deviceName ($numberOfTags tags)"
-        override val tabTooltip: String = "$numberOfTags items"
+    ) : TabStrip.LazyTab(
+        "$deviceName ($numberOfTags tags)",
+        null,
+        "$numberOfTags items",
+        supplier,
+    ), FloatableComponent {
         override fun customizePopupMenu(menu: JPopupMenu) {
             menu.add(
                 Action("Export to CSV") {
-                    if (directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                    if (directoryChooser.showSaveDialog(this@SimulatorView) == JFileChooser.APPROVE_OPTION) {
                         val outputFile = directoryChooser.selectedFile.toPath().resolve("$deviceName-sim.csv")
                         programs[deviceName]!!.exportToFile(outputFile)
                         JOptionPane.showMessageDialog(this@SimulatorView, "Tag Export Finished.")
@@ -343,12 +351,10 @@ class SimulatorView(path: Path) : ToolPanel() {
 
 object SimulatorViewer : Tool {
     override val extensions = listOf("json")
-    override val description = "Opens a tag export as parses to a device simulator builder."
-    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg")
+    override val description = "Opens a tag export and parses to a device simulator builder."
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-tag.svg")
     override val title = "Tag Export (Device Sim)"
     override fun open(path: Path): ToolPanel {
         return SimulatorView(path)
     }
 }
-
-class SimulatorViewerProxy : Tool by SimulatorViewer
