@@ -31,6 +31,7 @@ repositories {
 dependencies {
     // see gradle/libs.version.toml
     api(libs.serialization.json)
+    api(libs.serialization.csv)
     api(libs.xerial.jdbc)
     api(libs.hsql)
     api(libs.zip4j)
@@ -43,13 +44,13 @@ dependencies {
     api(libs.bundles.flatlaf)
     api(libs.bundles.ignition) {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
-        isTransitive = false
+        isTransitive = true
     }
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
+    implementation(libs.bundles.ia.transitive)
     implementation(libs.osthemedetector)
-    runtimeOnly(libs.bundles.ia.transitive)
 
     testImplementation(libs.bundles.kotest)
 }
