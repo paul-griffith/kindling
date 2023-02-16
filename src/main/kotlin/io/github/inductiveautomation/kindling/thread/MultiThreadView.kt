@@ -44,6 +44,9 @@ import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
 import org.jdesktop.swingx.table.TableColumnExt
 import java.awt.Desktop
 import java.awt.Rectangle
+import java.io.File
+import java.io.IOException
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.ButtonGroup
@@ -290,6 +293,7 @@ class MultiThreadView(
     }
 
     init {
+        pmml
         name = if (mainTable.model.isSingleContext) {
             paths.first().name
         } else {
