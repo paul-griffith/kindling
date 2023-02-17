@@ -1,15 +1,12 @@
 package io.github.paulgriffith.kindling.sim
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.inductiveautomation.ignition.common.tags.TagUtilities
-import com.inductiveautomation.ignition.common.tags.config.TagConfiguration
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.sim.model.TagProviderStructure
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JScrollPane
@@ -18,9 +15,9 @@ import kotlin.io.path.inputStream
 
 @OptIn(ExperimentalSerializationApi::class)
 class SimulatorView(path: Path) : ToolPanel() {
-    override val icon: Icon? = null
+    override val icon: Icon = FlatSVGIcon("icons/bx-archive.svg")
 
-    val tagConfig: MutableList<TagConfiguration> = TagUtilities.toTagConfiguration(Files.readString(path), null)
+    //val tagConfig: MutableList<TagConfiguration> = TagUtilities.toTagConfiguration(Files.readString(path), null)
 
     private val tagProvider: TagProviderStructure = path.inputStream().use(JSON::decodeFromStream)
 
@@ -28,7 +25,6 @@ class SimulatorView(path: Path) : ToolPanel() {
         name = "Sim"
 
         tagProvider.resolveOpcTags()
-
 
         add(
             JScrollPane(
