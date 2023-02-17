@@ -44,9 +44,6 @@ import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
 import org.jdesktop.swingx.table.TableColumnExt
 import java.awt.Desktop
 import java.awt.Rectangle
-import java.io.File
-import java.io.IOException
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.ButtonGroup
@@ -293,7 +290,7 @@ class MultiThreadView(
     }
 
     init {
-        currentPMML
+        MachineLearningModel.verifyPMML()
         name = if (mainTable.model.isSingleContext) {
             paths.first().name
         } else {
@@ -429,112 +426,10 @@ class MultiThreadView(
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
-        private var newPMMLVersion = ""
-
-        private val cacheFilePath = run {
-            val os = System.getProperty("os.name").substringBefore(' ')
-            val user = System.getProperty("user.name")
-            when (os) {
-                "Windows" -> "C:/Users/$user/.kindling/machine-learning-data/"
-                "Linux" -> "/home/$user/.kindling/machine-learning-data/"
-                "MAC" -> "Users/$user/Library/Caches/.kindling/machine-learning-data/"
-                else -> ""
-            }
-        }
-
-        private val oldPMMLVersion = run {
-            val folder = File(cacheFilePath)
-            val listOfFiles = folder.listFiles()
-            var version = ""
-            if (listOfFiles != null) {
-                for (i in listOfFiles.indices) {
-                    if (listOfFiles[i].isFile && listOfFiles[i].name.contains("thread_machine_learning")) {
-                        version = listOfFiles[i].toString().substringBeforeLast(".pmml").substringAfterLast("_")
-                    }
-                }
-            }
-            version
-        }
-
-        private fun removeOldPMMLVersions() {
-            val folder = File(cacheFilePath)
-            val listOfFiles = folder.listFiles()
-            if (listOfFiles != null && newPMMLVersion != "") {
-                for (i in listOfFiles.indices) {
-                    if (listOfFiles[i].isFile && listOfFiles[i].name.contains("thread_machine_learning")) {
-                        if (listOfFiles[i].toString().substringBeforeLast(".pmml").substringAfterLast("_") != newPMMLVersion) {
-                            val fileName = listOfFiles[i].toString()
-                            try {
-                                Files.delete(Paths.get(fileName))
-                            } catch (e: IOException) {
-                                e.printStackTrace()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg")
         private val NATURAL_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-z-a.svg")
         private val NUMERIC_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-up.svg")
         private val NUMERIC_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-down.svg")
-
-        fun updatePMML() {
-            if (cacheFilePath.isNotEmpty()){
-                val client = HttpClient()
-                runBlocking {
-                    val response: HttpResponse = client.request("https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml") {
-                        method = HttpMethod.Get
-                    }
-                    Files.createDirectories(Paths.get(cacheFilePath))
-                    val file = File("${cacheFilePath}thread_machine_learning_$newPMMLVersion.pmml")
-                    file.bufferedWriter().use { out ->
-                        out.write(response.bodyAsText())
-                    }
-                    removeOldPMMLVersions()
-                }
-            }
-        }
-
-        val currentPMML by lazy {
-            run {
-                val client = HttpClient()
-                runBlocking {
-                    val response: HttpResponse = client.request("https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version") {
-                        method = HttpMethod.Get
-                        url {
-                            parameters.append("version", MainPanel.VERSION)
-                        }
-                    }
-                    newPMMLVersion = response.bodyAsText()
-                    if (response.bodyAsText() == "") {
-                        if (pmmlPopup("New Version Available!", "There is a new version of Kindling available. Would you like to upgrade?", arrayOf("No", "Upgrade Now!")) == 1) {
-                            val desk = Desktop.getDesktop()
-                            withContext(Dispatchers.IO) {
-                                desk.browse(URI("https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"))
-                            }
-                        }
-                    } else if (response.bodyAsText() != oldPMMLVersion) {
-                        if (pmmlPopup("New Machine Learning Model Available!", "There is a newer version of the Machine Learning Model available. Would you like to update?", arrayOf("No", "Update Now!")) == 1) {
-                            updatePMML()
-                        }
-                    }
-                    response.bodyAsText()
-                }
-            }
-        }
-
-        private fun pmmlPopup(title: String, message: String, options: Array<String>): Int {
-            return JOptionPane.showOptionDialog(JFrame(),
-                    message,
-                    title,
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    options,
-                    options[1])
-        }
 
         private fun List<ThreadDump?>.toLifespanList(): List<ThreadLifespan> {
             val idsToLifespans = mutableMapOf<Int, Array<Thread?>>()
