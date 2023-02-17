@@ -1,34 +1,30 @@
 package io.github.paulgriffith.kindling.sim.model
 
-import com.inductiveautomation.ignition.common.config.Property
-import com.inductiveautomation.ignition.common.tags.config.TagConfiguration
-import com.inductiveautomation.ignition.common.tags.config.properties.WellKnownTagProps
-import com.inductiveautomation.ignition.common.tags.config.types.OpcTagTypeProperties
-import com.inductiveautomation.ignition.common.tags.config.types.TagObjectType.Folder
-import com.inductiveautomation.ignition.common.tags.config.types.TagObjectType.Provider
-import com.inductiveautomation.ignition.common.tags.config.types.TagObjectType.UdtInstance
-import com.inductiveautomation.ignition.common.tags.config.types.TagObjectType.UdtType
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
-fun TagConfiguration.isBrowsable(): Boolean = when(type) {
-    Folder, UdtType, UdtInstance, Provider -> true
-    else -> false
-}
-fun <T> getTagsWithProperty(conf: TagConfiguration, prop: Property<T>, propValue: T): List<TagConfiguration> {
-    return buildList {
-        conf.children.forEach { child ->
-            if (child.isBrowsable()) {
-                addAll(getTagsWithProperty(child, prop, propValue))
-            }
-            if (child.tagProperties[prop] == propValue) {
-                add(child)
-            }
-        }
-    }
-}
+//fun <T> getTagsWithProperty(conf: TagConfiguration, prop: Property<T>, propValue: T): List<TagConfiguration> {
+//    return buildList {
+//        conf.children.forEach { child ->
+//            if (child.isBrowsable()) {
+//                addAll(getTagsWithProperty(child, prop, propValue))
+//            }
+//            if (child.tagProperties[prop] == propValue) {
+//                add(child)
+//            }
+//        }
+//    }
+//}
 
 @Serializable
 data class TagProviderStructure(
@@ -40,7 +36,7 @@ data class TagProviderStructure(
 
     fun resolveOpcTags() {
         val defParams = udtDefinitions.associate {
-            it.name to it.parametersAsList
+            it.name to it.parameters
         }
         tags.forEach { node ->
             node.resolveOpcTags(defParams, mutableListOf())
@@ -63,21 +59,23 @@ data class NodeStructure(
 
     // Other
     val tags: List<NodeStructure>?,
-    val parameters: JsonObject?,
+    @Serializable(with=UdtParameterListSerializer::class)
+    val parameters: List<UdtParameter>,
     val tagType: String,
     val typeId: String?,
     val sourceTagPath: JsonElement?,
 ) {
-    val isBrowsable = tags != null
+    private val isBrowsable = tags != null
 
-    val parametersAsList: List<UdtParameter> by lazy {
-        parameters?.map { (key, value) ->
-            val parameterProperties = (value as JsonObject)
-            UdtParameter(key, parameterProperties["dataType"].toString(), parameterProperties["value"]?.toString())
-        } ?: emptyList()
-    }
+//    val parametersAsList: List<UdtParameter> by lazy {
+//        parameters?.map { (key, value) ->
+//            val parameterProperties = (value as JsonObject)
+//            UdtParameter(key, parameterProperties["dataType"].toString(), parameterProperties["value"]?.toString())
+//        } ?: emptyList()
+//    }
 
     private fun resolveOpcItemPath(params: List<UdtParameter>) {
+        params.onEach { println(it) }
         if (opcItemPath is JsonObject) {
             val rawItemPath = opcItemPath["binding"].toString()
             println("$rawItemPath is gonna get resolved.")
@@ -94,27 +92,59 @@ data class NodeStructure(
             resolveOpcItemPath(params)
         }
         if (tagType == "UdtInstance") {
-            println("Udt Instance: $name")
-            val inheritedParams = defParams[typeId]
+            val inheritedParams = defParams[typeId]?.filter { it.value != null }
 
-            parametersAsList.joinToString(", ") {
+            if (inheritedParams != null) {
+                for (inheritedParam in inheritedParams) {
+                    parameters.find { it.name == inheritedParam.name }?.let {
+                        it.value = inheritedParam.value
+                    }
+                }
+            }
+
+            parameters.joinToString(", ") {
                 "${it.name}: ${it.value}"
             }.let { println(it) }
         }
         if (isBrowsable) {
             tags?.forEach { node ->
-                node.resolveOpcTags(defParams, params.plus(parametersAsList).toMutableList())
+                node.resolveOpcTags(defParams, params.plus(parameters).toMutableList())
             }
         }
     }
 }
 
+@Serializable
 data class UdtParameter(
     val name: String,
     val dataType: String,
-    var value: String?,
+    var value: JsonElement?,
 )
 
+class UdtParameterListSerializer : KSerializer<List<UdtParameter>> {
+    private val delegateSerializer = MapSerializer(String.serializer(), JsonObject.serializer())
+    @OptIn(ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor = SerialDescriptor("UdtParameter", delegateSerializer.descriptor)
+
+    override fun serialize(encoder: Encoder, value: List<UdtParameter>) {
+        val data = value.associate { param ->
+            param.name to buildJsonObject {
+                put("dataType", JsonPrimitive(param.dataType))
+                param.value?.let { put("value", it) }
+            }
+        }
+        encoder.encodeSerializableValue(delegateSerializer, data)
+    }
+
+    override fun deserialize(decoder: Decoder): List<UdtParameter> {
+        val map = decoder.decodeSerializableValue(delegateSerializer)
+        return map.entries.map { (key: String, value: JsonObject) ->
+            UdtParameter(key, value["dataType"].toString(), value["value"] as JsonPrimitive)
+        }
+    }
+}
+
+/*
 @Serializable
 data class FullTagStructure(
     // Basic:
@@ -179,3 +209,4 @@ data class FullTagStructure(
 ) {
     val isBrowsable = tags != null
 }
+*/
