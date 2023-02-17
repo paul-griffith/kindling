@@ -15,22 +15,25 @@ import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
+import javax.swing.ImageIcon
 import javax.swing.JFrame
 import javax.swing.JOptionPane
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.name
 
 object MachineLearningModel {
-
     private var needsUpdate = true
+    private const val pmmlFileNamePrefix = "thread_machine_learning_"
+    private const val supportAppsGatewayEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
+    private const val versionEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
+    private const val kindlingDownloadUrl = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
+
     fun verifyPMML() {
-        println(System.getProperty("user.home"))
         if (oldPMMLVersion != currentPMMLVersion && needsUpdate) {
             when (currentPMMLVersion) {
-                oldPMMLVersion -> { }
                 "" -> if (pmmlPopup("New Version Available!", "There is a new version of Kindling Beta available. Would you like to upgrade?", arrayOf("No", "Upgrade Now!")) == 1) {
                     val desk = Desktop.getDesktop()
-                    desk.browse(URI("https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"))
+                    desk.browse(URI(kindlingDownloadUrl))
                 }
                 else -> if (pmmlPopup("New Machine Learning Model Available!", "There is a newer version of the Machine Learning Model available. Would you like to update?", arrayOf("No", "Update Now!")) == 1) {
                     updatePMML()
@@ -52,30 +55,24 @@ object MachineLearningModel {
             folder = File("src/main/resources")
         }
         val listOfFiles = folder.listFiles()
-        var version = ""
-        if (listOfFiles != null) {
-            for (i in listOfFiles.indices) {
-                if (listOfFiles[i].isFile && listOfFiles[i].name.contains("thread_machine_learning")) {
-                    version = listOfFiles[i].toString().substringBeforeLast(".pmml").substringAfterLast("_")
-                }
-            }
-        }
-        version
+        listOfFiles.findLast {file ->
+            file.isFile && file.name.contains(pmmlFileNamePrefix)
+        }?.toString()?.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
     }
 
     private fun removeOldPMMLVersions() {
         val folder = cacheFilePath.toFile()
         val listOfFiles = folder.listFiles()
         if (listOfFiles != null && currentPMMLVersion != "") {
-            for (i in listOfFiles.indices) {
-                if (listOfFiles[i].isFile && listOfFiles[i].name.contains("thread_machine_learning")) {
-                    if (listOfFiles[i].toString().substringBeforeLast(".pmml").substringAfterLast("_") != currentPMMLVersion) {
-                        val fileName = listOfFiles[i].toString()
-                        try {
-                            Files.delete(Paths.get(fileName))
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        }
+            val filteredList = listOfFiles.filter { file ->
+                file.isFile && pmmlFileNamePrefix in file.name
+            }
+            filteredList.forEach { file ->
+                if (file.name.substringBeforeLast(".pmml").substringAfterLast("_") != currentPMMLVersion) {
+                    try {
+                        Files.delete(file.toPath())
+                    } catch (e: IOException) {
+                        e.printStackTrace()
                     }
                 }
             }
@@ -86,13 +83,13 @@ object MachineLearningModel {
         if (cacheFilePath.name.isNotEmpty()){
             val client = HttpClient()
             runBlocking {
-                val response: HttpResponse = client.request("https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml") {
+                val response: HttpResponse = client.request(supportAppsGatewayEndpoint) {
                     method = HttpMethod.Get
                 }
                 withContext(Dispatchers.IO) {
                     Files.createDirectories(cacheFilePath)
                 }
-                val filename = "thread_machine_learning_$currentPMMLVersion.pmml"
+                val filename = "$pmmlFileNamePrefix$currentPMMLVersion.pmml"
                 cacheFilePath.resolve(filename).bufferedWriter().use { out ->
                     out.write(response.bodyAsText())
                 }
@@ -104,7 +101,7 @@ object MachineLearningModel {
     private val currentPMMLVersion by lazy {
         val client = HttpClient()
         runBlocking {
-            val response: HttpResponse = client.request("https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version") {
+            val response: HttpResponse = client.request(versionEndpoint) {
                 method = HttpMethod.Get
                 url {
                     parameters.append("version", Kindling.VERSION)
@@ -116,12 +113,12 @@ object MachineLearningModel {
 
     private fun pmmlPopup(title: String, message: String, options: Array<String>): Int {
         return JOptionPane.showOptionDialog(JFrame(),
-                message,
-                title,
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[1])
+            message,
+            title,
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            ImageIcon(Kindling.frameIcon),
+            options,
+            options[1])
     }
 }

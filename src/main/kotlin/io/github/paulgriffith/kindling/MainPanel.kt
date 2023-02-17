@@ -210,7 +210,6 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
     }
 
     companion object {
-        val THEME_DETECTOR: OsThemeDetector = OsThemeDetector.getDetector()
         val LOGGER = getLogger<MainPanel>()
 
         @JvmStatic
