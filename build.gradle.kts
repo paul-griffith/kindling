@@ -123,7 +123,6 @@ runtime {
         val imgType = if (currentOs.isWindows) "ico" else "png"
         appVersion = project.version.toString()
         imageOptions = listOf("--icon", "src/main/resources/icons/ignition.$imgType")
-        @OptIn(ExperimentalStdlibApi::class)
         val options: Map<String, String?> = buildMap {
             put("resource-dir", "src/main/resources")
             put("vendor", "Paul Griffith")
