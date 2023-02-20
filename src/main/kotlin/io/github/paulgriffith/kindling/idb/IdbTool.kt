@@ -14,6 +14,7 @@ import java.sql.Connection
 import java.time.Instant
 import javax.swing.JPanel
 
+@Suppress("ktlint:trailing-comma-on-declaration-site")
 enum class IdbTool {
     Log {
         override fun openPanel(connection: Connection): JPanel {

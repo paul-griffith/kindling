@@ -91,6 +91,7 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
             override fun parse(source: String, parsePosition: ParsePosition): Number = mbFormatter.parse(source, parsePosition)
         }
 
+        @Suppress("ktlint:trailing-comma-on-declaration-site")
         enum class MetricPresentation(val formatter: NumberFormat, val isShowTrend: Boolean) {
             Heap(heapFormatter, true),
             Queue(NumberFormat.getIntegerInstance(), false),
