@@ -7,7 +7,7 @@ import javax.swing.tree.TreeNode
 data class Table(
     val name: String,
     val columns: List<Column>,
-    val _parent: () -> TreeNode
+    val _parent: () -> TreeNode,
 ) : TreeNode {
     override fun getChildAt(childIndex: Int): TreeNode = columns[childIndex]
     override fun getChildCount(): Int = columns.size

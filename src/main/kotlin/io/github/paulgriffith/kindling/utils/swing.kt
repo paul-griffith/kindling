@@ -79,7 +79,9 @@ class ReifiedLabelProvider<T : Any>(
         fun <T> defaultIconFunction(): IconProvider<T> = {
             if (it == null) {
                 NULL_ICON
-            } else null
+            } else {
+                null
+            }
         }
 
         inline operator fun <reified T : Any> invoke(

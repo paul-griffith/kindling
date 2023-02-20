@@ -11,7 +11,7 @@ data class Column(
     val defaultValue: String?,
     val primaryKey: Boolean,
     val hidden: Boolean,
-    val _parent: () -> TreeNode
+    val _parent: () -> TreeNode,
 ) : TreeNode {
     override fun getChildAt(childIndex: Int): TreeNode? = null
     override fun getChildCount(): Int = 0

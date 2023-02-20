@@ -7,7 +7,7 @@ data class Column<R, C>(
     val header: String,
     val getValue: (row: R) -> C,
     val columnCustomization: (TableColumnExt.(model: TableModel) -> Unit)?,
-    val clazz: Class<C>
+    val clazz: Class<C>,
 ) {
     companion object {
         inline operator fun <R, reified C> invoke(

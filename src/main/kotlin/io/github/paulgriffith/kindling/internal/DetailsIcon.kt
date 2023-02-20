@@ -18,24 +18,26 @@ class DetailsIcon(details: Map<String, String>) : JLabel(detailsIcon) {
     init {
         alignmentY = 0.7F
 
-        addMouseListener(object : MouseAdapter() {
-            var popup: Popup? = null
+        addMouseListener(
+            object : MouseAdapter() {
+                var popup: Popup? = null
 
-            override fun mouseEntered(e: MouseEvent) {
-                popup = PopupFactory.getSharedInstance().getPopup(
-                    this@DetailsIcon,
-                    table,
-                    locationOnScreen.x + detailsIcon.iconWidth,
-                    locationOnScreen.y
-                ).also {
-                    it.show()
+                override fun mouseEntered(e: MouseEvent) {
+                    popup = PopupFactory.getSharedInstance().getPopup(
+                        this@DetailsIcon,
+                        table,
+                        locationOnScreen.x + detailsIcon.iconWidth,
+                        locationOnScreen.y,
+                    ).also {
+                        it.show()
+                    }
                 }
-            }
 
-            override fun mouseExited(e: MouseEvent) {
-                popup?.hide()
-            }
-        })
+                override fun mouseExited(e: MouseEvent) {
+                    popup?.hide()
+                }
+            },
+        )
     }
 
     companion object {

@@ -16,7 +16,7 @@ import javax.swing.ListModel
 
 data class LoggerName(
     val name: String,
-    val eventCount: Int
+    val eventCount: Int,
 )
 
 class LoggerNamesModel(val data: List<LoggerName>) : AbstractListModel<Any>() {
@@ -44,6 +44,7 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
             } else {
                 value.name
             }
+
             else -> value.toString()
         }
     }
@@ -55,7 +56,7 @@ class LoggerNamesList(model: LoggerNamesModel) : CheckBoxList(model) {
                 isRepeats = true
                 isCountMatch = true
             },
-            conversion = ::displayValue
+            conversion = ::displayValue,
         )
         selectionModel = NoSelectionModel()
         cellRenderer = listCellRenderer<Any> { _, value, _, _, _ ->
@@ -103,35 +104,35 @@ class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")
             return JToggleButton(
                 Action(
                     description = tooltip,
-                    icon = icon
+                    icon = icon,
                 ) {
                     list.model = LoggerNamesModel(list.model.data.sortedWith(comparator))
-                }
+                },
             )
         }
 
         val naturalAsc = sortButton(
             icon = NATURAL_SORT_ASCENDING,
             tooltip = "Sort A-Z",
-            comparator = byName
+            comparator = byName,
         )
         listOf(
             naturalAsc,
             sortButton(
                 icon = NATURAL_SORT_DESCENDING,
                 tooltip = "Sort Z-A",
-                comparator = byName.reversed()
+                comparator = byName.reversed(),
             ),
             sortButton(
                 icon = NUMERIC_SORT_DESCENDING,
                 tooltip = "Sort by Count",
-                comparator = byCount.reversed() then byName
+                comparator = byCount.reversed() then byName,
             ),
             sortButton(
                 icon = NUMERIC_SORT_ASCENDING,
                 tooltip = "Sort by Count (ascending)",
-                comparator = byCount then byName
-            )
+                comparator = byCount then byName,
+            ),
         ).forEach { sortButton ->
             sortButtons.add(sortButton)
             add(sortButton, "cell 0 0")

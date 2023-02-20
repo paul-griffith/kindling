@@ -26,6 +26,7 @@ class DBMetaDataTree(treeModel: TreeModel) : FlatTree() {
                         icon = if (selected && focused) TABLE_ICON_SELECTED else TABLE_ICON
                         this
                     }
+
                     is Column -> {
                         StyledLabelBuilder()
                             .add(value.name)
@@ -41,9 +42,10 @@ class DBMetaDataTree(treeModel: TreeModel) : FlatTree() {
                                 }
                             }
                     }
+
                     else -> this
                 }
-            }
+            },
         )
 
         object : TreeSearchable(this) {

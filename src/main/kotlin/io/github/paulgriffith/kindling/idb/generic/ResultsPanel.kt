@@ -29,7 +29,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
                     ""
                 }
             },
-            getTooltip = { "Export to CSV to view full data (b64 encoded)" }
+            getTooltip = { "Export to CSV to view full data (b64 encoded)" },
         )
     }
 
@@ -64,7 +64,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
 
     private val copy = Action(
         description = "Copy to Clipboard",
-        icon = FlatSVGIcon("icons/bx-clipboard.svg")
+        icon = FlatSVGIcon("icons/bx-clipboard.svg"),
     ) {
         val tsv = buildString {
             table.model.columnNames.joinTo(buffer = this, separator = "\t")
@@ -88,7 +88,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
 
     private val save = Action(
         description = "Save to File",
-        icon = FlatSVGIcon("icons/bx-save.svg")
+        icon = FlatSVGIcon("icons/bx-save.svg"),
     ) {
         JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_ONLY
@@ -107,7 +107,7 @@ class ResultsPanel : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
                                         is ByteArray -> BASE64.encodeToString(cell)
                                         else -> cell?.toString()
                                     }
-                                }
+                                },
                             )
                         }
                 }
