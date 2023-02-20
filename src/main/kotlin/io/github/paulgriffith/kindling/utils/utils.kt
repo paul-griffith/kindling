@@ -91,10 +91,10 @@ val JDBCType.javaType: Class<*>
         else -> Any::class
     }.javaObjectType
 
-fun SQLiteConnection(path: Path): Connection {
+fun SQLiteConnection(path: Path, readOnly: Boolean = true): Connection {
     return SQLiteDataSource().apply {
         url = "jdbc:sqlite:file:$path"
-        setReadOnly(true)
+        setReadOnly(readOnly)
     }.connection
 }
 
