@@ -100,14 +100,18 @@ class ThreadComparisonPane(
             cpuUsages.max().takeIf { maxVal ->
                 cpuUsages.count { it == maxVal } == 1
             }
-        } else null
+        } else {
+            null
+        }
 
         val largestDepth = if (moreThanOneThread) {
             val sizes = threads.map { it?.stacktrace?.size ?: 0 }
             sizes.max().takeIf { maxVal ->
                 sizes.count { it == maxVal } == 1
             }
-        } else null
+        } else {
+            null
+        }
 
         for ((container, thread) in threadContainers.zip(threads)) {
             container.highlightCpu = highestCpu != null && thread?.cpuUsage == highestCpu

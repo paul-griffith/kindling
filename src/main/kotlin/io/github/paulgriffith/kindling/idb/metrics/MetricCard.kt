@@ -101,7 +101,7 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
                 },
                 true,
             ),
-            Default(NumberFormat.getInstance(), false)
+            Default(NumberFormat.getInstance(), false);
         }
 
         private val Metric.presentation: MetricPresentation

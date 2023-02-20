@@ -39,7 +39,7 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                 addActionListener {
                     isShowFullLoggerName = !isShowFullLoggerName
                 }
-            }
+            },
         )
 
         val tzGroup = ButtonGroup()
@@ -53,7 +53,7 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                         }
                     }
                 }
-            }
+            },
         )
 
         val levelGroup = ButtonGroup()
@@ -67,16 +67,18 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
                         }
                     }
                 }
-            }
+            },
         )
     }
 
     private val settings = JideButton(FlatSVGIcon("icons/bx-cog.svg")).apply {
-        addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                settingsMenu.show(this@apply, e.x, e.y)
-            }
-        })
+        addMouseListener(
+            object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    settingsMenu.show(this@apply, e.x, e.y)
+                }
+            },
+        )
     }
 
     init {

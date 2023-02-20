@@ -6,7 +6,7 @@ sealed interface QueryResult {
     class Success(
         val columnNames: List<String>,
         private val columnTypes: List<Class<*>>,
-        val data: List<List<*>>
+        val data: List<List<*>>,
     ) : QueryResult, AbstractTableModel() {
         constructor() : this(emptyList(), emptyList(), emptyList())
 
@@ -22,6 +22,6 @@ sealed interface QueryResult {
     }
 
     class Error(
-        val details: String
+        val details: String,
     ) : QueryResult
 }

@@ -45,9 +45,9 @@ class GenericView(connection: Connection) : IdbPanel() {
                             defaultValue = resultSet.getString("dflt_value"),
                             primaryKey = resultSet.getInt("pk") == 1,
                             hidden = resultSet.getInt("hidden") == 1,
-                            _parent = { root.getChildAt(i) }
+                            _parent = { root.getChildAt(i) },
                         )
-                    }
+                    },
             )
         }
 
@@ -120,8 +120,8 @@ class GenericView(connection: Connection) : IdbPanel() {
                         JMenuItem(
                             Action("SELECT * FROM ${node.name}") {
                                 query.text = "SELECT * FROM ${node.name};"
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
 
@@ -131,8 +131,8 @@ class GenericView(connection: Connection) : IdbPanel() {
                         JMenuItem(
                             Action("SELECT ${node.name} FROM ${table.name}") {
                                 query.text = "SELECT ${node.name} FROM ${table.name}"
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
 
@@ -149,14 +149,14 @@ class GenericView(connection: Connection) : IdbPanel() {
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     FlatScrollPane(queryPanel),
-                    results
+                    results,
                 ).apply {
                     resizeWeight = 0.2
-                }
+                },
             ).apply {
                 resizeWeight = 0.1
             },
-            "push, grow"
+            "push, grow",
         )
     }
 }

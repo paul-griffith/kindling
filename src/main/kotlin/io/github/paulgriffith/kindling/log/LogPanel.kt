@@ -35,7 +35,7 @@ import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
 class LogPanel(
-    private val rawData: List<LogEvent>
+    private val rawData: List<LogEvent>,
 ) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
     private val totalRows: Int = rawData.size
 
@@ -139,14 +139,14 @@ class LogPanel(
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     tableScrollPane,
-                    details
+                    details,
                 ).apply {
                     resizeWeight = 0.6
-                }
+                },
             ).apply {
                 resizeWeight = 0.1
             },
-            "push, grow"
+            "push, grow",
         )
 
         table.selectionModel.apply {
@@ -162,13 +162,13 @@ class LogPanel(
                                     title = "${dateFormatter.format(event.timestamp)} ${event.thread}",
                                     message = event.message,
                                     body = event.stacktrace,
-                                    details = event.mdc
+                                    details = event.mdc,
                                 )
 
                                 is WrapperLogEvent -> DetailEvent(
                                     title = dateFormatter.format(event.timestamp),
                                     message = event.message,
-                                    body = event.stacktrace
+                                    body = event.stacktrace,
                                 )
                             }
                         }
@@ -240,15 +240,15 @@ class LogPanel(
                     g.transform(
                         AffineTransform.getScaleInstance(
                             trackBounds.width / rangex.toDouble(),
-                            trackBounds.height / density.size.toDouble()
-                        )
+                            trackBounds.height / density.size.toDouble(),
+                        ),
                     )
                     density.values.forEachIndexed { index, count ->
                         g.drawLine(
                             trackBounds.x,
                             trackBounds.y + index,
                             trackBounds.x + count,
-                            trackBounds.y + index
+                            trackBounds.y + index,
                         )
                     }
                     g.transform = old
@@ -286,7 +286,7 @@ class LogPanel(
             Duration.ofHours(2),
             Duration.ofHours(6),
             Duration.ofHours(12),
-            Duration.ofDays(1)
+            Duration.ofDays(1),
         )
 
         private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
@@ -332,7 +332,7 @@ class LogPanel(
                             timestamp = time,
                             message = message.value.trim(),
                             logger = logger.value.trim(),
-                            level = Level.valueOf(level.value.single())
+                            level = Level.valueOf(level.value.single()),
                         )
                     } else {
                         val stack by match.groups
@@ -346,7 +346,7 @@ class LogPanel(
                             events += WrapperLogEvent(
                                 timestamp = time,
                                 message = stack.value,
-                                level = Level.INFO
+                                level = Level.INFO,
                             )
                         }
                     }

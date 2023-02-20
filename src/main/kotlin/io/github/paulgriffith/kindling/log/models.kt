@@ -10,7 +10,7 @@ import javax.swing.table.AbstractTableModel
 
 class LogsModel<T : LogEvent>(
     val data: List<T>,
-    val columns: ColumnList<T>
+    val columns: ColumnList<T>,
 ) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = columns[column].header
     override fun getRowCount(): Int = data.size
@@ -33,7 +33,7 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
             minWidth = 55
             maxWidth = 55
         },
-        value = { it.level }
+        value = { it.level },
     )
     val Timestamp by column(
         column = {
@@ -43,13 +43,13 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
                 panel.dateFormatter.format(it as Instant)
             }
         },
-        value = SystemLogsEvent::timestamp
+        value = SystemLogsEvent::timestamp,
     )
     val Thread by column(
         column = {
             minWidth = 50
         },
-        value = { it.thread }
+        value = { it.thread },
     )
     val Logger by column(
         column = {
@@ -66,12 +66,12 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
             cellRenderer = DefaultTableRenderer(
                 ReifiedLabelProvider(
                     getText = valueExtractor,
-                    getTooltip = { it }
-                )
+                    getTooltip = { it },
+                ),
             )
             comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
-        value = SystemLogsEvent::logger
+        value = SystemLogsEvent::logger,
     )
 
     val Message by column { it.message }
@@ -84,7 +84,7 @@ class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
             minWidth = 55
             maxWidth = 55
         },
-        value = { it.level }
+        value = { it.level },
     )
     val Timestamp by column(
         column = {
@@ -94,7 +94,7 @@ class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
                 panel.dateFormatter.format(it as Instant)
             }
         },
-        value = { it.timestamp }
+        value = { it.timestamp },
     )
     val Logger by column(
         column = {
@@ -111,12 +111,12 @@ class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
             cellRenderer = DefaultTableRenderer(
                 ReifiedLabelProvider(
                     getText = valueExtractor,
-                    getTooltip = { it }
-                )
+                    getTooltip = { it },
+                ),
             )
             comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
-        value = { it.logger }
+        value = { it.logger },
     )
     val Message by column { it.message }
 }

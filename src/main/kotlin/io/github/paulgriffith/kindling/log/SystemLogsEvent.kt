@@ -13,7 +13,7 @@ data class WrapperLogEvent(
     override val message: String,
     override val logger: String = STDOUT,
     val level: Level? = null,
-    val stacktrace: List<String> = emptyList()
+    val stacktrace: List<String> = emptyList(),
 ) : LogEvent {
     companion object {
         const val STDOUT = "STDOUT"
@@ -27,10 +27,10 @@ data class SystemLogsEvent(
     val thread: String,
     val level: Level,
     val mdc: Map<String, String>,
-    val stacktrace: List<String>
+    val stacktrace: List<String>,
 ) : LogEvent
 
-@Suppress("unused")
+@Suppress("ktlint:trailing-comma-on-declaration-site")
 enum class Level {
     TRACE,
     DEBUG,
