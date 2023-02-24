@@ -175,7 +175,7 @@ class LoggerMDCPanel(events: List<SystemLogsEvent>) : JPanel(MigLayout("ins 0, f
     val filterTable = FilterTable(arrayOf("Enable", "Key", "Value", "Invert"), mutableListOf())
 
     init {
-        add(JLabel("MDC Key Filtering"), "align center, span 2, wrap")
+        add(JLabel("MDC Key Filter"), "align center, span 2, wrap")
         add(keyMenu, "spanx 2, pushx, growx, wrap")
         add(valueMenu, "spanx 2, pushx, growx, wrap")
         add(removeButton, "cell 1 3, align right")

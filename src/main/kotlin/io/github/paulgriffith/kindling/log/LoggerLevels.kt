@@ -7,6 +7,7 @@ import io.github.paulgriffith.kindling.utils.installSearchable
 import io.github.paulgriffith.kindling.utils.listCellRenderer
 import net.miginfocom.swing.MigLayout
 import javax.swing.AbstractListModel
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.ListModel
 
@@ -103,6 +104,7 @@ class LoggerLevelsPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill,
     }
 
     init {
+        add(JLabel("Logger Level Filter"), "align center, wrap")
         add(FlatScrollPane(list), "newline, push, grow")
     }
 }

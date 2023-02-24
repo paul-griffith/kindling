@@ -18,7 +18,6 @@ import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
 import javax.swing.*
 import io.github.paulgriffith.kindling.utils.Action
-import org.intellij.lang.annotations.JdkConstants.TabLayoutPolicy
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
 
@@ -34,8 +33,8 @@ class LogPanel(
     private var showDensityDisplay: Boolean = true
 
     val header = Header(totalRows)
-    private val startTime = rawData.first().timestamp.toEpochMilli()
-    private val endTime = rawData.last().timestamp.toEpochMilli()
+    private val startTime = rawData.minBy{ it.timestamp }.timestamp.toEpochMilli()
+    private val endTime = rawData.maxBy{ it.timestamp }.timestamp.toEpochMilli()
     private var messageFilter = ""
     private var stackTraceFilter = Pair<Short, List<String>>(0, emptyList())
     private var threadFilter = ""
@@ -74,7 +73,7 @@ class LogPanel(
     private val loggerNamesSidebar = LoggerNamesPanel(rawData)
     private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
     private val loggerMDCsSidebar = if (rawData.first() is SystemLogsEvent) {LoggerMDCPanel(rawData as List<SystemLogsEvent>)} else {null}
-    private val loggerTimesSidebar = LoggerTimesPanel(rawData)
+    private val loggerTimesSidebar = LoggerTimesPanel(startTime, endTime)
     private val filterPane = JTabbedPane().apply {
 
         addTab("Loggers", loggerNamesSidebar)
@@ -92,7 +91,7 @@ class LogPanel(
                 .mapTo(mutableSetOf()) { it.name }
         }
         add { event ->
-            event.timestamp.toEpochMilli() in timeline.lowerSelectedTime ..  timeline.upperSelectedTime
+            loggerTimesSidebar.isValidLogEvent(event)
         }
         add { event ->
             event.level!!.name in loggerLevelsSidebar.list.checkBoxListSelectedIndices
@@ -635,6 +634,10 @@ class LogPanel(
         }
 
         loggerMDCsSidebar?.filterTable?.addTableModelListener {
+            updateData()
+        }
+
+        loggerTimesSidebar.addTimeUpdateEventListener {
             updateData()
         }
 

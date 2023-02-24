@@ -10,6 +10,7 @@ import io.github.paulgriffith.kindling.utils.listCellRenderer
 import net.miginfocom.swing.MigLayout
 import javax.swing.AbstractListModel
 import javax.swing.ButtonGroup
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JToggleButton
 import javax.swing.ListModel
@@ -142,6 +143,7 @@ class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")
     }
 
     init {
+        add(JLabel("Logger Name Filter"), "align center, wrap")
         listOf(
             naturalAsc,
             naturalDesc,
@@ -157,7 +159,7 @@ class LoggerNamesPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")
             ))
         ).forEach { sortButton ->
             sortButtons.add(sortButton)
-            add(sortButton, "cell 0 0")
+            add(sortButton, "cell 0 1")
         }
         sortButtons.setSelected(naturalAsc.model, true)
         add(FlatScrollPane(list), "newline, push, grow")
