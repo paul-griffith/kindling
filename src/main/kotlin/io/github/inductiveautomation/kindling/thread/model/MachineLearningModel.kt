@@ -28,6 +28,19 @@ object MachineLearningModel {
     private const val versionEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
     private const val kindlingDownloadUrl = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
 
+    val pmmlFilePath: String
+        get() {
+            val folder = if (cacheFilePath.toFile().exists()) {
+                cacheFilePath
+            } else {
+                Paths.get("src/main/resources")
+            }
+
+            return folder.toFile().listFiles().findLast { file ->
+                file.isFile && file.name.contains(pmmlFileNamePrefix)
+            }!!.absolutePath
+        }
+
     fun verifyPMML() {
         if (oldPMMLVersion != currentPMMLVersion && needsUpdate) {
             when (currentPMMLVersion) {
