@@ -234,17 +234,19 @@ class MultiThreadView(
         build()
     }
 
-    private val threadsOfInterest: List<Thread> = buildList {
-        val threads = mainTable.model.threadData
+    private val threadsOfInterest: List<Thread> by lazy {
+        buildList {
+            val threads = mainTable.model.threadData
 
-        threads.flatten().filterNotNull().forEach { thread ->
-            val evaluation = evaluator.evaluate(
-                evaluator.inputFields.associate { field ->
-                    field.name to field.prepare(thread.getPmmlProperty(field.name))
-                }
-            )
-            val result = (evaluation["marked"] as ProbabilityDistribution<*>).result as Int
-            if (result == 1) add(thread)
+            threads.flatten().filterNotNull().forEach { thread ->
+                val evaluation = evaluator.evaluate(
+                    evaluator.inputFields.associate { field ->
+                        field.name to field.prepare(thread.getPmmlProperty(field.name))
+                    }
+                )
+                val result = (evaluation["marked"] as ProbabilityDistribution<*>).result as Int
+                if (result == 1) add(thread)
+            }
         }
     }
 
