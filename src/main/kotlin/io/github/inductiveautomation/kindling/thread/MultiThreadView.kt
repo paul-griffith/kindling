@@ -183,7 +183,9 @@ class MultiThreadView(
 
             actionMap.apply{
                 put("$COLUMN_CONTROL_MARKER.clearAllMarks", clearAllMarks)
-                put("$COLUMN_CONTROL_MARKER.markThreadsOfInterest", markThreadsOfInterest)
+                put("$COLUMN_CONTROL_MARKER.markThreadsOfInterest", Action("Mark Threads of Interest") {
+                    markThreadsOfInterest()
+                })
             }
 
             attachPopupMenu table@{ event ->
@@ -235,6 +237,8 @@ class MultiThreadView(
     }
 
     private val threadsOfInterest: List<Thread> by lazy {
+        if (threadDumps.any(ThreadDump::isLegacy) || !MachineLearningModel.enabled) return@lazy emptyList()
+
         buildList {
             val threads = mainTable.model.threadData
 

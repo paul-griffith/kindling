@@ -128,6 +128,11 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                     },
                 )
                 add(
+                    Action("Enable/Disable Experimental ML Features") {
+                        MachineLearningModel.enabled = !MachineLearningModel.enabled
+                    }
+                )
+                add(
                     Action("UI Inspector") {
                         FlatUIDefaultsInspector.show()
                     },

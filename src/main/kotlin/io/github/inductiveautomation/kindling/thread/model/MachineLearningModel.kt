@@ -23,6 +23,7 @@ import kotlin.io.path.name
 
 object MachineLearningModel {
     private var needsUpdate = true
+    var enabled = false
     private const val pmmlFileNamePrefix = "thread_machine_learning_"
     private const val supportAppsGatewayEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
     private const val versionEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
@@ -41,36 +42,58 @@ object MachineLearningModel {
             }!!.absolutePath
         }
 
-    fun verifyPMML() {
-        if (oldPMMLVersion != currentPMMLVersion && needsUpdate) {
-            when (currentPMMLVersion) {
-                "" -> if (pmmlPopup("New Version Available!", "There is a new version of Kindling Beta available. Would you like to upgrade?", arrayOf("No", "Upgrade Now!")) == 1) {
-                    val desk = Desktop.getDesktop()
-                    desk.browse(URI(kindlingDownloadUrl))
-                }
-                else -> if (pmmlPopup("New Machine Learning Model Available!", "There is a newer version of the Machine Learning Model available. Would you like to update?", arrayOf("No", "Update Now!")) == 1) {
-                    updatePMML()
-                }
-            }
-            needsUpdate = false
-        }
-    }
-
     private val cacheFilePath = run {
         val userHome = System.getProperty("user.home")
         val pmmlRelativePath = ".kindling/machine-learning-data/"
         Paths.get(userHome).resolve(pmmlRelativePath)
     }
 
+    private val currentPMMLVersion by lazy {
+        val client = HttpClient()
+        runBlocking {
+            val response: HttpResponse = client.request(versionEndpoint) {
+                method = HttpMethod.Get
+                url {
+                    parameters.append("version", Kindling.VERSION)
+                }
+            }
+            response.bodyAsText()
+        }
+    }
+
     private val oldPMMLVersion = run {
         var folder = cacheFilePath.toFile()
-        if (!folder.exists()) {
+        if (!folder.exists()) { // If no cache file already, get bundled version
             folder = File("src/main/resources")
         }
-        val listOfFiles = folder.listFiles()
-        listOfFiles.findLast {file ->
+        val lastFileName = folder.listFiles().findLast {file ->
             file.isFile && file.name.contains(pmmlFileNamePrefix)
-        }?.toString()?.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
+        }?.toString()
+        lastFileName?.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
+    }
+
+    fun verifyPMML() {
+        if (!enabled) return
+        if (oldPMMLVersion != currentPMMLVersion && needsUpdate) {
+            when (currentPMMLVersion) { // Add future cases here if we want to send special messages for older versions (i.e. bug warnings post-release)
+                "" -> {
+                    val title = "New Version Available!"
+                    val msg = "There is a new version of Kindling Beta available. Would you like to upgrade?"
+                    if (pmmlPopup(title, msg, arrayOf("No", "Upgrade Now!")) == 1) {
+                        val desk = Desktop.getDesktop()
+                        desk.browse(URI(kindlingDownloadUrl))
+                    }
+                }
+                else -> {
+                    val title = "New Machine Learning Model Available!"
+                    val msg = "There is a newer version of the Machine Learning Model available. Would you like to update?"
+                    if (pmmlPopup(title, msg, arrayOf("No", "Update Now!")) == 1) {
+                        updatePMML()
+                    }
+                }
+            }
+            needsUpdate = false
+        }
     }
 
     private fun removeOldPMMLVersions() {
@@ -111,27 +134,16 @@ object MachineLearningModel {
         }
     }
 
-    private val currentPMMLVersion by lazy {
-        val client = HttpClient()
-        runBlocking {
-            val response: HttpResponse = client.request(versionEndpoint) {
-                method = HttpMethod.Get
-                url {
-                    parameters.append("version", Kindling.VERSION)
-                }
-            }
-            response.bodyAsText()
-        }
-    }
-
     private fun pmmlPopup(title: String, message: String, options: Array<String>): Int {
-        return JOptionPane.showOptionDialog(JFrame(),
+        return JOptionPane.showOptionDialog(
+            JFrame(),
             message,
             title,
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
             ImageIcon(Kindling.frameIcon),
             options,
-            options[1])
+            options[1]
+        )
     }
 }
