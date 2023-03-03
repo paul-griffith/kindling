@@ -77,7 +77,7 @@ class LoggerTimesPanel(
         add(JLabel("Time Filter"), "align center, wrap")
         add(JPanel(MigLayout("ins 4, fill")).apply {
             border = BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor"))
-            add(enabledCheckBox, "top, wrap")
+            add(enabledCheckBox, "left, wrap")
             add(startSelector,"spanx 2, pushx, growx, wrap")
             add(endSelector,"spanx 2, push, grow, wrap")
             add(resetButton, "left")
@@ -100,13 +100,13 @@ class LoggerTimesPanel(
     }
 }
 
-private class DateTimeSelector(label: String, initialTime: Long) : JPanel(MigLayout("ins 0, fillx")) {
+class DateTimeSelector(label: String, initialTime: Long) : JPanel(MigLayout("ins 0, fillx")) {
 
     var latchedTime = initialTime
-    var datePicker = JXDatePicker(Date(initialTime)).apply {
+    private var datePicker = JXDatePicker(Date(initialTime)).apply {
         editor.horizontalAlignment = SwingConstants.CENTER
     }
-    val timeSelector = TimeSelector(initialTime)
+    private val timeSelector = TimeSelector(initialTime)
 
     fun updateDisplay(latchedTime: Long) {
         datePicker.date = Date(latchedTime)
@@ -140,14 +140,14 @@ private class DateTimeSelector(label: String, initialTime: Long) : JPanel(MigLay
     }
 }
 
-private class TimeSelector(time : Long) : JPanel(MigLayout("ins 0")) {
+class TimeSelector(time : Long) : JPanel(MigLayout("ins 0")) {
 
     private val backgroundColor = UIManager.getColor("ComboBox.background")
     val hourSelector = FormattedComboBox(24)
     val minuteSelector = FormattedComboBox(60)
     val secondSelector = FormattedComboBox(60)
     val milliSelector = FormattedComboBox(1000)
-    var latchedTime: Calendar = Calendar.getInstance()
+    private var latchedTime: Calendar = Calendar.getInstance()
     init {
         border = BorderFactory.createLineBorder(UIManager.getColor("Button.borderColor"))
         add(hourSelector,"wmin 45")
@@ -169,7 +169,7 @@ private class TimeSelector(time : Long) : JPanel(MigLayout("ins 0")) {
     }
 }
 
-private class FormattedComboBox(items : Int) : JComboBox<String>() {
+class FormattedComboBox(items : Int) : JComboBox<String>() {
     init {
         border = null
         val popup: Any = getUI().getAccessibleChild(this, 0)
