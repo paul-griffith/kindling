@@ -97,6 +97,9 @@ class TabStrip : FlatTabbedPane() {
         }
     }
 
+    val indices: IntRange
+        get() = 0 until tabCount
+
     fun <T> addTab(
         component: T,
         tabName: String = component.tabName,
@@ -106,7 +109,7 @@ class TabStrip : FlatTabbedPane() {
     ) where T : Container, T : FloatableComponent {
         addTab(tabName, icon, component, tabTooltip)
         if (select) {
-            selectedIndex = tabCount - 1
+            selectedIndex = indices.last
         }
     }
 

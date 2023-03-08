@@ -39,6 +39,7 @@ class IdbView(path: Path) : ToolPanel() {
             select = true,
         )
 
+        var addedTabs = 0
         for (tool in IdbTool.values()) {
             if (tool.supports(tables)) {
                 tabs.addLazyTab(
@@ -46,7 +47,11 @@ class IdbView(path: Path) : ToolPanel() {
                 ) {
                     tool.open(connection)
                 }
+                addedTabs += 1
             }
+        }
+        if (addedTabs == 1) {
+            tabs.selectedIndex = tabs.indices.last
         }
 
         add(tabs, "push, grow")

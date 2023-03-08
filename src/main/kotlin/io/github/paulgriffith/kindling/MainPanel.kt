@@ -164,7 +164,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                     },
                 ),
             )
-            tabs.selectedIndex = tabs.tabCount - 1
+            tabs.selectedIndex = tabs.indices.last
         }
     }
 
