@@ -32,16 +32,7 @@ data class TagProviderStructure(
     val tagType: String?,
     val tags: List<NodeStructure>
 ) {
-    private val udtDefinitions: List<NodeStructure> = tags.find { struct -> struct.name == "_types_" }?.tags ?: emptyList()
-
-    fun resolveOpcTags() {
-        val defParams = udtDefinitions.associate {
-            it.name to it.parameters
-        }
-        tags.forEach { node ->
-            node.resolveOpcTags(defParams, mutableListOf())
-        }
-    }
+//    val udtDefinitions: List<NodeStructure> = tags.find { struct -> struct.name == "_types_" }?.tags ?: emptyList()
 }
 
 
@@ -52,20 +43,20 @@ data class NodeStructure(
     val name: String,
 
     // Value
-    val valueSource: String?,
-    val dataType: String?,
-    val opcServer: String?,
-    val opcItemPath: JsonElement?, // Can be primitive or Object
+    val valueSource: String? = null,
+    val dataType: String? = null,
+    val opcServer: String? = null,
+    var opcItemPath: JsonElement? = null, // Can be primitive or Object
 
     // Other
     val tags: List<NodeStructure>?,
     @Serializable(with=UdtParameterListSerializer::class)
-    val parameters: List<UdtParameter>,
+    val parameters: List<UdtParameter> = emptyList(),
     val tagType: String,
-    val typeId: String?,
-    val sourceTagPath: JsonElement?,
+    val typeId: String? = null,
+    val sourceTagPath: JsonElement? = null,
 ) {
-    private val isBrowsable = tags != null
+//    val isBrowsable = tags != null
 
 //    val parametersAsList: List<UdtParameter> by lazy {
 //        parameters?.map { (key, value) ->
@@ -74,44 +65,44 @@ data class NodeStructure(
 //        } ?: emptyList()
 //    }
 
-    private fun resolveOpcItemPath(params: List<UdtParameter>) {
-        params.onEach { println(it) }
-        if (opcItemPath is JsonObject) {
-            val rawItemPath = opcItemPath["binding"].toString()
-            println("$rawItemPath is gonna get resolved.")
-        }
-    }
+//    private fun resolveOpcItemPath(params: List<UdtParameter>) {
+//        params.onEach { println(it) }
+//        if (opcItemPath is JsonObject) {
+//            val rawItemPath = opcItemPath["binding"].toString()
+//            println("$rawItemPath is gonna get resolved.")
+//        }
+//    }
 
-    fun resolveOpcTags(
-        defParams: Map<String, List<UdtParameter>>,
-        params: MutableList<UdtParameter>
-    ) {
-        println("Starting resolve...")
-        if (valueSource == "opc") {
-            println("Opc Tag: $name")
-            resolveOpcItemPath(params)
-        }
-        if (tagType == "UdtInstance") {
-            val inheritedParams = defParams[typeId]?.filter { it.value != null }
-
-            if (inheritedParams != null) {
-                for (inheritedParam in inheritedParams) {
-                    parameters.find { it.name == inheritedParam.name }?.let {
-                        it.value = inheritedParam.value
-                    }
-                }
-            }
-
-            parameters.joinToString(", ") {
-                "${it.name}: ${it.value}"
-            }.let { println(it) }
-        }
-        if (isBrowsable) {
-            tags?.forEach { node ->
-                node.resolveOpcTags(defParams, params.plus(parameters).toMutableList())
-            }
-        }
-    }
+//    fun resolveOpcTags(
+//        defParams: Map<String, List<UdtParameter>>,
+//        params: MutableList<UdtParameter>
+//    ) {
+//        println("Starting resolve...")
+//        if (valueSource == "opc") {
+//            println("Opc Tag: $name")
+//            resolveOpcItemPath(params)
+//        }
+//        if (tagType == "UdtInstance") {
+//            val inheritedParams = defParams[typeId]?.filter { it.value != null }
+//
+//            if (inheritedParams != null) {
+//                for (inheritedParam in inheritedParams) {
+//                    parameters.find { it.name == inheritedParam.name }?.let {
+//                        it.value = inheritedParam.value
+//                    }
+//                }
+//            }
+//
+//            parameters.joinToString(", ") {
+//                "${it.name}: ${it.value}"
+//            }.let { println(it) }
+//        }
+//        if (isBrowsable) {
+//            tags?.forEach { node ->
+//                node.resolveOpcTags(defParams, params.plus(parameters).toMutableList())
+//            }
+//        }
+//    }
 }
 
 @Serializable
@@ -139,7 +130,8 @@ class UdtParameterListSerializer : KSerializer<List<UdtParameter>> {
     override fun deserialize(decoder: Decoder): List<UdtParameter> {
         val map = decoder.decodeSerializableValue(delegateSerializer)
         return map.entries.map { (key: String, value: JsonObject) ->
-            UdtParameter(key, value["dataType"].toString(), value["value"] as JsonPrimitive)
+            println("key: $key, value: ${value["value"]}")
+            UdtParameter(key, value["dataType"].toString(), value["value"] as JsonPrimitive?)
         }
     }
 }
@@ -209,4 +201,14 @@ data class FullTagStructure(
 ) {
     val isBrowsable = tags != null
 }
+
+
+    fun resolveOpcTags() {
+        val defParams = udtDefinitions.associate {
+            it.name to it.parameters
+        }
+        tags.forEach { node ->
+            node.resolveOpcTags(defParams, mutableListOf())
+        }
+    }
 */
