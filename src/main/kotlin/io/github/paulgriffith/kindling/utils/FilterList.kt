@@ -1,4 +1,4 @@
-package io.github.paulgriffith.kindling.thread
+package io.github.paulgriffith.kindling.utils
 
 import com.jidesoft.swing.CheckBoxList
 import com.jidesoft.swing.ListSearchable
@@ -13,9 +13,9 @@ typealias FilterComparator = Comparator<Map.Entry<String?, Int>>
 class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
     var comparator: FilterComparator = byCountDesc
         set(value) {
-            values = rawData.entries.sortedWith(comparator).map { it.key }
-            fireContentsChanged(this, 0, size)
             field = value
+            values = rawData.entries.sortedWith(value).map { it.key }
+            fireContentsChanged(this, 0, size)
         }
 
     private var values = rawData.entries.sortedWith(comparator).map { it.key }
@@ -46,11 +46,11 @@ class FilterModel(val rawData: Map<String?, Int>) : AbstractListModel<Any>() {
     }
 }
 
-class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(emptyMap())) {
-    private var total = 0
-    private var percentages = emptyMap<String?, String>()
+open class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(emptyMap())) {
+    protected var total = 0
+    protected var percentages = emptyMap<String?, String>()
 
-    private var lastSelection = arrayOf<Any>()
+    protected var lastSelection = arrayOf<Any>()
 
     init {
         selectionModel = NoSelectionModel()
@@ -78,6 +78,22 @@ class FilterList(private val emptyLabel: String) : CheckBoxList(FilterModel(empt
             }
         }
     }
+
+    fun updateComparator(comparator: FilterComparator) {
+        checkBoxListSelectionModel.valueIsAdjusting = true
+        val currentSelection = checkBoxListSelectedValues
+        lastSelection = if (currentSelection.isEmpty()) {
+            lastSelection
+        } else {
+            currentSelection
+        }
+        model.comparator = comparator
+        selectNone()
+        addCheckBoxListSelectedValues(lastSelection)
+        checkBoxListSelectionModel.valueIsAdjusting = false
+    }
+
+    fun isOnlySelected(value: String): Boolean = checkBoxListSelectedValues.size == 1 && value == checkBoxListSelectedValues.first()
 
     fun select(value: String) {
         val rowToSelect = model.indexOf(value)

@@ -12,7 +12,7 @@ import javax.swing.table.AbstractTableModel
 
 class LogsModel<T : LogEvent>(
     val data: List<T>,
-    val columns: ColumnList<T>
+    val columns: LogsColumn<T>
 ) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = columns[column].header
     override fun getRowCount(): Int = data.size
@@ -33,46 +33,48 @@ class LogsModel<T : LogEvent>(
         require(isCellEditable(rowIndex, columnIndex))
         data[rowIndex].marked = aValue as Boolean
     }
+
 }
 
 @Suppress("unused", "PropertyName")
-class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
-    val Marked by column(
-        column = {
+sealed class LogsColumn<T : LogEvent>(panel: LogPanel) : ColumnList<T>() {
+    val Marked = Column<T, Boolean>(
+        header = "Marked",
+        columnCustomization = {
             minWidth = 25
             maxWidth = 25
-            toolTipText = "Marked Threads"
+            toolTipText = "Marked Logs"
             headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
                 FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
             }
         },
-        value = { it.marked }
+        getValue = LogEvent::marked
     )
-    val Level by column(
-        column = {
+
+    val Level = Column<T, Level?>(
+        header = "Level",
+        columnCustomization = {
             minWidth = 55
             maxWidth = 55
         },
-        value = { it.level }
+        getValue = LogEvent::level
     )
-    val Timestamp by column(
-        column = {
+
+    val Timestamp = Column<T, Instant>(
+        header = "Timestamp",
+        columnCustomization = {
             minWidth = 155
             maxWidth = 155
             cellRenderer = DefaultTableRenderer {
                 panel.dateFormatter.format(it as Instant)
             }
         },
-        value = SystemLogsEvent::timestamp
+        getValue = LogEvent::timestamp
     )
-    val Thread by column(
-        column = {
-            minWidth = 50
-        },
-        value = { it.thread }
-    )
-    val Logger by column(
-        column = {
+
+    val Logger = Column<T, String>(
+        header = "Logger",
+        columnCustomization = {
             minWidth = 50
 
             val valueExtractor: (String?) -> String? = {
@@ -84,70 +86,72 @@ class SystemLogsColumns(panel: LogPanel) : ColumnList<SystemLogsEvent>() {
             }
 
             cellRenderer = DefaultTableRenderer(
-                ReifiedLabelProvider(
-                    getText = valueExtractor,
-                    getTooltip = { it }
-                )
+                    ReifiedLabelProvider(
+                            getText = valueExtractor,
+                            getTooltip = { it }
+                    )
             )
             comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
-        value = SystemLogsEvent::logger
+        getValue = LogEvent::logger
     )
 
-    val Message by column { it.message }
+    val Message = Column<T, String>(
+        header = "Message",
+        getValue = LogEvent::message
+    )
+
+    init {
+        add(Marked)
+        add(Level)
+        add(Logger)
+        add(Message)
+        add(Timestamp)
+    }
+
+    abstract val filterableColumns: List<Column<T, out Any?>>
+    abstract val markableColumns: List<Column<T, out Any?>>
 }
 
-@Suppress("unused", "PropertyName")
-class WrapperLogColumns(panel: LogPanel) : ColumnList<WrapperLogEvent>() {
-    val Marked by column(
-        column = {
-            minWidth = 25
-            maxWidth = 25
-            toolTipText = "Marked Threads"
-            headerRenderer = DefaultTableRenderer(StringValues.EMPTY) {
-                FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
-            }
-        },
-        value = { it.marked  }
-    )
-    val Level by column(
-        column = {
-            minWidth = 55
-            maxWidth = 55
-        },
-        value = { it.level }
-    )
-    val Timestamp by column(
-        column = {
-            minWidth = 155
-            maxWidth = 155
-            cellRenderer = DefaultTableRenderer {
-                panel.dateFormatter.format(it as Instant)
-            }
-        },
-        value = { it.timestamp }
-    )
-    val Logger by column(
-        column = {
+@Suppress("PropertyName")
+class SystemLogsColumns(panel: LogPanel) : LogsColumn<SystemLogsEvent>(panel) {
+    val Thread = Column(
+        header = "Thread",
+        columnCustomization = {
             minWidth = 50
-
-            val valueExtractor: (String?) -> String? = {
-                if (panel.header.isShowFullLoggerName) {
-                    it
-                } else {
-                    it?.substringAfterLast('.')
-                }
-            }
-
-            cellRenderer = DefaultTableRenderer(
-                ReifiedLabelProvider(
-                    getText = valueExtractor,
-                    getTooltip = { it }
-                )
-            )
-            comparator = compareBy(AlphanumComparator(), valueExtractor)
         },
-        value = { it.logger }
+        getValue = SystemLogsEvent::thread
     )
-    val Message by column { it.message }
+
+    init {
+        add(Thread)
+    }
+
+    override val filterableColumns = listOf(
+            Level,
+            Thread,
+            Logger,
+            Message,
+    )
+
+    override val markableColumns = listOf(
+            Level,
+            Thread,
+            Logger,
+            Message
+    )
+}
+
+class WrapperLogColumns(panel: LogPanel) : LogsColumn<WrapperLogEvent>(panel) {
+    override val filterableColumns = listOf(
+            Level,
+            Logger,
+            Message,
+    )
+
+    override val markableColumns = listOf(
+            Level,
+            Logger,
+            Message,
+    )
 }

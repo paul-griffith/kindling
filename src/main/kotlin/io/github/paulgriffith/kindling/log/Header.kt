@@ -42,11 +42,11 @@ class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill")) {
             }
         )
         add(
-                JCheckBoxMenuItem("Only Show Marked Logs").apply {
-                    addActionListener {
-                        isOnlyShowMarkedLogs = !isOnlyShowMarkedLogs
-                    }
+            JCheckBoxMenuItem("Only Show Marked Logs").apply {
+                addActionListener {
+                    isOnlyShowMarkedLogs = !isOnlyShowMarkedLogs
                 }
+            }
         )
         val tzGroup = ButtonGroup()
         add(

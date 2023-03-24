@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.ui.FlatScrollBarUI
+import io.github.paulgriffith.kindling.utils.Column
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,11 +16,12 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.Temporal
 import java.time.temporal.TemporalUnit
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
+import io.github.paulgriffith.kindling.utils.FilterList
+import io.github.paulgriffith.kindling.utils.FilterModel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
 import io.github.paulgriffith.kindling.utils.getValue
-import io.github.paulgriffith.kindling.utils.selectedRowIndices
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -38,6 +40,8 @@ import javax.swing.SwingConstants
 import javax.swing.UIManager
 import kotlin.math.absoluteValue
 import io.github.paulgriffith.kindling.core.Detail as DetailEvent
+
+
 
 class LogPanel(
     private val rawData: List<LogEvent>
@@ -66,7 +70,6 @@ class LogPanel(
         }
     }
     private var threadFilter = ""
-    private var mdcFilter : Map<String, String> = emptyMap()
 
     val table = run {
         val initialModel = createModel(rawData)
@@ -85,7 +88,221 @@ class LogPanel(
                 }
             }
             actionMap.put("column.showLogDensity", densityDisplayAction)
+
+//            fun createJMenuFilterItem(column: Column<out LogEvent, out Any?>): JCheckBoxMenuItem {
+//                var name = ""
+//                var condition = false
+//                when (column) {
+//                    is SystemLogsColumns<LogEvent> -> {
+//
+//                    }
+//                    LogsColumns<LogEvent>::Level -> {
+//
+//                    }
+//                    LogsColumns<LogEvent>::Logger -> {
+//
+//                    }
+//                    LogsColumns<SystemLogsEvent>:: -> {
+//
+//                    }
+//                }
+//                return JCheckBoxMenuItem(name, !condition)
+//            }
+//
+//            fun <R, C> Column<R, C>.condition(): Boolean {
+//                when (this) {
+//                    is SystemLogsColumns::Thread -> threadFilter.isNotEmpty()
+//                    is LogsColumns::Logger -> {
+//                        loggerNamesSidebar.loggerNamesList.isOnlySelected()
+//                    }
+//                }
+//            }
+
+            attachPopupMenu { event ->
+                val currentRow = rowAtPoint(event.point)
+                selectionModel.setSelectionInterval(currentRow, currentRow)
+                JPopupMenu().apply {
+
+                    val selectedLogEvent = this@attachPopupMenu.model.data[currentRow]
+                    add(JMenu("Filter all with same...").apply {
+                        val isOnlySelectedLevel = !loggerLevelsSidebar.isOnlySelected(selectedLogEvent.level!!.name)
+                        add(
+                            JCheckBoxMenuItem("Level", !isOnlySelectedLevel).apply {
+                                addActionListener {
+                                    if (isOnlySelectedLevel){
+                                        loggerLevelsSidebar.select(this@attachPopupMenu.model.data[currentRow].level!!.name)
+                                    } else {
+                                        loggerLevelsSidebar.checkBoxListSelectionModel.setSelectionInterval(0, 0)
+                                    }
+                                    updateData()
+                                }
+                            }
+                        )
+                        if (this@attachPopupMenu.model.data[currentRow] is SystemLogsEvent) {
+                            add(JCheckBoxMenuItem("Thread", threadFilter.isNotEmpty()).apply {
+                                addActionListener {
+                                    if (threadFilter.isEmpty()) {
+                                        threadFilter = (this@attachPopupMenu.model.data[currentRow] as SystemLogsEvent).thread
+                                    } else {
+                                        threadFilter = ""
+                                    }
+                                    updateData()
+                                }
+                            })
+                        }
+                        add(JCheckBoxMenuItem("Logger", !loggerNamesSidebar.loggerNamesList.isOnlySelected(selectedLogEvent.logger)).apply {
+                            addActionListener {
+                                if (loggerNamesSidebar.loggerNamesList.isOnlySelected(this@attachPopupMenu.model.data[currentRow].logger)) {
+                                    loggerNamesSidebar.loggerNamesList.select(this@attachPopupMenu.model.data[currentRow].logger)
+                                } else {
+                                    loggerNamesSidebar.loggerNamesList.checkBoxListSelectionModel.setSelectionInterval(0, 0)
+                                }
+                                updateData()
+                            }
+                        })
+                        add(JCheckBoxMenuItem("Message", messageFilter.isNotEmpty()).apply {
+                            addActionListener {
+                                if (messageFilter.isEmpty()) {
+                                    messageFilter = this@attachPopupMenu.model.data[currentRow].message
+                                } else {
+                                    messageFilter = ""
+                                }
+                                updateData()
+                            }
+                        })
+                        add(JMenu("StackTrace").apply {
+                            val eventStacktrace = this@attachPopupMenu.model.data[currentRow].stacktrace
+                            add(JCheckBoxMenuItem("Complete Match", stackTraceFilter.enabled).apply {
+                                if (eventStacktrace.isNotEmpty()) {
+                                    addActionListener {
+                                        if (stackTraceFilter.enabled) {
+                                            stackTraceFilter.enabled = false
+                                        } else {
+                                            stackTraceFilter.enableFilter(true, eventStacktrace)
+                                        }
+                                        updateData()
+                                    }
+                                } else {
+                                    this.isEnabled = false
+                                }
+                            })
+                            add(JCheckBoxMenuItem("Partial Match", stackTraceFilter.enabled).apply {
+                                if (eventStacktrace.isNotEmpty()) {
+                                    addActionListener {
+                                        if (stackTraceFilter.enabled) {
+                                            stackTraceFilter.enabled = false
+                                        } else {
+                                            stackTraceFilter.enableFilter(false, eventStacktrace)
+                                        }
+                                        updateData()
+                                    }
+                                } else {
+                                    this.isEnabled = false
+                                }
+                            })
+                        })
+                    }
+                    )
+                    add(JMenu("Mark/Unmark all with same...").apply {
+                        val isLevelMarked = isMarked("level", this@attachPopupMenu.model.data[currentRow].level!!.name)
+                        add(JCheckBoxMenuItem("Level", isLevelMarked).apply {
+                            addActionListener {
+                                this@attachPopupMenu.model.data.forEach {
+                                    if (it.level?.name == this@attachPopupMenu.model.data[currentRow].level!!.name) {
+                                        it.marked = !isLevelMarked
+                                    }
+                                }
+                            }
+                        })
+                        if (this@attachPopupMenu.model.data[currentRow] is SystemLogsEvent) {
+                            val isThreadMarked = isMarked("thread", (this@attachPopupMenu.model.data[currentRow] as SystemLogsEvent).thread)
+                            add(JCheckBoxMenuItem("Thread", isThreadMarked).apply {
+                                addActionListener {
+                                    this@attachPopupMenu.model.data.forEach {
+                                        if ((it as SystemLogsEvent).thread == (this@attachPopupMenu.model.data[currentRow] as SystemLogsEvent).thread) {
+                                            it.marked = !isThreadMarked
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                        val isNameMarked = isMarked("logger", this@attachPopupMenu.model.data[currentRow].logger)
+                        add(JCheckBoxMenuItem("Logger", isNameMarked).apply {
+                            addActionListener {
+                                this@attachPopupMenu.model.data.forEach {
+                                    if (it.logger == this@attachPopupMenu.model.data[currentRow].logger) {
+                                        it.marked = !isNameMarked
+                                    }
+                                }
+                            }
+                        })
+                        val isMessageMarked = isMarked("message", this@attachPopupMenu.model.data[currentRow].message)
+                        add(JCheckBoxMenuItem("Message", isMessageMarked).apply {
+                            addActionListener {
+                                this@attachPopupMenu.model.data.forEach {
+                                    if (it.message == this@attachPopupMenu.model.data[currentRow].message) {
+                                        it.marked = !isMessageMarked
+                                    }
+                                }
+                            }
+                        })
+                        val eventStacktrace = this@attachPopupMenu.model.data[currentRow].stacktrace
+                        add(JMenu("StackTrace").apply {
+                            val isFullStackMarked = isMarked("full-stacktrace", eventStacktrace.toString())
+                            add(JCheckBoxMenuItem("Complete Match", isFullStackMarked).apply {
+                                if (eventStacktrace.isNotEmpty()) {
+                                    addActionListener {
+                                        this@attachPopupMenu.model.data.forEach {
+                                            if (it.stacktrace == eventStacktrace) {
+                                                it.marked = !isFullStackMarked
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    this.isEnabled = false
+                                }
+                            })
+                            val isPartialStackMarked = isMarked("partial-stacktrace", if (eventStacktrace.isNotEmpty()) { eventStacktrace[0] } else { "" })
+                            add(JCheckBoxMenuItem("Partial Match", isPartialStackMarked).apply {
+                                if (eventStacktrace.isNotEmpty()) {
+                                    addActionListener {
+                                        this@attachPopupMenu.model.data.forEach {
+                                            if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == this@attachPopupMenu.model.data[currentRow].stacktrace[0]) {
+                                                it.marked = !isPartialStackMarked
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    this.isEnabled = false
+                                }
+                            })
+                        })
+                    })
+                }
+            }
+
         }
+    }
+
+
+
+    private fun isMarked(type: String, selectedValue: String) : Boolean {
+        table.model.data.forEach {
+            if (!it.marked) {
+                val eventValue = when (type) {
+                    "level" -> it.level?.name
+                    "logger" -> it.logger
+                    "thread" -> (it as SystemLogsEvent).thread
+                    "message" ->it.message
+                    "partial-stacktrace" ->
+                        if (it.stacktrace.isNotEmpty()) { it.stacktrace[0] } else { "" }
+                    "full-stacktrace" -> it.stacktrace.toString()
+                    else -> ""
+                }
+                if (eventValue == selectedValue) return false
+            }
+        }
+        return true
     }
 
     private val tableScrollPane = FlatScrollPane(table) {
@@ -93,15 +310,18 @@ class LogPanel(
     }
 
     private val details = LogDetailsPane()
-
     private val loggerNamesSidebar = LoggerNamesPanel(rawData)
-    private val loggerLevelsSidebar = LoggerLevelsPanel(rawData)
+
+    private val loggerLevelsSidebar = FilterList("").apply {
+        model = FilterModel(rawData.groupingBy { it.level?.name }.eachCount())
+        selectAll()
+    }
     private val loggerMDCsSidebar = if (rawData.first() is SystemLogsEvent) {LoggerMDCPanel(rawData as List<SystemLogsEvent>)} else {null}
     private val loggerTimesSidebar = LoggerTimesPanel(startTime, endTime)
     private val filterPane = JTabbedPane().apply {
 
         addTab("Loggers", loggerNamesSidebar)
-        addTab("Levels", loggerLevelsSidebar)
+        addTab("Levels", FlatScrollPane(loggerLevelsSidebar))
         if (loggerMDCsSidebar != null) {
             addTab("MDC", loggerMDCsSidebar)
         }
@@ -109,19 +329,13 @@ class LogPanel(
     }
     private val filters: List<(LogEvent) -> Boolean> = buildList {
         add { event ->
-            event.logger in loggerNamesSidebar.list.checkBoxListSelectedIndices
-                .map { loggerNamesSidebar.list.model.getElementAt(it) }
-                .filterIsInstance<LoggerName>()
-                .mapTo(mutableSetOf()) { it.name }
+            event.logger in loggerNamesSidebar.loggerNamesList.checkBoxListSelectedValues
         }
         add { event ->
             loggerTimesSidebar.isValidLogEvent(event)
         }
         add { event ->
-            event.level!!.name in loggerLevelsSidebar.list.checkBoxListSelectedIndices
-                    .map { loggerLevelsSidebar.list.model.getElementAt(it) }
-                    .filterIsInstance<LoggerLevel>()
-                    .mapTo(mutableSetOf()) { it.name }
+            event.level!!.name in loggerLevelsSidebar.checkBoxListSelectedValues
         }
         add { event ->
             loggerMDCsSidebar?.filterTable?.isValidLogEvent(event, false) ?: true
@@ -130,7 +344,7 @@ class LogPanel(
             loggerMDCsSidebar?.filterTable?.isValidLogEvent(event, true) ?: true
         }
         add { event ->
-            !header.isOnlyShowMarkedLogs || (header.isOnlyShowMarkedLogs && event.marked)
+            event.marked || !header.isOnlyShowMarkedLogs
         }
         add { event ->
             val text = header.search.text
@@ -154,51 +368,20 @@ class LogPanel(
             }
         }
         add { event ->
-            messageFilter.isEmpty() ||
-                    ((event is SystemLogsEvent || event is WrapperLogEvent) && messageFilter in event.message)
+            messageFilter.isEmpty() || messageFilter in event.message
         }
         add { event ->
-            if (!stackTraceFilter.enabled) {
-                true
-            } else {
-                if (event.stacktrace.isEmpty()) {
-                    false
-                } else {
-                    if (stackTraceFilter.completeMatch) {
-                        stackTraceFilter.stacktrace == event.stacktrace
-                    } else {
-                        stackTraceFilter.stacktrace[0] == event.stacktrace[0]
-                    }
-                }
-            }
+            !stackTraceFilter.enabled ||
+            (
+                event.stacktrace.isNotEmpty() &&
+                (
+                    (stackTraceFilter.completeMatch && stackTraceFilter.stacktrace == event.stacktrace) ||
+                    (!stackTraceFilter.completeMatch && stackTraceFilter.stacktrace[0] == event.stacktrace[0])
+                )
+            )
         }
         add { event ->
-            when (event) {
-                is SystemLogsEvent -> {
-                    if (threadFilter.isEmpty()) {
-                        true
-                    } else {
-                        threadFilter == event.thread
-                    }
-                }
-                is WrapperLogEvent -> {
-                    true
-                }
-            }
-        }
-        add { event ->
-            when (event) {
-                is SystemLogsEvent -> {
-                    if (mdcFilter.isEmpty()) {
-                        true
-                    } else {
-                        mdcFilter == event.mdc
-                    }
-                }
-                is WrapperLogEvent -> {
-                    true
-                }
-            }
+            event is WrapperLogEvent || threadFilter.isEmpty() || threadFilter == (event as SystemLogsEvent).thread
         }
     }
 
@@ -268,222 +451,17 @@ class LogPanel(
             }
         }
 
-        fun isLoggerLevelMarked(logger: String) : Boolean {
-            table.model.data.forEach {
-                if (it.level?.name == logger && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun isLoggerNameMarked(name: String) : Boolean {
-            table.model.data.forEach {
-                if (it.logger == name && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun isLoggerThreadMarked(name: String) : Boolean {
-            table.model.data.forEach {
-                if ((it as SystemLogsEvent).thread == name && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun isLoggerMessageMarked(message: String) : Boolean {
-            table.model.data.forEach {
-                if (it.message == message && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun isPartialStackTraceMarked(stackTrace: String) : Boolean {
-            table.model.data.forEach {
-                if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == stackTrace && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun isFullStackTraceMarked(stackTrace: List<String>) : Boolean {
-            table.model.data.forEach {
-                if (it.stacktrace == stackTrace && !it.marked) {
-                    return false
-                }
-            }
-            return true
-        }
-        table.attachPopupMenu table@{
-            val rowAtPoint = if (selectedRowIndices().isNotEmpty()) { selectedRowIndices().first() } else { 0 }
-            selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
-            JPopupMenu().apply {
-                add(JMenu("Filter all with same...").apply {
-                    val isOnlySelectedLevel = !loggerLevelsSidebar.isOnlySelected(this@table.model.data[rowAtPoint].level!!.name)
-                    add(JCheckBoxMenuItem("Level", !isOnlySelectedLevel).apply {
-                        addActionListener {
-                            if (isOnlySelectedLevel){
-                                loggerLevelsSidebar.select(this@table.model.data[rowAtPoint].level!!.name)
-                            } else {
-                                loggerLevelsSidebar.list.checkBoxListSelectionModel.setSelectionInterval(0, 0)
-                            }
-                            updateData()
-                        }
-                    })
-                    if (this@table.model.data[rowAtPoint] is SystemLogsEvent) {
-                        add(JCheckBoxMenuItem("Thread", threadFilter.isNotEmpty()).apply {
-                            addActionListener {
-                                if (threadFilter.isEmpty()) {
-                                    threadFilter = (this@table.model.data[rowAtPoint] as SystemLogsEvent).thread
-                                } else {
-                                    threadFilter = ""
-                                }
-                                updateData()
-                            }
-                        })
-                    }
-                    add(JCheckBoxMenuItem("Logger", loggerNamesSidebar.isOnlySelected(this@table.model.data[rowAtPoint].logger)).apply {
-                        addActionListener {
-                            if (!loggerNamesSidebar.isOnlySelected(this@table.model.data[rowAtPoint].logger)) {
-                                loggerNamesSidebar.select(this@table.model.data[rowAtPoint].logger)
-                            } else {
-                                loggerNamesSidebar.list.checkBoxListSelectionModel.setSelectionInterval(0, 0)
-                            }
-                            updateData()
-                        }
-                    })
-                    add(JCheckBoxMenuItem("Message", messageFilter.isNotEmpty()).apply {
-                        addActionListener {
-                            if (messageFilter.isEmpty()) {
-                                messageFilter = this@table.model.data[rowAtPoint].message
-                            } else {
-                                messageFilter = ""
-                            }
-                            updateData()
-                        }
-                    })
-                    add(JMenu("StackTrace").apply {
-                        val eventStacktrace = this@table.model.data[rowAtPoint].stacktrace
-                        add(JCheckBoxMenuItem("Complete Match", stackTraceFilter.enabled).apply {
-                            if (eventStacktrace.isNotEmpty()) {
-                                addActionListener {
-                                    if (stackTraceFilter.enabled) {
-                                        stackTraceFilter.enabled = false
-                                    } else {
-                                        stackTraceFilter.enableFilter(true, eventStacktrace)
-                                    }
-                                    updateData()
-                                }
-                            } else {
-                                this.isEnabled = false
-                            }
-                        })
-                        add(JCheckBoxMenuItem("Partial Match", stackTraceFilter.enabled).apply {
-                            if (eventStacktrace.isNotEmpty()) {
-                                addActionListener {
-                                    if (stackTraceFilter.enabled) {
-                                        stackTraceFilter.enabled = false
-                                    } else {
-                                        stackTraceFilter.enableFilter(false, eventStacktrace)
-                                    }
-                                    updateData()
-                                }
-                            } else {
-                                this.isEnabled = false
-                            }
-                        })
-                    })})
-                add(JMenu("Mark/Unmark all with same...").apply {
-                    val isLevelMarked = isLoggerLevelMarked(this@table.model.data[rowAtPoint].level!!.name)
-                    add(JCheckBoxMenuItem("Level", isLevelMarked).apply {
-                        addActionListener {
-                            table.model.data.forEach {
-                                if (it.level?.name == this@table.model.data[rowAtPoint].level!!.name) {
-                                    it.marked = !isLevelMarked
-                                }
-                            }
-                        }
-                    })
-                    if (this@table.model.data[rowAtPoint] is SystemLogsEvent) {
-                        val isThreadMarked = isLoggerThreadMarked((this@table.model.data[rowAtPoint] as SystemLogsEvent).thread)
-                        add(JCheckBoxMenuItem("Thread", isThreadMarked).apply {
-                            addActionListener {
-                                table.model.data.forEach {
-                                    if ((it as SystemLogsEvent).thread == (this@table.model.data[rowAtPoint] as SystemLogsEvent).thread) {
-                                        it.marked = !isThreadMarked
-                                    }
-                                }
-                            }
-                        })
-                    }
-                    val isNameMarked = isLoggerNameMarked(this@table.model.data[rowAtPoint].logger)
-                    add(JCheckBoxMenuItem("Logger", isNameMarked).apply {
-                        addActionListener {
-                            table.model.data.forEach {
-                                if (it.logger == this@table.model.data[rowAtPoint].logger) {
-                                    it.marked = !isNameMarked
-                                }
-                            }
-                        }
-                    })
-                    val isMessageMarked = isLoggerMessageMarked(this@table.model.data[rowAtPoint].message)
-                    add(JCheckBoxMenuItem("Message", isMessageMarked).apply {
-                        addActionListener {
-                            table.model.data.forEach {
-                                if (it.message == this@table.model.data[rowAtPoint].message) {
-                                    it.marked = !isMessageMarked
-                                }
-                            }
-                        }
-                    })
-                    if (this@table.model.data[rowAtPoint].stacktrace.isNotEmpty()) {
-                        add(JMenu("StackTrace").apply {
-                            val isFullStackMarked = isFullStackTraceMarked(this@table.model.data[rowAtPoint].stacktrace)
-                            add(JCheckBoxMenuItem("Complete Match", isFullStackMarked).apply {
-                                addActionListener {
-                                    table.model.data.forEach {
-                                        if (it.stacktrace == this@table.model.data[rowAtPoint].stacktrace) {
-                                            it.marked = !isFullStackMarked
-                                        }
-                                    }
-                                }
-                            })
-
-                            val isPartialStackMarked = isPartialStackTraceMarked(this@table.model.data[rowAtPoint].stacktrace[0])
-                            add(JCheckBoxMenuItem("Partial Match", isPartialStackMarked).apply {
-                                addActionListener {
-                                    table.model.data.forEach {
-                                        if (it.stacktrace.isNotEmpty() && it.stacktrace[0] == this@table.model.data[rowAtPoint].stacktrace[0]) {
-                                            it.marked = !isPartialStackMarked
-                                        }
-                                    }
-                                }
-                            })
-
-                        })
-                    }
-                })
-            }
-        }
-
         table.addPropertyChangeListener("model") {
             header.displayedRows = table.model.rowCount
         }
 
-        loggerNamesSidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+        loggerNamesSidebar.loggerNamesList.checkBoxListSelectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 updateData()
             }
         }
 
-        loggerLevelsSidebar.list.checkBoxListSelectionModel.addListSelectionListener {
+        loggerLevelsSidebar.checkBoxListSelectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 updateData()
             }
@@ -508,9 +486,8 @@ class LogPanel(
         }
 
         header.addPropertyChangeListener("isShowFullLoggerName") {
+            loggerNamesSidebar.loggerNamesList.isShowFullLoggerNames = !loggerNamesSidebar.loggerNamesList.isShowFullLoggerNames
             table.model.fireTableDataChanged()
-            loggerNamesSidebar.list.isShowFullLoggerName = it.newValue as Boolean
-            loggerNamesSidebar.sortByFullName(it.newValue as Boolean)
         }
 
         header.addPropertyChangeListener("isOnlyShowMarkedLogs") {
@@ -705,5 +682,3 @@ class DurationUnit(private val duration: Duration) : TemporalUnit {
         private const val NANOS_PER_DAY = NANOS_PER_SECOND * SECONDS_PER_DAY
     }
 }
-
-

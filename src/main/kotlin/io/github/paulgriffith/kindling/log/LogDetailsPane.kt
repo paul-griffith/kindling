@@ -8,10 +8,18 @@ import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.escapeHtml
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXCollapsiblePane
-import java.awt.*
+import java.awt.Desktop
+import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
-import javax.swing.*
+import javax.swing.BorderFactory
+import javax.swing.JButton
+import javax.swing.JFileChooser
+import javax.swing.JFrame
+import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.JScrollPane
 import javax.swing.SwingUtilities.invokeLater
+import javax.swing.UIManager
 import javax.swing.event.HyperlinkEvent
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.html.HTMLEditorKit
@@ -22,10 +30,11 @@ class LogDetailsPane : JPanel(MigLayout("ins 1, fill")) {
         detailsPanel.removeAll()
         newValue.forEach {
             detailsPanel.add(DetailContainer(it), "growx, wrap")
-        }
-        detailsPanel.revalidate()
-        detailsScrollPane.verticalScrollBar.value = 0
 
+        }
+        detailsScrollPane.verticalScrollBar.value = 0
+        detailsPanel.revalidate()
+        detailsPanel.repaint()
     }
 
     private val detailsPanel = JPanel(MigLayout("ins 2,  fillx"))
