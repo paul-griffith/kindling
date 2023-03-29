@@ -154,7 +154,7 @@ runtime {
             listOfNotNull("--$key", value)
         }
 
-        imageName = "kindling"
+        imageName = "kindling beta"
         installerName = "kindling"
         mainJar = "kindling-bundle.jar"
     }

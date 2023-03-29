@@ -48,10 +48,9 @@
 			<Value value="perspective"/>
 		</DataField>
 		<DataField name="stacktrace_depth" optype="continuous" dataType="integer">
-			<Interval closure="closedClosed" leftMargin="0" rightMargin="100"/>
 		</DataField>
 		<DataField name="cpu_usage" optype="continuous" dataType="double">
-			<Interval closure="closedClosed" leftMargin="0.0" rightMargin="21.8451"/>
+			<Interval closure="closedClosed" leftMargin="0.0" rightMargin="100.0"/>
 		</DataField>
 		<DataField name="daemon" optype="continuous" dataType="integer">
 			<Interval closure="closedClosed" leftMargin="0" rightMargin="1"/>
