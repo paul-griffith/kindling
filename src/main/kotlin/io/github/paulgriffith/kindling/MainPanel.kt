@@ -144,12 +144,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         }
         runCatching {
             val toolPanel = openFunction()
-            tabs.addTab(
-                toolPanel.tabName,
-                toolPanel.icon,
-                toolPanel,
-                toolPanel.tabTooltip,
-            )
+            tabs.addTab(component = toolPanel, select = true)
         }.getOrElse { ex ->
             LOGGER.error("Failed to open $description as a $title", ex)
             tabs.addTab(
@@ -169,8 +164,8 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                     },
                 ),
             )
+            tabs.selectedIndex = tabs.indices.last
         }
-        tabs.selectedIndex = tabs.tabCount - 1
     }
 
     fun openFiles(files: List<File>, tool: Tool? = null) {

@@ -136,7 +136,7 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
                                 val selectedNode = selectedPaths.first().lastPathComponent as PathNode
                                 exportFileChooser.selectedFile = File(selectedNode.userObject.name)
                                 if (exportFileChooser.showSaveDialog(this@attachPopupMenu) == JFileChooser.APPROVE_OPTION) {
-                                    provider.newInputStream(path).use { file ->
+                                    provider.newInputStream(selectedNode.userObject).use { file ->
                                         exportFileChooser.selectedFile.toPath().outputStream().use(file::copyTo)
                                     }
                                 }
@@ -160,13 +160,7 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
         if (existingTab == null) {
             val pathView = createView(provider, *paths)
             if (pathView != null) {
-                tabStrip.addTab(
-                    pathView.tabName,
-                    pathView.icon,
-                    pathView,
-                    pathView.tabTooltip,
-                )
-                tabStrip.selectedComponent = pathView
+                tabStrip.addTab(component = pathView, select = true)
             }
         } else {
             tabStrip.selectedComponent = existingTab

@@ -1,6 +1,6 @@
 package io.github.paulgriffith.kindling.idb.generic
 
-import io.github.paulgriffith.kindling.idb.IdbPanel
+import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
@@ -12,8 +12,10 @@ import java.awt.Toolkit
 import java.awt.event.KeyEvent
 import java.sql.Connection
 import java.sql.JDBCType
+import java.sql.Timestamp
 import java.util.Collections
 import java.util.Enumeration
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JMenuItem
 import javax.swing.JPanel
@@ -24,7 +26,7 @@ import javax.swing.KeyStroke
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeNode
 
-class GenericView(connection: Connection) : IdbPanel() {
+class GenericView(connection: Connection) : ToolPanel("ins 0, fill, hidemode 3") {
     private val tables: List<Table> = connection
         .prepareStatement("SELECT name FROM main.sqlite_schema WHERE type = \"table\" ORDER BY name")
         .executeQuery()
@@ -74,9 +76,17 @@ class GenericView(connection: Connection) : IdbPanel() {
                         val columnCount = resultSet.metaData.columnCount
                         val names = List(columnCount) { i -> resultSet.metaData.getColumnName(i + 1) }
                         val types = List(columnCount) { i ->
-                            val sqlType = resultSet.metaData.getColumnType(i + 1)
-                            val jdbcType = JDBCType.valueOf(sqlType)
-                            jdbcType.javaType
+                            val timestamp = TIMESTAMP_COLUMN_NAMES.any {
+                                resultSet.metaData.getColumnName(i + 1).contains(it, true)
+                            }
+
+                            if (timestamp) {
+                                Timestamp::class.java
+                            } else {
+                                val sqlType = resultSet.metaData.getColumnType(i + 1)
+                                val jdbcType = JDBCType.valueOf(sqlType)
+                                jdbcType.javaType
+                            }
                         }
 
                         val data = resultSet.toList {
@@ -158,5 +168,11 @@ class GenericView(connection: Connection) : IdbPanel() {
             },
             "push, grow",
         )
+    }
+
+    override val icon: Icon? = null
+
+    companion object {
+        private val TIMESTAMP_COLUMN_NAMES = setOf("timestamp", "timestmp", "t_stamp", "tstamp")
     }
 }

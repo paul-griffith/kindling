@@ -1,12 +1,17 @@
 package io.github.paulgriffith.kindling.utils
 
 import com.formdev.flatlaf.extras.components.FlatTabbedPane
+import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Container
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.JMenu
 import javax.swing.JMenuBar
+import javax.swing.JPanel
 import javax.swing.JPopupMenu
 
 interface PopupMenuCustomizer {
@@ -89,6 +94,53 @@ class TabStrip : FlatTabbedPane() {
     private fun removeClosableTabAt(index: Int) {
         if (isTabClosable(index)) {
             removeTabAt(index)
+        }
+    }
+
+    val indices: IntRange
+        get() = 0 until tabCount
+
+    fun <T> addTab(
+        component: T,
+        tabName: String = component.tabName,
+        tabTooltip: String? = component.tabTooltip,
+        icon: Icon? = component.icon,
+        select: Boolean = true,
+    ) where T : Container, T : FloatableComponent {
+        addTab(tabName, icon, component, tabTooltip)
+        if (select) {
+            selectedIndex = indices.last
+        }
+    }
+
+    fun <T> addLazyTab(
+        tabName: String,
+        tabTooltip: String? = null,
+        icon: Icon? = null,
+        component: () -> T,
+    ) where T : Container, T : FloatableComponent {
+        addTab(
+            tabName,
+            icon,
+            LazyTab(component),
+            tabTooltip,
+        )
+    }
+
+    private class LazyTab(supplier: () -> Component) : JPanel(BorderLayout()) {
+        private var initialized = false
+
+        init {
+            addComponentListener(
+                object : ComponentAdapter() {
+                    override fun componentShown(e: ComponentEvent) {
+                        if (!initialized) {
+                            add(supplier(), BorderLayout.CENTER)
+                            initialized = true
+                        }
+                    }
+                },
+            )
         }
     }
 
