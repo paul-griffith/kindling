@@ -2,7 +2,6 @@ import org.gradle.internal.os.OperatingSystem
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
 import java.time.LocalDate
 
-@Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.serialization)
