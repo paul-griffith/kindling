@@ -76,5 +76,3 @@ object LogViewer : MultiTool, ClipboardTool {
         )
     }
 }
-
-class LogViewerProxy : MultiClipboardTool by LogViewer

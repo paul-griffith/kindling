@@ -1,9 +1,7 @@
-package io.github.paulgriffith.kindling.thread
+package io.github.paulgriffith.kindling.utils
 
 import com.jidesoft.swing.CheckBoxList
 import com.jidesoft.swing.ListSearchable
-import io.github.paulgriffith.kindling.utils.NoSelectionModel
-import io.github.paulgriffith.kindling.utils.listCellRenderer
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
 import javax.swing.ListModel

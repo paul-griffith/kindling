@@ -1,9 +1,10 @@
 package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.ui.FlatScrollBarUI
-import io.github.paulgriffith.kindling.core.DetailsPane
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
+import io.github.paulgriffith.kindling.utils.FilterList
+import io.github.paulgriffith.kindling.utils.FilterModel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
@@ -11,6 +12,7 @@ import io.github.paulgriffith.kindling.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.action.AbstractActionExt
 import java.awt.Dimension
 import java.awt.Graphics

@@ -1,6 +1,7 @@
 package io.github.paulgriffith.kindling.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.FilterComparator
 import io.github.paulgriffith.kindling.utils.FilterList

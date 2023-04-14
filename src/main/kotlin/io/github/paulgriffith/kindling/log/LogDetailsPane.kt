@@ -156,7 +156,7 @@ class LogDetailsPane : JPanel(MigLayout("ins 1, fill")) {
                     }
                     if (event.message != null) {
                         append("<b>Message:</b><br>")
-                        append(event.message!!.escapeHtml().replace("\t", "       "))
+                        append(event.message.escapeHtml().replace("\t", "       "))
                         append("<br>")
                     }
                     if (event.body.isNotEmpty()) {
@@ -203,7 +203,7 @@ class LogDetailsPane : JPanel(MigLayout("ins 1, fill")) {
                     append("<br>")
                 }
                 if (event.message != null) {
-                    append(event.message!!.escapeHtml().replace("\t", "       "))
+                    append(event.message.escapeHtml().replace("\t", "       "))
                     append("<br>")
                 }
                 if (event.body.isNotEmpty()) {
