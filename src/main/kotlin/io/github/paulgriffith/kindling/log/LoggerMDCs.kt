@@ -1,185 +1,225 @@
 package io.github.paulgriffith.kindling.log
 
+import io.github.paulgriffith.kindling.utils.Column
+import io.github.paulgriffith.kindling.utils.ColumnList
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
+import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import net.miginfocom.swing.MigLayout
-import javax.swing.*
+import java.awt.Component
+import javax.swing.BorderFactory
+import javax.swing.JButton
+import javax.swing.JComboBox
+import javax.swing.JLabel
+import javax.swing.JList
+import javax.swing.JPanel
+import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.table.AbstractTableModel
-import kotlin.Any
-import kotlin.Array
-import kotlin.Int
-import kotlin.String
-import kotlin.apply
-import kotlin.arrayOf
-import kotlin.run
 
+class LoggerMDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0, fill")) {
 
-data class MDCDisplay(
-        val mdc: Pair<String, String>,
-        var eventCount: Int,
-) {
-    fun displayValue(valIndex: Int) : String {
-        if (valIndex == 0) return "${mdc.first} - [${eventCount}]"
-        return "${mdc.second} - [${eventCount}]"
-    }
-}
-
-class FilterTable(val columns: Array<String>, var data: MutableList<MutableList<Any>>) : AbstractTableModel() {
-
-    var selectedRow = 0
-
-    override fun getRowCount(): Int {
-        return data.size
-    }
-
-    override fun getColumnCount(): Int {
-        return columns.size
-    }
-
-    override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
-        return data[rowIndex][columnIndex]
-    }
-
-    override fun getColumnName(column: Int): String {
-        return columns[column]
-    }
-
-    override fun getColumnClass(columnIndex: Int): Class<*> {
-        return data[0][columnIndex].javaClass
-    }
-
-    override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
-        selectedRow = rowIndex
-        return columnIndex in arrayOf(0, 3)
-    }
-
-    override fun setValueAt(aValue: Any?, rowIndex: Int, columnIndex: Int) {
-        if (aValue != null) {
-            data[rowIndex][columnIndex] = aValue
-        }
-        fireTableCellUpdated(rowIndex, columnIndex)
-    }
-
-    fun isValidLogEvent(logEvent : LogEvent, inverted : Boolean) : Boolean {
-        val mdcList : MutableList<List<Any>> = mutableListOf()
-        data.forEach {
-            if (it[0] == true && it[3] == inverted) {
-                mdcList.add(listOf(it[1], it[2]))
-            }
-        }
-        if (logEvent is SystemLogsEvent) {
-            var exists = inverted
-            return if (mdcList.size == 0) {
-                true
-            } else {
-                logEvent.mdc.forEach { eventMDC ->
-                    mdcList.forEach { filterMDC ->
-                        if (eventMDC.key == filterMDC[0] && eventMDC.value == filterMDC[1]) {
-                            exists = !inverted
-                        }
-                    }
-                }
-                exists
-            }
-        } else {
-            return true
+    private val allMDCs = events.flatMap { event ->
+        event.mdc.map { (key, value) ->
+            MDC(key, value)
         }
     }
-}
 
-class LoggerMDCPanel(events: List<SystemLogsEvent>) : JPanel(MigLayout("ins 0, fill")) {
+    private val fullMDCMap = allMDCs.groupingBy { it }.eachCount()
 
-    private val fullMCDList : List<MDCDisplay> = run {
-        val list : MutableList<Pair<String, String>> = mutableListOf()
-        events.forEach { event ->
-            event.mdc.forEach { mdc ->
-                list.add(Pair(mdc.key, mdc.value))
-            }
-        }
-        val condensedList : List<MDCDisplay> = list.groupingBy {
-            it
-        }
-                .eachCount()
-                .entries
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.first})
-                .map { (key, value) -> MDCDisplay(key, value) }
-        condensedList
-    }
+    private val keyList = allMDCs.groupingBy { it.key }.eachCount()
+            .toList().sortedByDescending { (_, value) -> value }.toMap()
 
-    private val keyList : List<MDCDisplay> = run {
-        val list : MutableList<MDCDisplay> = mutableListOf()
-        fullMCDList.forEach { loggerMDC ->
-            var found = false
-            list.forEach breaking@{key ->
-                if (key.mdc.first == loggerMDC.mdc.first) {
-                    key.eventCount += loggerMDC.eventCount
-                    found = true
-                    return@breaking
-                }
-            }
-            if (!found) {
-                list.add(MDCDisplay(loggerMDC.mdc, loggerMDC.eventCount))
-            }
-
-        }
-        list
-    }
     private val keyMenu = JComboBox<String>().apply {
-        addItem(" - key - ")
-        keyList.forEach{
-            addItem(it.displayValue(0))
+        renderer = object : BasicComboBoxRenderer() {
+            override fun getListCellRendererComponent(
+                    list: JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+            ): Component {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+                text = if (index == -1 && value == null) {
+                    " - key - "
+                } else {
+                    val key = value as? String
+                    val count = keyList[key]
+                    "$key [$count]"
+                }
+                return this
+            }
         }
+        keyList.forEach {
+            addItem(it.key)
+        }
+        selectedIndex = -1
+
         addActionListener {
             valueMenu.removeAllItems()
-            valueMenu.addItem(" - value - ")
-            fullMCDList.forEach { loggerMDC ->
-                if (loggerMDC.mdc.first == selectedItem?.toString()?.substringBefore(" - [")) {
-                    valueMenu.addItem(loggerMDC.displayValue(1))
-                }
+            val values = fullMDCMap.filter { (mdc, _) ->
+                mdc.key == this.selectedItem as String
+            }.map { (mdc, _) -> mdc.value }
+            values.forEach {
+                valueMenu.addItem(it)
             }
-
         }
     }
-    private val valueMenu = JComboBox<String>().apply { addItem(" - value - ") }
+
+private val valueMenu: JComboBox<String> = JComboBox<String>().apply {
+    renderer = object : BasicComboBoxRenderer() {
+        override fun getListCellRendererComponent(
+                list: JList<*>?,
+                value: Any?,
+                index: Int,
+                isSelected: Boolean,
+                cellHasFocus: Boolean
+        ): Component {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            text = if (index == -1 && value == null) {
+                " - value - "
+            } else {
+                val count = fullMDCMap.entries.find { (mdc, _) ->
+                    val selectedKey: String = keyMenu.selectedItem as String
+                    val selectedValue: String = value as String
+                    mdc.key == selectedKey && mdc.value == selectedValue
+                }?.value
+                "${value as String} [${count}]"
+            }
+            return this
+        }
+    }
+    selectedIndex = -1
+}
+
     private val addButton = JButton("+").apply {
-        border = null
-        background = null
+        border = BorderFactory.createEmptyBorder()
+        isOpaque = false
+        isContentAreaFilled = false
         addActionListener {
-            val key = keyMenu.selectedItem?.toString()!!.substringBefore(" - [")
-            val value = valueMenu.selectedItem?.toString()!!.substringBefore(" - [")
-            if (key != " - key - " && value != " - value - ") {
-                var exists = false
-                filterTable.data.forEach {
-                    if (it[1] == key && it[2] == value) {
-                        exists = true
-                    }
+            val key = keyMenu.selectedItem as String?
+            val value = valueMenu.selectedItem as String?
+
+            if (key != null && value != null) {
+                val exists = filterTable.model.data.any {
+                    it.mdc.key == key && it.mdc.value == value
                 }
                 if (!exists) {
-                    filterTable.data.add(mutableListOf(java.lang.Boolean.TRUE, key, value, java.lang.Boolean.FALSE))
-                    filterTable.fireTableDataChanged()
+                    filterTable.model.data.add(MDCEntry(mdc = MDC(key, value)))
+                    filterTable.model.fireTableDataChanged()
                 }
             }
         }
     }
+
     private val removeButton = JButton("-").apply {
-        border = null
-        background = null
+        border = BorderFactory.createEmptyBorder()
+        isOpaque = false
+        isContentAreaFilled = false
         addActionListener {
-            if (filterTable.selectedRow < filterTable.data.size && filterTable.data.size > 0) {
-                filterTable.data.removeAt(filterTable.selectedRow)
-                filterTable.fireTableDataChanged()
-
+            if (filterTable.selectedRow < filterTable.model.data.size && filterTable.model.data.size > 0 && filterTable.selectedRow > -1) {
+                filterTable.model.data.removeAt(filterTable.selectedRow)
+                filterTable.model.fireTableDataChanged()
             }
-
         }
     }
-    val filterTable = FilterTable(arrayOf("Enable", "Key", "Value", "Invert"), mutableListOf())
+
+    val filterTable = ReifiedJXTable(MDCTableModel())
 
     init {
         add(JLabel("MDC Key Filter"), "align center, span 2, wrap")
         add(keyMenu, "spanx 2, pushx, growx, wrap")
         add(valueMenu, "spanx 2, pushx, growx, wrap")
         add(removeButton, "cell 1 3, align right")
-        add(addButton, "cell 1 3, align right, wrap")
-        add(FlatScrollPane(JTable(filterTable)), "spanx 2, pushy, grow")
+        add(addButton, "cell 1 3, align right, wrap, pushx")
+        add(FlatScrollPane(filterTable), "spanx 2, pushy, grow")
+    }
+}
+
+data class MDC(override val key: String, override val value: String) : Map.Entry<String, String>
+
+data class MDCEntry(
+        var enabled: Boolean = true,
+        val mdc: MDC,
+        var inverted: Boolean = false,
+)
+
+class MDCTableModel(
+        val data: MutableList<MDCEntry> = mutableListOf(),
+) : AbstractTableModel() {
+
+    override fun getRowCount(): Int {
+        return data.size
+    }
+
+    override fun getColumnCount(): Int = size
+
+    override fun getValueAt(rowIndex: Int, columnIndex: Int): Any? {
+        return get(rowIndex, MDCColumns[columnIndex])
+    }
+
+    override fun getColumnName(column: Int): String {
+        return get(column).header
+    }
+
+    override fun getColumnClass(columnIndex: Int): Class<*> {
+        return get(columnIndex).clazz
+    }
+
+    override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
+        return columnIndex == MDCColumns[Enable] || columnIndex == MDCColumns[Invert]
+    }
+
+    override fun setValueAt(aValue: Any?, rowIndex: Int, columnIndex: Int) {
+        if (aValue !is Boolean) return
+
+        when (MDCColumns[columnIndex]) {
+            Enable -> {
+                data[rowIndex].enabled = aValue
+            }
+            Invert -> {
+                data[rowIndex].inverted = aValue
+            }
+        }
+
+        fireTableCellUpdated(rowIndex, columnIndex)
+    }
+
+    operator fun <T> get(row: Int, column: Column<MDCEntry, T>): T {
+        return data[row].let { info ->
+            column.getValue(info)
+        }
+    }
+
+    fun isValidLogEvent(logEvent : LogEvent, inverted : Boolean) : Boolean = when(logEvent) {
+        is WrapperLogEvent -> true
+        is SystemLogEvent -> {
+            val mdcList = data.filter {
+                it.enabled && it.inverted == inverted
+            }
+
+            if (mdcList.isEmpty()) {
+                true
+            } else {
+                if (mdcList.any { it.mdc in logEvent.mdc.entries } ) {
+                    !inverted
+                } else {
+                    inverted
+                }
+            }
+        }
+    }
+
+    companion object MDCColumns : ColumnList<MDCEntry>() {
+        val Enable by column(
+                value = MDCEntry::enabled,
+        )
+        val Key by column(
+                value = { it.mdc.key },
+        )
+        val Value by column(
+                value = { it.mdc.value },
+        )
+        val Invert by column(
+                value = MDCEntry::inverted,
+        )
     }
 }

@@ -22,12 +22,10 @@ data class WrapperLogEvent(
     companion object {
         const val STDOUT = "STDOUT"
     }
-
-
 }
 
 
-data class SystemLogsEvent(
+data class SystemLogEvent(
     override var marked: Boolean,
     override val timestamp: Instant,
     override val message: String,

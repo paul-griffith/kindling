@@ -7,7 +7,7 @@ import io.github.paulgriffith.kindling.idb.generic.GenericView
 import io.github.paulgriffith.kindling.idb.metrics.MetricsView
 import io.github.paulgriffith.kindling.log.Level
 import io.github.paulgriffith.kindling.log.LogPanel
-import io.github.paulgriffith.kindling.log.SystemLogsEvent
+import io.github.paulgriffith.kindling.log.SystemLogEvent
 import io.github.paulgriffith.kindling.utils.toList
 import java.nio.file.Path
 import java.sql.Connection
@@ -84,7 +84,7 @@ enum class IdbTool {
                 """.trimIndent(),
             ).executeQuery().toList { resultSet ->
                 val eventId = resultSet.getInt("event_id")
-                SystemLogsEvent(
+                SystemLogEvent(
                     timestamp = Instant.ofEpochMilli(resultSet.getLong("timestmp")),
                     message = resultSet.getString("formatted_message"),
                     logger = resultSet.getString("logger_name"),

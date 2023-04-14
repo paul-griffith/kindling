@@ -6,8 +6,6 @@ import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.utils.Action
 import java.awt.Desktop
 import java.io.File
-import java.nio.charset.Charset
-import java.nio.charset.CodingErrorAction
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -48,10 +46,14 @@ class WrapperLogView(
 }
 
 object LogViewer : MultiClipboardTool {
+    private const val MAX_EXTENSION_INDEX = 20
     override val title = "Wrapper Log"
     override val description = "wrapper.log(.n) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
-    override val extensions = listOf("log", "1", "2", "3", "4", "5")
+    override val extensions: List<String> = buildList {
+        add("log")
+        addAll((1..MAX_EXTENSION_INDEX).map { it.toString() })
+    }
 
     override fun open(paths: List<Path>): ToolPanel {
         require(paths.isNotEmpty()) { "Must provide at least one path" }

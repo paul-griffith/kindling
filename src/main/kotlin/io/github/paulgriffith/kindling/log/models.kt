@@ -12,7 +12,7 @@ import javax.swing.table.AbstractTableModel
 
 class LogsModel<T : LogEvent>(
     val data: List<T>,
-    val columns: LogsColumn<T>
+    val columns: LogColumnList<T>
 ) : AbstractTableModel() {
     override fun getColumnName(column: Int): String = columns[column].header
     override fun getRowCount(): Int = data.size
@@ -37,7 +37,7 @@ class LogsModel<T : LogEvent>(
 }
 
 @Suppress("unused", "PropertyName")
-sealed class LogsColumn<T : LogEvent>(panel: LogPanel) : ColumnList<T>() {
+sealed class LogColumnList<T : LogEvent>(panel: LogPanel) : ColumnList<T>() {
     val Marked = Column<T, Boolean>(
         header = "Marked",
         columnCustomization = {
@@ -114,13 +114,13 @@ sealed class LogsColumn<T : LogEvent>(panel: LogPanel) : ColumnList<T>() {
 }
 
 @Suppress("PropertyName")
-class SystemLogsColumns(panel: LogPanel) : LogsColumn<SystemLogsEvent>(panel) {
+class SystemLogColumns(panel: LogPanel) : LogColumnList<SystemLogEvent>(panel) {
     val Thread = Column(
         header = "Thread",
         columnCustomization = {
             minWidth = 50
         },
-        getValue = SystemLogsEvent::thread
+        getValue = SystemLogEvent::thread
     )
 
     init {
@@ -142,7 +142,7 @@ class SystemLogsColumns(panel: LogPanel) : LogsColumn<SystemLogsEvent>(panel) {
     )
 }
 
-class WrapperLogColumns(panel: LogPanel) : LogsColumn<WrapperLogEvent>(panel) {
+class WrapperLogColumns(panel: LogPanel) : LogColumnList<WrapperLogEvent>(panel) {
     override val filterableColumns = listOf(
             Level,
             Logger,
