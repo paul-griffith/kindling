@@ -10,10 +10,10 @@ import io.github.paulgriffith.kindling.core.MultiTool
 import io.github.paulgriffith.kindling.core.ToolOpeningException
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.core.add
-import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byCountAsc
-import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byCountDesc
-import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byNameAsc
-import io.github.paulgriffith.kindling.thread.FilterModel.Companion.byNameDesc
+import io.github.paulgriffith.kindling.utils.FilterModel.Companion.byCountAsc
+import io.github.paulgriffith.kindling.utils.FilterModel.Companion.byCountDesc
+import io.github.paulgriffith.kindling.utils.FilterModel.Companion.byNameAsc
+import io.github.paulgriffith.kindling.utils.FilterModel.Companion.byNameDesc
 import io.github.paulgriffith.kindling.thread.model.Stacktrace
 import io.github.paulgriffith.kindling.thread.model.Thread
 import io.github.paulgriffith.kindling.thread.model.ThreadDump
@@ -24,6 +24,9 @@ import io.github.paulgriffith.kindling.thread.model.ThreadModel.SingleThreadColu
 import io.github.paulgriffith.kindling.utils.Action
 import io.github.paulgriffith.kindling.utils.Column
 import io.github.paulgriffith.kindling.utils.EDT_SCOPE
+import io.github.paulgriffith.kindling.utils.FilterComparator
+import io.github.paulgriffith.kindling.utils.FilterList
+import io.github.paulgriffith.kindling.utils.FilterModel
 import io.github.paulgriffith.kindling.utils.FlatScrollPane
 import io.github.paulgriffith.kindling.utils.ReifiedJXTable
 import io.github.paulgriffith.kindling.utils.attachPopupMenu
