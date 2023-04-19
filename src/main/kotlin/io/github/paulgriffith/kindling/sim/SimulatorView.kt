@@ -1,17 +1,24 @@
 package io.github.paulgriffith.kindling.sim
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.inductiveautomation.ignition.common.gson.GsonBuilder
+import com.formdev.flatlaf.extras.components.FlatButton
 import io.github.paulgriffith.kindling.core.Tool
 import io.github.paulgriffith.kindling.core.ToolPanel
 import io.github.paulgriffith.kindling.sim.model.NodeStructure
+import io.github.paulgriffith.kindling.sim.model.ProgramDataType
+import io.github.paulgriffith.kindling.sim.model.ProgramItem
+import io.github.paulgriffith.kindling.sim.model.SimulatorFunction
+import io.github.paulgriffith.kindling.sim.model.SimulatorProgram
+import io.github.paulgriffith.kindling.sim.model.TagDataType
 import io.github.paulgriffith.kindling.sim.model.TagProviderStructure
 import io.github.paulgriffith.kindling.sim.model.UdtParameter
 import io.github.paulgriffith.kindling.sim.model.UdtParameterListSerializer
+import io.github.paulgriffith.kindling.sim.model.toSimulatorCsv
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -19,41 +26,95 @@ import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.awt.Font
+import net.miginfocom.swing.MigLayout
+import java.io.File
 import java.nio.file.Path
 import javax.swing.Icon
+import javax.swing.JFileChooser
+import javax.swing.JLabel
+import javax.swing.JPanel
 import javax.swing.JScrollPane
-import javax.swing.JTextArea
 import kotlin.io.path.inputStream
 
 @OptIn(ExperimentalSerializationApi::class)
 class SimulatorView(path: Path) : ToolPanel() {
     override val icon: Icon = FlatSVGIcon("icons/bx-archive.svg")
-
-    private val tagProvider: TagProviderStructure = path.inputStream().use(JSON::decodeFromStream)
+    private val deviceName = "Sim"
 
     private val builtDefinitions = mutableMapOf<String, JsonObject>()
+    private val tagProvider: TagProviderStructure = path.inputStream().use(JSON::decodeFromStream)
+    private val tags = tagProvider.resolveOpcTags().toList()
+
+    private val program: SimulatorProgram = tags.flatMap { it.parseDeviceProgram() }
+
+    val countLabel = JLabel("Number of OPC Tags: ${program.size}")
+    val exportButton = FlatButton().apply {
+        text = "Export"
+        addActionListener {
+            val approve = exportFileChooser.showSaveDialog(this)
+            if (approve == JFileChooser.APPROVE_OPTION) {
+                val selectedFile = exportFileChooser.selectedFile
+                val selectedFileWithExt =
+                    if (selectedFile.absolutePath.endsWith("csv")) {
+                        selectedFile
+                    } else {
+                        File(selectedFile.absolutePath + "csv")
+                    }
+                selectedFileWithExt.writeText(program.toSimulatorCsv())
+            }
+        }
+    }
 
     init {
-        name = "Sim"
-        toolTipText = "Hello World"
+        name = "Device Simulator"
+        toolTipText = path.toString()
 
-        val tags = tagProvider.resolveOpcTags()
-
-        val gson = GsonBuilder().setPrettyPrinting().create()
-        val lines = tags.joinToString("\n") { tag ->
-            gson.toJson(tag)
-        }
+        add(
+            JPanel(MigLayout("fill, ins 2")).apply {
+                add(countLabel, "west")
+                add(exportButton, "east")
+            },
+            "push, grow, span"
+        )
 
         add(
             JScrollPane(
-                JTextArea(lines).apply {
-                    lineWrap = true
-                    font = Font.getFont(Font.MONOSPACED)
+                JPanel(MigLayout("fill, ins 0")).apply {
+                    program.forEach {
+                        add(ProgramItemPanel(it), "grow, span")
+                    }
                 }
-            ), "push, grow, span"
+            ),
+            "push, grow, span"
         )
     }
+
+    private fun NodeStructure.parseDeviceProgram(): SimulatorProgram {
+        return buildList {
+            tags?.forEach { tag ->
+                when {
+                    tag.valueSource == "opc" -> {
+                        add(
+                            ProgramItem(
+                                browsePath = when (val path = tag.opcItemPath) {
+                                    is JsonObject -> (path["binding"] as JsonPrimitive).content
+                                    is JsonPrimitive -> path.content
+                                    else -> throw IllegalArgumentException("OPC item path is ${this::class.java.name}")
+                                }.replaceFirst("\\[.*?]".toRegex(), "[$deviceName]"),
+                                dataType = tagToSimDataType(TagDataType.valueOf(tag.dataType ?: "None")),
+                                valueSource = SimulatorFunction.defaultFunction
+                            )
+                        )
+                    }
+
+                    !tag.tags.isNullOrEmpty() -> { // Browsable node
+                        addAll(tag.parseDeviceProgram())
+                    }
+                }
+            }
+        }
+    }
+
 
     private fun TagProviderStructure.resolveOpcTags(): MutableList<NodeStructure> {
         val (defs, nodes) = tags.partition { node -> node.name == "_types_" }
@@ -89,11 +150,13 @@ class SimulatorView(path: Path) : ToolPanel() {
                         )
                     )
                 }
+
                 "UdtInstance" -> {
                     val defDict = builtDefinitions[node.typeId]!!
                     val retTag = zipObject(defDict, JSON.encodeToJsonElement(node).jsonObject)
                     resolvedTags.add(JSON.decodeFromJsonElement(retTag))
                 }
+
                 else -> resolvedTags.add(node)
             }
         }
@@ -102,24 +165,29 @@ class SimulatorView(path: Path) : ToolPanel() {
     private fun resolveParameters(tags: List<NodeStructure>, parameters: List<UdtParameter>) {
         for (tag in tags) {
             if (tag.tagType == "UdtInstance" && tag.parameters.isNotEmpty() && !tag.tags.isNullOrEmpty()) {
-                val params = JSON.encodeToJsonElement(UdtParameterListSerializer(), parameters).jsonObject
-                val tagParams = JSON.encodeToJsonElement(UdtParameterListSerializer(), tag.parameters).jsonObject
-                val udtParams = zipObject(params, tagParams)
+                val udtParams = run {
+                    val params = JSON.encodeToJsonElement(UdtParameterListSerializer(), parameters).jsonObject
+                    val tagParams = JSON.encodeToJsonElement(UdtParameterListSerializer(), tag.parameters).jsonObject
+                    zipObject(params, tagParams)
+                }
+
                 resolveParameters(tag.tags, JSON.decodeFromJsonElement(UdtParameterListSerializer(), udtParams))
+
             } else if (tag.tagType == "Folder") {
                 resolveParameters(tag.tags!!, parameters)
+
             } else if (tag.valueSource == "opc" && tag.opcItemPath is JsonObject && (tag.opcItemPath as JsonObject)["bindType"]!!.jsonPrimitive.content == "parameter") {
                 for (param in parameters) {
                     val newItemPath = (tag.opcItemPath as JsonObject).toMutableMap().apply {
-                        val binding = this["binding"]!!.jsonPrimitive.content.apply {
-                            val newParamValue = parameters.find {
-                                it.name == param.name
-                            }?.value?.jsonPrimitive?.content
-                            replace("{${param.value}}", newParamValue ?: "null")
+                        val binding = this["binding"]!!.jsonPrimitive.content.run {
+                            val newParamValue = param.value?.jsonPrimitive?.content
+                            replace("{${param.name}}", newParamValue ?: "null")
                         }
                         this["binding"] = Json.encodeToJsonElement(binding)
+
                     }
                     tag.opcItemPath = JSON.encodeToJsonElement(newItemPath)
+
                 }
             }
         }
@@ -173,6 +241,20 @@ class SimulatorView(path: Path) : ToolPanel() {
             isLenient = true
             ignoreUnknownKeys = true
             explicitNulls = false
+        }
+
+        private fun tagToSimDataType(type: TagDataType): ProgramDataType? {
+            return mapOf(
+                TagDataType.Short to ProgramDataType.INT16,
+                TagDataType.Integer to ProgramDataType.INT32,
+                TagDataType.Long to ProgramDataType.INT64,
+                TagDataType.Float4 to ProgramDataType.FLOAT,
+                TagDataType.Float8 to ProgramDataType.DOUBLE,
+                TagDataType.Boolean to ProgramDataType.BOOLEAN,
+                TagDataType.String to ProgramDataType.STRING,
+                TagDataType.DateTime to ProgramDataType.DATETIME,
+                TagDataType.Text to ProgramDataType.STRING,
+            )[type]
         }
     }
 }
