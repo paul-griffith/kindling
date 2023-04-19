@@ -2,40 +2,23 @@ package io.github.paulgriffith.kindling.sim.model
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-
-//fun <T> getTagsWithProperty(conf: TagConfiguration, prop: Property<T>, propValue: T): List<TagConfiguration> {
-//    return buildList {
-//        conf.children.forEach { child ->
-//            if (child.isBrowsable()) {
-//                addAll(getTagsWithProperty(child, prop, propValue))
-//            }
-//            if (child.tagProperties[prop] == propValue) {
-//                add(child)
-//            }
-//        }
-//    }
-//}
 
 @Serializable
 data class TagProviderStructure(
     val name: String?,
     val tagType: String?,
     val tags: List<NodeStructure>
-) {
-//    val udtDefinitions: List<NodeStructure> = tags.find { struct -> struct.name == "_types_" }?.tags ?: emptyList()
-}
-
-
+)
 
 @Serializable
 data class NodeStructure(
@@ -51,60 +34,27 @@ data class NodeStructure(
     // Other
     val tags: List<NodeStructure>?,
     @Serializable(with=UdtParameterListSerializer::class)
-    val parameters: List<UdtParameter> = emptyList(),
+    val parameters: ParameterList = emptyList(),
     val tagType: String,
     val typeId: String? = null,
     val sourceTagPath: JsonElement? = null,
-) {
-//    val isBrowsable = tags != null
+)
 
-//    val parametersAsList: List<UdtParameter> by lazy {
-//        parameters?.map { (key, value) ->
-//            val parameterProperties = (value as JsonObject)
-//            UdtParameter(key, parameterProperties["dataType"].toString(), parameterProperties["value"]?.toString())
-//        } ?: emptyList()
-//    }
-
-//    private fun resolveOpcItemPath(params: List<UdtParameter>) {
-//        params.onEach { println(it) }
-//        if (opcItemPath is JsonObject) {
-//            val rawItemPath = opcItemPath["binding"].toString()
-//            println("$rawItemPath is gonna get resolved.")
-//        }
-//    }
-
-//    fun resolveOpcTags(
-//        defParams: Map<String, List<UdtParameter>>,
-//        params: MutableList<UdtParameter>
-//    ) {
-//        println("Starting resolve...")
-//        if (valueSource == "opc") {
-//            println("Opc Tag: $name")
-//            resolveOpcItemPath(params)
-//        }
-//        if (tagType == "UdtInstance") {
-//            val inheritedParams = defParams[typeId]?.filter { it.value != null }
-//
-//            if (inheritedParams != null) {
-//                for (inheritedParam in inheritedParams) {
-//                    parameters.find { it.name == inheritedParam.name }?.let {
-//                        it.value = inheritedParam.value
-//                    }
-//                }
-//            }
-//
-//            parameters.joinToString(", ") {
-//                "${it.name}: ${it.value}"
-//            }.let { println(it) }
-//        }
-//        if (isBrowsable) {
-//            tags?.forEach { node ->
-//                node.resolveOpcTags(defParams, params.plus(parameters).toMutableList())
-//            }
-//        }
-//    }
+enum class TagDataType {
+    Byte,
+    Short,
+    Integer,
+    Long,
+    Float4,
+    Float8,
+    Boolean,
+    String,
+    DateTime,
+    Text,
+    None;
 }
 
+typealias ParameterList = List<UdtParameter>
 @Serializable
 data class UdtParameter(
     val name: String,
@@ -112,12 +62,12 @@ data class UdtParameter(
     var value: JsonElement?,
 )
 
-class UdtParameterListSerializer : KSerializer<List<UdtParameter>> {
+class UdtParameterListSerializer : KSerializer<ParameterList> {
     private val delegateSerializer = MapSerializer(String.serializer(), JsonObject.serializer())
     @OptIn(ExperimentalSerializationApi::class)
-    override val descriptor: SerialDescriptor = SerialDescriptor("UdtParameter", delegateSerializer.descriptor)
+    override val descriptor: SerialDescriptor = SerialDescriptor("UdtParameterList", delegateSerializer.descriptor)
 
-    override fun serialize(encoder: Encoder, value: List<UdtParameter>) {
+    override fun serialize(encoder: Encoder, value: ParameterList) {
         val data = value.associate { param ->
             param.name to buildJsonObject {
                 put("dataType", JsonPrimitive(param.dataType))
@@ -127,7 +77,7 @@ class UdtParameterListSerializer : KSerializer<List<UdtParameter>> {
         encoder.encodeSerializableValue(delegateSerializer, data)
     }
 
-    override fun deserialize(decoder: Decoder): List<UdtParameter> {
+    override fun deserialize(decoder: Decoder): ParameterList {
         val map = decoder.decodeSerializableValue(delegateSerializer)
         return map.entries.map { (key: String, value: JsonObject) ->
             println("key: $key, value: ${value["value"]}")
@@ -201,14 +151,4 @@ data class FullTagStructure(
 ) {
     val isBrowsable = tags != null
 }
-
-
-    fun resolveOpcTags() {
-        val defParams = udtDefinitions.associate {
-            it.name to it.parameters
-        }
-        tags.forEach { node ->
-            node.resolveOpcTags(defParams, mutableListOf())
-        }
-    }
 */
