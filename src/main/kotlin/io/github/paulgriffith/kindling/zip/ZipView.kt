@@ -32,6 +32,7 @@ import java.nio.file.spi.FileSystemProvider
 import javax.swing.Icon
 import javax.swing.JFileChooser
 import javax.swing.JLabel
+import javax.swing.JSplitPane
 import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
@@ -130,10 +131,11 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
                     }
                     add(openIndividually)
 
-                    if (selectedPaths.size == 1) {
+                    val selectedNode = selectedPaths.first().lastPathComponent as PathNode
+
+                    if (selectedPaths.size == 1 && selectedNode.isLeaf) {
                         add(
                             Action("Save As") {
-                                val selectedNode = selectedPaths.first().lastPathComponent as PathNode
                                 exportFileChooser.selectedFile = File(selectedNode.userObject.name)
                                 if (exportFileChooser.showSaveDialog(this@attachPopupMenu) == JFileChooser.APPROVE_OPTION) {
                                     provider.newInputStream(selectedNode.userObject).use { file ->
@@ -148,8 +150,17 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
         }
 
         add(bundleInfo, "split 2, height 32!")
-        add(FlatScrollPane(fileTree), "pushy, growy, width 250!")
-        add(tabStrip, "newline, push, grow, spany")
+        add(
+            JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                FlatScrollPane((fileTree)),
+                tabStrip,
+            ).apply {
+                dividerSize += 2
+                isOneTouchExpandable = true
+                dividerLocation = 250
+            }, "push, grow, span"
+        )
     }
 
     override val icon: Icon = ZipViewer.icon

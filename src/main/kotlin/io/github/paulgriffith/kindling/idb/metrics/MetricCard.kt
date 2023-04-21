@@ -5,6 +5,8 @@ import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.MetricPr
 import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.MetricPresentation.Heap
 import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.MetricPresentation.Queue
 import io.github.paulgriffith.kindling.idb.metrics.MetricCard.Companion.MetricPresentation.Throughput
+import io.github.paulgriffith.kindling.utils.Action
+import io.github.paulgriffith.kindling.utils.jFrame
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.border.DropShadowBorder
 import org.jfree.chart.ChartPanel
@@ -33,7 +35,22 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
         /* print = */ false,
         /* zoom = */ true,
         /* tooltips = */ true,
-    )
+    ).apply {
+        popupMenu.addSeparator()
+        popupMenu.add(
+            Action("Popout") {
+                jFrame(
+                    title = metric.name,
+                    width = 800,
+                    height = 600,
+                ) {
+                    add(
+                        ChartPanel(sparkline(data, presentation.formatter))
+                    )
+                }
+            }
+        )
+    }
 
     init {
         add(
