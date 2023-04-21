@@ -45,7 +45,12 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
                     height = 600,
                 ) {
                     add(
-                        ChartPanel(sparkline(data, presentation.formatter))
+                        ChartPanel(
+                            sparkline(
+                                data,
+                                presentation.formatter,
+                            )
+                        ),
                     )
                 }
             }

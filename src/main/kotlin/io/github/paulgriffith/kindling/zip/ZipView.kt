@@ -159,7 +159,8 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
                 dividerSize += 2
                 isOneTouchExpandable = true
                 dividerLocation = 250
-            }, "push, grow, span"
+            },
+            "push, grow, span",
         )
     }
 
