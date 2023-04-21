@@ -123,18 +123,20 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         add(
             JMenu("Help").apply {
                 add(
+                    Action("UI Inspector") {
+                        FlatUIDefaultsInspector.show()
+                    },
+                )
+                add(
                     Action("Update Machine Learning Model") {
                         MachineLearningModel.verifyPMML()
                     },
                 )
                 add(
-                    Action("Enable/Disable Experimental ML Features") {
-                        MachineLearningModel.enabled = !MachineLearningModel.enabled
-                    }
-                )
-                add(
-                    Action("UI Inspector") {
-                        FlatUIDefaultsInspector.show()
+                    JCheckBoxMenuItem("Machine Learning Thread Prediction").apply {
+                        addActionListener {
+                            MachineLearningModel.enabled = !MachineLearningModel.enabled
+                        }
                     },
                 )
             },
