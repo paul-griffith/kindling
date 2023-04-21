@@ -49,11 +49,11 @@ class MetricCard(val metric: Metric, data: List<MetricData>) : JPanel(MigLayout(
                             sparkline(
                                 data,
                                 presentation.formatter,
-                            )
+                            ),
                         ),
                     )
                 }
-            }
+            },
         )
     }
 
