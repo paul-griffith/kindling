@@ -2,7 +2,7 @@
 java = "17"
 kotlin = "1.8.20"
 coroutines = "1.6.4"
-flatlaf = "3.1"
+flatlaf = "3.1.1"
 kotest = "5.5.5"
 ignition = "8.1.1"
 
@@ -10,7 +10,7 @@ ignition = "8.1.1"
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.3.1" }
-shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.0" }
+shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 runtime = { id = "org.beryx.runtime", version = "1.13.0" }
 
 [libraries]
