@@ -29,7 +29,7 @@ class MetricsView(connection: Connection) : ToolPanel("ins 0, fill, hidemode 3")
     private val metricDataQuery = connection.prepareStatement(
         //language=sql
         """
-        SELECT 
+        SELECT DISTINCT
             VALUE,
             TIMESTAMP 
         FROM SYSTEM_METRICS

@@ -2,14 +2,20 @@ package io.github.paulgriffith.kindling.zip.views
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.paulgriffith.kindling.core.Kindling
+import java.nio.file.FileVisitResult
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.swing.JButton
 import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.copyToRecursively
 import kotlin.io.path.div
 import kotlin.io.path.name
+import kotlin.io.path.outputStream
+import kotlin.io.path.readBytes
+import kotlin.io.path.visitFileTree
 
 @OptIn(ExperimentalPathApi::class)
 class ProjectView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
@@ -17,10 +23,22 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
 
     init {
         exportButton.addActionListener {
-            exportDirectoryChooser.selectedFile = Kindling.homeLocation.resolve(path.name)
-            if (exportDirectoryChooser.showSaveDialog(this@ProjectView) == JFileChooser.APPROVE_OPTION) {
-                val exportLocation = exportDirectoryChooser.selectedFile.toPath()
-                path.copyToRecursively(exportLocation, followLinks = false, overwrite = true)
+            exportZipFileChooser.selectedFile = Kindling.homeLocation.resolve("${path.name}.zip")
+            if (exportZipFileChooser.showSaveDialog(this@ProjectView) == JFileChooser.APPROVE_OPTION) {
+                val exportLocation = exportZipFileChooser.selectedFile.toPath()
+
+                ZipOutputStream(exportLocation.outputStream()).use { zos ->
+                    path.visitFileTree {
+                        onVisitFile { file, _ ->
+                            zos.run {
+                                putNextEntry(ZipEntry(path.relativize(file).toString()))
+                                write(file.readBytes())
+                                closeEntry()
+                                FileVisitResult.CONTINUE
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -31,10 +49,11 @@ class ProjectView(override val provider: FileSystemProvider, override val path: 
     override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg").derive(16, 16)
 
     companion object {
-        val exportDirectoryChooser = JFileChooser(Kindling.homeLocation).apply {
+        val exportZipFileChooser = JFileChooser(Kindling.homeLocation).apply {
             isMultiSelectionEnabled = false
             isAcceptAllFileFilterUsed = false
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+            fileSelectionMode = JFileChooser.FILES_ONLY
+            fileFilter = FileNameExtensionFilter("ZIP Files", "zip")
 
             Kindling.addThemeChangeListener {
                 updateUI()
