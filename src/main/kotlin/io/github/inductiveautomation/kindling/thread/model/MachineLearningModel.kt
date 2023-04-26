@@ -1,6 +1,7 @@
 package io.github.inductiveautomation.kindling.thread.model
 
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.enableMachineLearning
 import io.ktor.client.HttpClient
 import io.ktor.client.request.request
 import io.ktor.client.statement.HttpResponse
@@ -23,11 +24,28 @@ import kotlin.io.path.name
 
 object MachineLearningModel {
     private var needsUpdate = true
-    var enabled = false
+
     private const val PMML_FILE_PREFIX = "thread_machine_learning_"
     private const val SUPPORT_APPS_GATEWAY_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
     private const val VERSION_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
     private const val KINDLING_DOWNLOAD_URL = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
+
+    private val currentPMMLVersion by lazy {
+        val client = HttpClient()
+        runBlocking {
+            val response: HttpResponse = client.request(VERSION_ENDPOINT) {
+                method = HttpMethod.Get
+                url {
+                    parameters.append("version", "1.1.0")
+                }
+            }
+            response.bodyAsText()
+        }
+    }
+
+    init {
+        if (enableMachineLearning.currentValue) verifyPMML()
+    }
 
     val pmmlFilePath: String
         get() {
@@ -48,19 +66,6 @@ object MachineLearningModel {
         Paths.get(userHome).resolve(pmmlRelativePath)
     }
 
-    private val currentPMMLVersion by lazy {
-        val client = HttpClient()
-        runBlocking {
-            val response: HttpResponse = client.request(VERSION_ENDPOINT) {
-                method = HttpMethod.Get
-                url {
-                    parameters.append("version", "1.1.0")
-                }
-            }
-            response.bodyAsText()
-        }
-    }
-
     private val oldPMMLVersion = run {
         var folder = cacheFilePath.toFile()
         if (!folder.exists()) { // If no cache file already, get bundled version
@@ -73,7 +78,7 @@ object MachineLearningModel {
     }
 
     fun verifyPMML() {
-        if (!enabled) return
+        if (!enableMachineLearning.currentValue) return
         if (oldPMMLVersion != currentPMMLVersion && needsUpdate) {
             when (currentPMMLVersion) { // Add future cases here if we want to send special messages for older versions (i.e. bug warnings post-release)
                 "" -> {
