@@ -1,12 +1,12 @@
-package io.github.paulgriffith.kindling.sim
+package io.github.inductiveautomation.kindling.sim
 
 import com.formdev.flatlaf.extras.components.FlatComboBox
-import io.github.paulgriffith.kindling.sim.model.ProgramDataType
-import io.github.paulgriffith.kindling.sim.model.ProgramItem
-import io.github.paulgriffith.kindling.sim.model.QualityCodes
-import io.github.paulgriffith.kindling.sim.model.SimulatorFunction
-import io.github.paulgriffith.kindling.sim.model.SimulatorFunctionParameter
-import io.github.paulgriffith.kindling.utils.configureCellRenderer
+import io.github.inductiveautomation.kindling.sim.model.ProgramDataType
+import io.github.inductiveautomation.kindling.sim.model.ProgramItem
+import io.github.inductiveautomation.kindling.sim.model.QualityCodes
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunctionParameter
+import io.github.inductiveautomation.kindling.utils.configureCellRenderer
 import net.miginfocom.swing.MigLayout
 import javax.swing.JCheckBox
 import javax.swing.JComboBox

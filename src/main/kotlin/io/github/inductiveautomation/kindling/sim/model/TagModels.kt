@@ -1,4 +1,4 @@
-package io.github.paulgriffith.kindling.sim.model
+package io.github.inductiveautomation.kindling.sim.model
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -33,7 +33,7 @@ data class NodeStructure(
 
     // Other
     val tags: List<NodeStructure>?,
-    @Serializable(with=UdtParameterListSerializer::class)
+    @Serializable(with= UdtParameterListSerializer::class)
     val parameters: ParameterList = emptyList(),
     val tagType: String,
     val typeId: String? = null,
