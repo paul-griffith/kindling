@@ -55,6 +55,7 @@ enum class TagDataType {
 }
 
 typealias ParameterList = List<UdtParameter>
+
 @Serializable
 data class UdtParameter(
     val name: String,
@@ -80,7 +81,6 @@ class UdtParameterListSerializer : KSerializer<ParameterList> {
     override fun deserialize(decoder: Decoder): ParameterList {
         val map = decoder.decodeSerializableValue(delegateSerializer)
         return map.entries.map { (key: String, value: JsonObject) ->
-            println("key: $key, value: ${value["value"]}")
             UdtParameter(key, value["dataType"].toString(), value["value"] as JsonPrimitive?)
         }
     }

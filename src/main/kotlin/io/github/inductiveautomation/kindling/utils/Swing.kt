@@ -55,6 +55,8 @@ import javax.swing.SortOrder.UNSORTED
 import javax.swing.UIManager
 import javax.swing.border.EmptyBorder
 import javax.swing.event.EventListenerList
+import javax.swing.filechooser.FileFilter
+import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.table.TableModel
 import javax.swing.text.Document
@@ -503,5 +505,26 @@ fun SVGDocument.render(width: Int, height: Int, x: Int = 0, y: Int = 0): Buffere
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         render(null, g, ViewBox(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat()))
         g.dispose()
+    }
+}
+
+inline fun <reified T> JComboBox<T>.configureCellRenderer(
+    configureDefault: Boolean = true,
+    noinline block: BasicComboBoxRenderer.(list: JList<*>?, value: T?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) -> Unit
+) {
+    renderer = object : BasicComboBoxRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean
+        ): Component {
+            if (configureDefault) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            }
+            block(list, value as T?, index, isSelected, cellHasFocus)
+            return this
+        }
     }
 }

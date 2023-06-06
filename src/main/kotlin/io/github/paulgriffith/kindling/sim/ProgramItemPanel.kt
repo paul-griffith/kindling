@@ -6,17 +6,16 @@ import io.github.paulgriffith.kindling.sim.model.ProgramItem
 import io.github.paulgriffith.kindling.sim.model.QualityCodes
 import io.github.paulgriffith.kindling.sim.model.SimulatorFunction
 import io.github.paulgriffith.kindling.sim.model.SimulatorFunctionParameter
+import io.github.paulgriffith.kindling.utils.configureCellRenderer
 import net.miginfocom.swing.MigLayout
-import java.awt.Component
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
+import javax.swing.JComponent
 import javax.swing.JLabel
-import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.JSpinner
 import javax.swing.JTextField
 import javax.swing.SpinnerNumberModel
-import javax.swing.plaf.basic.BasicComboBoxRenderer
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -38,18 +37,8 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("fillx, ins 5, 
         val functions = SimulatorFunction::class.nestedClasses.filter { !it.isCompanion }
         functions.forEach(this::addItem)
 
-        renderer = object : BasicComboBoxRenderer() {
-            override fun getListCellRendererComponent(
-                list: JList<*>?,
-                value: Any?,
-                index: Int,
-                isSelected: Boolean,
-                cellHasFocus: Boolean
-            ): Component {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-                text = (value as KClass<*>?)?.simpleName ?: ""
-                return this
-            }
+        configureCellRenderer { _, value, _, _, _ ->
+            text = value?.simpleName ?: ""
         }
         selectedIndex = -1
     }
@@ -58,19 +47,11 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("fillx, ins 5, 
 
     private val dataTypeEntry = FlatComboBox<ProgramDataType>().apply {
         ProgramDataType.values().forEach(this::addItem)
-        renderer = object : BasicComboBoxRenderer() {
-            override fun getListCellRendererComponent(
-                list: JList<*>?,
-                value: Any?,
-                index: Int,
-                isSelected: Boolean,
-                cellHasFocus: Boolean
-            ): Component {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-                text = (value as ProgramDataType?)?.name ?: ""
-                return this
-            }
+        
+        configureCellRenderer { _, value, _, _, _ ->
+            text = value?.name ?: ""
         }
+
         if (item.dataType != null) {
             selectedItem = item.dataType
         } else {
@@ -101,6 +82,10 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("fillx, ins 5, 
         browsePathEntry.addActionListener {
             item.browsePath = browsePathEntry.text
         }
+
+        dataTypeEntry.addActionListener {
+            item.dataType = dataTypeEntry.selectedItem as ProgramDataType
+        }
     }
 
     class FunctionPanel(function: SimulatorFunction?) : JPanel(MigLayout("fill, ins 0, flowy, wrap 2")) {
@@ -117,65 +102,73 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("fillx, ins 5, 
             newParams?.forEachIndexed { i, param ->
                 add(JLabel(param.name), "grow")
 
-                when (param) {
+                val component: JComponent = when (param) {
                     is SimulatorFunctionParameter.Min,
                     is SimulatorFunctionParameter.Max,
                     is SimulatorFunctionParameter.Period,
                     is SimulatorFunctionParameter.SetPoint -> {
-                        val spinner = JSpinner(SpinnerNumberModel(param.value as Int, Integer.MIN_VALUE, Integer.MAX_VALUE, 1))
-                        spinner.addChangeListener {
-                            assignParam(i, spinner.value)
+                        JSpinner(
+                            SpinnerNumberModel(
+                                param.value as Int,
+                                Integer.MIN_VALUE,
+                                Integer.MAX_VALUE,
+                                1)
+                        ).apply {
+                            addChangeListener {
+                                assignParam(i, value)
+                            }
                         }
-                        add(spinner)
                     }
 
                     is SimulatorFunctionParameter.Derivative,
                     is SimulatorFunctionParameter.Integral,
                     is SimulatorFunctionParameter.Proportion -> {
-                        val textField = JTextField(param.value.toString()).apply {
+                        JTextField(param.value.toString()).apply {
                             addActionListener {
                                 assignParam(i, text.toFloat())
                             }
                         }
-                        add(textField)
                     }
 
                     is SimulatorFunctionParameter.List -> {
-                        add(JTextField(param.value.toString()))
-                        // TODO: Add event listener
+                        JTextField(param.value.joinToString(",")).apply {
+                            addActionListener {
+                                val newList = text.split(",")
+                                assignParam(i, newList)
+                            }
+                        }
                     }
                     is SimulatorFunctionParameter.QualityCode -> {
-                        val comboBox = JComboBox(QualityCodes.values()).apply {
+                        JComboBox(QualityCodes.values()).apply {
                             addActionListener {
                                 val newValue = model.selectedItem as QualityCodes
                                 assignParam(i, newValue)
                             }
                         }
-                        add(comboBox)
                     }
                     is SimulatorFunctionParameter.Repeat -> {
-                        val checkBox = JCheckBox("Repeat", param.value).apply {
+                        JCheckBox("Repeat", param.value).apply {
                             verticalTextPosition = JCheckBox.NORTH
                             addActionListener {
                                 assignParam(i, isSelected)
                             }
                         }
-                        add(checkBox)
                     }
                     is SimulatorFunctionParameter.Value -> {
-                        val textField = JTextField(param.value).apply {
+                        JTextField(param.value).apply {
                             addActionListener {
                                 assignParam(i, text)
                             }
                         }
-                        add(textField)
                     }
                 }
+                add(component)
             }
             revalidate()
             repaint()
         }
 
+        @Suppress("unchecked_cast")
         private fun <T> assignParam(index: Int, newValue: T) {
             (function?.parameters?.get(index) as SimulatorFunctionParameter<T>).value = newValue
         }
