@@ -58,7 +58,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                     if (selectedFile.absolutePath.endsWith("csv")) {
                         selectedFile
                     } else {
-                        File(selectedFile.absolutePath + "csv")
+                        File(selectedFile.absolutePath + ".csv")
                     }
                 selectedFileWithExt.writeText(program.toSimulatorCsv())
             }
