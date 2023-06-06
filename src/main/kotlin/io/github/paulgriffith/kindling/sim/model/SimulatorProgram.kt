@@ -3,25 +3,17 @@ package io.github.paulgriffith.kindling.sim.model
 import io.github.paulgriffith.kindling.sim.model.QualityCodes.Good
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Polymorphic
-import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.Transient
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.csv.Csv
 import kotlinx.serialization.csv.config.QuoteMode.ALL
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import org.apache.poi.ss.formula.functions.T
-import sun.jvm.hotspot.oops.CellTypeState.value
 
 typealias SimulatorProgram = List<ProgramItem>
 @OptIn(ExperimentalSerializationApi::class)
@@ -44,9 +36,6 @@ data class ProgramItem(
     var dataType: ProgramDataType? = null,
 )
 
-// ramp(0, 100, 10, true)
-// random(0, 100, true)
-
 @Serializable(with=ProgramDataTypeSerializer::class)
 enum class ProgramDataType(val exportName: String) {
     BOOLEAN("boolean"),
@@ -61,19 +50,17 @@ enum class ProgramDataType(val exportName: String) {
     DATETIME("datetime");
 }
 
-// function.name(param1.value, param2.value)
-
-
-@Serializable
+@Suppress("unused")
+@Serializable(with=SimulatorFunctionSerializer::class)
 sealed interface SimulatorFunction {
     val name: String
     val parameters: kotlin.collections.List<SimulatorFunctionParameter<*>>
 
     @Serializable
-    class Sine private constructor(
-        override val name: String = "sine",
-        @Polymorphic
-        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<*>> = listOf(
+    class Cosine(
+        override val name: String = "cosine",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Min(),
             SimulatorFunctionParameter.Max(),
             SimulatorFunctionParameter.Period(),
@@ -82,104 +69,102 @@ sealed interface SimulatorFunction {
     ) : SimulatorFunction
 
     @Serializable
-    class Cosine : SimulatorFunction {
-        override val name = "cosine"
-        override val parameters = listOf<SimulatorFunctionParameter<*>>(
+    class Square(
+        override val name: String = "square",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Min(),
             SimulatorFunctionParameter.Max(),
             SimulatorFunctionParameter.Period(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class Square : SimulatorFunction {
-        override val name = "square"
-        override val parameters = listOf(
+    class Triangle(
+        override val name: String = "triangle",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Min(),
             SimulatorFunctionParameter.Max(),
             SimulatorFunctionParameter.Period(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class Triangle : SimulatorFunction {
-        override val name = "triangle"
-        override val parameters = listOf(
+    class Ramp(
+        override val name: String = "ramp",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Min(),
             SimulatorFunctionParameter.Max(),
             SimulatorFunctionParameter.Period(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class Ramp : SimulatorFunction {
-        override val name = "ramp"
-        override val parameters = listOf(
-            SimulatorFunctionParameter.Min(),
-            SimulatorFunctionParameter.Max(),
-            SimulatorFunctionParameter.Period(),
-            SimulatorFunctionParameter.Repeat(),
-        )
-    }
-
-    @Serializable
-    class Realistic : SimulatorFunction {
-        override val name = "realistic"
-        override val parameters = listOf(
+    class Realistic(
+        override val name: String = "realistic",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.SetPoint(),
             SimulatorFunctionParameter.Proportion(),
             SimulatorFunctionParameter.Integral(),
             SimulatorFunctionParameter.Derivative(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class Random : SimulatorFunction {
-        override val name = "random"
-        override val parameters = listOf(
+    class Random(
+        override val name: String = "random",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Min(),
             SimulatorFunctionParameter.Max(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class List : SimulatorFunction {
-        override val name = "list"
-        override val parameters = listOf(
+    class List(
+        override val name: String = "list",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.List(),
             SimulatorFunctionParameter.Repeat(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class QV : SimulatorFunction {
-        override val name = "qv"
-        override val parameters = listOf(
+    class QV(
+        override val name: String = "qv",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Value(),
             SimulatorFunctionParameter.QualityCode(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class ReadOnly : SimulatorFunction {
-        override val name = "readonly"
-        override val parameters = listOf(
+    class ReadOnly(
+        override val name: String = "readonly",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
             SimulatorFunctionParameter.Value(),
         )
-    }
+    ) : SimulatorFunction
 
     @Serializable
-    class Writable : SimulatorFunction {
-        override val name = "writeable"
-        override val parameters = listOf(
+    class Writable(
+        override val name: String = "writeable",
+        @Transient
+        override val parameters: kotlin.collections.List<SimulatorFunctionParameter<*>> = listOf(
             SimulatorFunctionParameter.Value()
         )
-    }
+    ) : SimulatorFunction
 
 
     companion object {
@@ -188,37 +173,25 @@ sealed interface SimulatorFunction {
     }
 }
 
-@Serializable
+//@Serializable
 sealed class SimulatorFunctionParameter<T> private constructor(
-    private val name: String,
+    val name: String,
     private val defaultValue: T,
     var value: T,
 ) {
     constructor(name: String, defaultValue: T) : this(name, defaultValue, defaultValue)
 
-    @Serializable
     class Min : SimulatorFunctionParameter<Int>("min", 0)
-    @Serializable
     class Max : SimulatorFunctionParameter<Int>("max", 100)
-    @Serializable
     class Period : SimulatorFunctionParameter<Int>("period", 10)
-    @Serializable
     class SetPoint : SimulatorFunctionParameter<Int>("setPoint", 0)
-    @Serializable
     class Proportion : SimulatorFunctionParameter<Float>("proportion", 1.2F)
-    @Serializable
     class Integral : SimulatorFunctionParameter<Float>("integral", 0.06F)
-    @Serializable
     class Derivative : SimulatorFunctionParameter<Float>("derivative", 0.25F)
-    @Serializable
     class QualityCode : SimulatorFunctionParameter<QualityCodes>("qualityCode", Good)
-    @Serializable
     class Repeat : SimulatorFunctionParameter<Boolean>("repeat", true)
-    @Serializable
     class List : SimulatorFunctionParameter<MutableList<String>>("list", mutableListOf())
-    @Serializable
     class Value: SimulatorFunctionParameter<String>("value", "Any Value")
-
 
     operator fun component1(): String = name
     operator fun component2(): T = value
@@ -231,9 +204,8 @@ enum class QualityCodes {
     Uncertain,
 }
 
-class SimulatorFunctionSerializer : KSerializer<SimulatorFunction> {
-    private val delegate =  String.serializer()
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("SimulatorFunction", PrimitiveKind.STRING)
+object SimulatorFunctionSerializer : KSerializer<SimulatorFunction> {
+    override val descriptor = String.serializer().descriptor
 
     override fun serialize(encoder: Encoder, value: SimulatorFunction) {
         val output = buildString {
@@ -269,45 +241,3 @@ class ProgramDataTypeSerializer : KSerializer<ProgramDataType> {
         return ProgramDataType.valueOf(stringRepresentation.uppercase())
     }
 }
-
-class FunctionParameterSerializer(private val dataSerializer: KSerializer<T>) : KSerializer<SimulatorFunctionParameter<T>> {
-    override val descriptor = dataSerializer.descriptor
-    override fun serialize(encoder: Encoder, value: SimulatorFunctionParameter<T>) {
-        dataSerializer.serialize(encoder, value.value)
-    }
-
-    override fun deserialize(decoder: Decoder): SimulatorFunctionParameter<T> {
-        throw NotImplementedError("Importing of Device Simulator CSV Files is not Supported.")
-    }
-}
-
-private val module = SerializersModule {
-    polymorphicDefaultSerializer(SimulatorFunctionParameter::class) { instance ->
-        when (instance) {
-            is SimulatorFunctionParameter.Min
-            is SimulatorFunctionParameter.Max
-            is SimulatorFunctionParameter.Period
-            is SimulatorFunctionParameter.SetPoint -> {
-
-            }
-            is SimulatorFunctionParameter.Proportion
-            is SimulatorFunctionParameter.Integral
-            is SimulatorFunctionParameter.Derivative -> {
-
-            }
-            is SimulatorFunctionParameter.QualityCode -> {
-
-            }
-            is SimulatorFunctionParameter.Repeat -> {
-
-            }
-            is SimulatorFunctionParameter.List -> {
-
-            }
-            is SimulatorFunctionParameter.Value -> {
-
-            }
-        }
-    }
-}
-
