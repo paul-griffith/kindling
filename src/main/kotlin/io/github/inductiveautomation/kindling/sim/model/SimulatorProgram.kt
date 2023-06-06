@@ -1,6 +1,6 @@
-package io.github.paulgriffith.kindling.sim.model
+package io.github.inductiveautomation.kindling.sim.model
 
-import io.github.paulgriffith.kindling.sim.model.QualityCodes.Good
+import io.github.inductiveautomation.kindling.sim.model.QualityCodes.Good
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -36,7 +36,7 @@ data class ProgramItem(
     var dataType: ProgramDataType? = null,
 )
 
-@Serializable(with=ProgramDataTypeSerializer::class)
+@Serializable(with= ProgramDataTypeSerializer::class)
 enum class ProgramDataType(val exportName: String) {
     BOOLEAN("boolean"),
     INT16("int16"),
@@ -51,7 +51,7 @@ enum class ProgramDataType(val exportName: String) {
 }
 
 @Suppress("unused")
-@Serializable(with=SimulatorFunctionSerializer::class)
+@Serializable(with= SimulatorFunctionSerializer::class)
 sealed interface SimulatorFunction {
     val name: String
     val parameters: kotlin.collections.List<SimulatorFunctionParameter<*>>
