@@ -1,7 +1,8 @@
 package io.github.inductiveautomation.kindling.sim
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import com.formdev.flatlaf.extras.components.FlatButton
+import io.github.inductiveautomation.kindling.core.CustomIconView
+import io.github.inductiveautomation.kindling.core.Kindling
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.sim.model.NodeStructure
@@ -13,7 +14,8 @@ import io.github.inductiveautomation.kindling.sim.model.TagDataType
 import io.github.inductiveautomation.kindling.sim.model.TagProviderStructure
 import io.github.inductiveautomation.kindling.sim.model.UdtParameter
 import io.github.inductiveautomation.kindling.sim.model.UdtParameterListSerializer
-import io.github.inductiveautomation.kindling.sim.model.toSimulatorCsv
+import io.github.inductiveautomation.kindling.sim.model.exportToFile
+import io.github.inductiveautomation.kindling.utils.TabStrip
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -27,70 +29,102 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.miginfocom.swing.MigLayout
-import java.io.File
 import java.nio.file.Path
 import javax.swing.Icon
+import javax.swing.JButton
 import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 import kotlin.io.path.inputStream
+import kotlin.properties.Delegates
 
 @OptIn(ExperimentalSerializationApi::class)
 class SimulatorView(path: Path) : ToolPanel() {
     override val icon: Icon = FlatSVGIcon("icons/bx-archive.svg")
-    private val deviceName = "Sim"
 
     private val builtDefinitions = mutableMapOf<String, JsonObject>()
     private val tagProvider: TagProviderStructure = path.inputStream().use(JSON::decodeFromStream)
     private val tags = tagProvider.resolveOpcTags().toList()
 
-    private val program: SimulatorProgram = tags.flatMap { it.parseDeviceProgram() }
+    private var numberOfOpcTags: Int by Delegates.observable(0) { _, _, newValue ->
+        countLabel.text = "<html><b>Number of OPC Tags: $newValue</b></html>"
+    }
 
-    val countLabel = JLabel("Number of OPC Tags: ${program.size}")
-    val exportButton = FlatButton().apply {
-        text = "Export"
+    private val countLabel = JLabel()
+
+    private val programs: MutableMap<String, SimulatorProgram> = tags.flatMap {
+        it.parseDeviceProgram()
+    }.also {
+        numberOfOpcTags = it.size
+    }.groupBy {
+        it.deviceName
+    }.mapValues { (_, programItems) ->
+        programItems.toMutableList()
+    }.toMutableMap()
+
+    private val exportButton = JButton("Export All").apply {
         addActionListener {
-            val approve = exportFileChooser.showSaveDialog(this)
-            if (approve == JFileChooser.APPROVE_OPTION) {
-                val selectedFile = exportFileChooser.selectedFile
-                val selectedFileWithExt =
-                    if (selectedFile.absolutePath.endsWith("csv")) {
-                        selectedFile
-                    } else {
-                        File(selectedFile.absolutePath + ".csv")
-                    }
-                selectedFileWithExt.writeText(program.toSimulatorCsv())
+            if (directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                val selectedFolder = directoryChooser.selectedFile.toPath()
+
+                programs.entries.forEach { (deviceName, programItems) ->
+                    val filePath = selectedFolder.resolve("$deviceName-sim.csv")
+                    programItems.exportToFile(filePath)
+                }
             }
         }
     }
+
+    private val infoPanel = JPanel(MigLayout("fill, ins 10")).apply {
+        add(countLabel, "west")
+        add(exportButton, "east")
+    }
+
+    private val tabs = TabStrip()
 
     init {
         name = "Device Simulator"
         toolTipText = path.toString()
 
-        add(
-            JPanel(MigLayout("fill, ins 2")).apply {
-                add(countLabel, "west")
-                add(exportButton, "east")
-            },
-            "push, grow, span"
-        )
+        add(infoPanel, "pushx, growx, span")
 
-        add(
-            JScrollPane(
-                JPanel(MigLayout("fill, ins 0")).apply {
-                    program.forEach {
-                        add(ProgramItemPanel(it), "grow, span")
+        programs.entries.forEach { (deviceName, programItems) ->
+            val devicePanel = DeviceProgramPanel(deviceName, programItems).apply {
+                addPropertyChangeListener("numItems") { evt ->
+
+                    // Change Main label count
+                    val change = evt.newValue as Int - evt.oldValue as Int
+                    numberOfOpcTags += change
+
+                    if (evt.newValue as Int == 0) { // Remove tab and device entry from programs map
+                        tabs.remove(this)
+                    } else { // Change tab title to reflect number of rows
+                        tabs.setTitleAt(
+                            tabs.indexOfComponent(this),
+                            "$deviceName (${evt.newValue} tags)",
+                        )
                     }
                 }
-            ),
-            "push, grow, span"
-        )
+            }
+
+            tabs.addTab(
+                "$deviceName (${programItems.size} tags)",
+                devicePanel,
+            )
+
+            tabs.setTabCloseCallback { thisRef, i ->
+                val programPanel = thisRef.getComponentAt(i) as DeviceProgramPanel
+                numberOfOpcTags -= programPanel.numberOfTags
+                programs[programPanel.deviceName]?.clear()
+                thisRef.removeTabAt(i)
+            }
+        }
+
+        add(tabs, "push, grow, span")
     }
 
     private fun NodeStructure.parseDeviceProgram(): SimulatorProgram {
-        return buildList {
+        return mutableListOf<ProgramItem>().apply {
             tags?.forEach { tag ->
                 when {
                     tag.valueSource == "opc" -> {
@@ -100,10 +134,10 @@ class SimulatorView(path: Path) : ToolPanel() {
                                     is JsonObject -> (path["binding"] as JsonPrimitive).content
                                     is JsonPrimitive -> path.content
                                     else -> throw IllegalArgumentException("OPC item path is ${this::class.java.name}")
-                                }.replaceFirst("\\[.*?]".toRegex(), "[$deviceName]"),
-                                dataType = tagToSimDataType(TagDataType.valueOf(tag.dataType ?: "None")),
-                                valueSource = SimulatorFunction.defaultFunction
-                            )
+                                }, // .replaceFirst("\\[.*?]".toRegex(), "[$deviceName]"),
+                                dataType = TagDataType.valueOf(tag.dataType ?: "None").toSimDataType(),
+                                valueSource = SimulatorFunction.defaultFunction,
+                            ),
                         )
                     }
 
@@ -114,7 +148,6 @@ class SimulatorView(path: Path) : ToolPanel() {
             }
         }
     }
-
 
     private fun TagProviderStructure.resolveOpcTags(): MutableList<NodeStructure> {
         val (defs, nodes) = tags.partition { node -> node.name == "_types_" }
@@ -147,7 +180,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                             name = node.name,
                             tagType = "Folder",
                             tags = folderTags.toList(),
-                        )
+                        ),
                     )
                 }
 
@@ -172,10 +205,8 @@ class SimulatorView(path: Path) : ToolPanel() {
                 }
 
                 resolveParameters(tag.tags, JSON.decodeFromJsonElement(UdtParameterListSerializer(), udtParams))
-
             } else if (tag.tagType == "Folder") {
                 resolveParameters(tag.tags!!, parameters)
-
             } else if (tag.valueSource == "opc" && tag.opcItemPath is JsonObject && (tag.opcItemPath as JsonObject)["bindType"]!!.jsonPrimitive.content == "parameter") {
                 for (param in parameters) {
                     val newItemPath = (tag.opcItemPath as JsonObject).toMutableMap().apply {
@@ -184,10 +215,8 @@ class SimulatorView(path: Path) : ToolPanel() {
                             replace("{${param.name}}", newParamValue ?: "null")
                         }
                         this["binding"] = Json.encodeToJsonElement(binding)
-
                     }
                     tag.opcItemPath = JSON.encodeToJsonElement(newItemPath)
-
                 }
             }
         }
@@ -199,6 +228,7 @@ class SimulatorView(path: Path) : ToolPanel() {
 
             instance.entries.forEach { (key, value) ->
                 if (key == "tags" && value is JsonArray) {
+                    // Both should always be true - this check is for the compiler to smart cast value as JsonArray
                     val defKey = def[key]
                     require(defKey is JsonArray)
                     put(key, zipTags(defKey, value))
@@ -206,7 +236,9 @@ class SimulatorView(path: Path) : ToolPanel() {
                     val defKey = def[key]
                     if (defKey is JsonObject) {
                         put(key, zipObject(defKey, value))
-                    } else put(key, value)
+                    } else {
+                        put(key, value)
+                    }
                 } else {
                     put(key, value)
                 }
@@ -243,7 +275,17 @@ class SimulatorView(path: Path) : ToolPanel() {
             explicitNulls = false
         }
 
-        private fun tagToSimDataType(type: TagDataType): ProgramDataType? {
+        val directoryChooser = JFileChooser(Kindling.homeLocation).apply {
+            isMultiSelectionEnabled = false
+            fileView = CustomIconView()
+            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+
+            Kindling.addThemeChangeListener {
+                updateUI()
+            }
+        }
+
+        private fun TagDataType.toSimDataType(): ProgramDataType? {
             return mapOf(
                 TagDataType.Short to ProgramDataType.INT16,
                 TagDataType.Integer to ProgramDataType.INT32,
@@ -254,7 +296,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                 TagDataType.String to ProgramDataType.STRING,
                 TagDataType.DateTime to ProgramDataType.DATETIME,
                 TagDataType.Text to ProgramDataType.STRING,
-            )[type]
+            )[this]
         }
     }
 }
