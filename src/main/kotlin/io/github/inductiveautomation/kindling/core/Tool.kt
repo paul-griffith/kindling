@@ -24,13 +24,14 @@ interface Tool {
 
     companion object {
         val tools: List<Tool> by lazy {
-            listOf(
-                ZipViewer,
-                MultiThreadViewer,
-                LogViewer,
-                IdbViewer,
-                CacheViewer,
-            ) + loadService<Tool>().sortedBy { it.title }
+            loadService<Tool>().sortedBy { it.title } +
+                listOf(
+                    ZipViewer,
+                    MultiThreadViewer,
+                    LogViewer,
+                    IdbViewer,
+                    CacheViewer,
+                )
         }
 
         val byFilter: Map<FileFilter, Tool> by lazy {

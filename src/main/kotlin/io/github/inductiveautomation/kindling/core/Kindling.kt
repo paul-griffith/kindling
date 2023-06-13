@@ -3,6 +3,8 @@ package io.github.inductiveautomation.kindling.core
 import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
+import org.jfree.chart.JFreeChart
 import com.github.weisj.jsvg.parser.SVGLoader
 import io.github.inductiveautomation.kindling.core.Preference.Companion.PreferenceCheckbox
 import io.github.inductiveautomation.kindling.core.Preference.Companion.preference
