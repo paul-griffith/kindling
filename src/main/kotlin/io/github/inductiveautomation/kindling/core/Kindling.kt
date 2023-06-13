@@ -7,7 +7,6 @@ import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.themes.FlatMacDarkLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
-import com.jthemedetecor.OsThemeDetector
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.jfree.chart.JFreeChart
 import java.awt.Image
@@ -58,9 +57,9 @@ object Kindling {
         themeListeners.add(listener)
     }
 
-    private val themeDetector = OsThemeDetector.getDetector()
+//    private val themeDetector = OsThemeDetector.getDetector()
 
-    var theme: Theme by Delegates.observable(if (themeDetector.isDark) Theme.Dark else Theme.Light) { _, _, newValue ->
+    var theme: Theme by Delegates.observable(Theme.Dark) { _, _, newValue ->
         newValue.apply(true)
         for (listener in themeListeners) {
             listener.invoke(newValue)

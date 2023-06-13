@@ -17,7 +17,7 @@ import kotlinx.serialization.json.buildJsonObject
 data class TagProviderStructure(
     val name: String?,
     val tagType: String?,
-    val tags: List<NodeStructure>
+    val tags: List<NodeStructure>,
 )
 
 @Serializable
@@ -33,7 +33,7 @@ data class NodeStructure(
 
     // Other
     val tags: List<NodeStructure>?,
-    @Serializable(with= UdtParameterListSerializer::class)
+    @Serializable(with = UdtParameterListSerializer::class)
     val parameters: ParameterList = emptyList(),
     val tagType: String,
     val typeId: String? = null,
@@ -51,7 +51,7 @@ enum class TagDataType {
     String,
     DateTime,
     Text,
-    None;
+    None,
 }
 
 typealias ParameterList = List<UdtParameter>
@@ -65,6 +65,7 @@ data class UdtParameter(
 
 class UdtParameterListSerializer : KSerializer<ParameterList> {
     private val delegateSerializer = MapSerializer(String.serializer(), JsonObject.serializer())
+
     @OptIn(ExperimentalSerializationApi::class)
     override val descriptor: SerialDescriptor = SerialDescriptor("UdtParameterList", delegateSerializer.descriptor)
 

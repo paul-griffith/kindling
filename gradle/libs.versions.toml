@@ -23,6 +23,7 @@ logback = { group = "ch.qos.logback", name = "logback-classic", version = "1.4.7
 hsql = { group = "org.hsqldb", name = "hsqldb", version = "2.7.1" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version = "2.11.5" }
 excelkt = { group = "io.github.evanrupert", name = "excelkt", version = "1.0.2" }
+kotlinreflect = {group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin"}
 
 # build
 jsoup = { group = "org.jsoup", name = "jsoup", version = "1.16.1" }

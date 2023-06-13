@@ -120,8 +120,7 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
             },
         )
         add(
-            JMenu("Debug").apply
-            {
+            JMenu("Debug").apply {
                 add(
                     Action("UI Inspector") {
                         FlatUIDefaultsInspector.show()
