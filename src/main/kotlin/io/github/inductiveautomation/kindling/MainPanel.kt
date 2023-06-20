@@ -1,21 +1,29 @@
 package io.github.inductiveautomation.kindling
 
+import com.formdev.flatlaf.FlatLaf
+import com.formdev.flatlaf.extras.FlatAnimatedLafChange
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.FlatUIDefaultsInspector
 import com.formdev.flatlaf.extras.components.FlatTextArea
+import com.formdev.flatlaf.util.SystemInfo
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.CustomIconView
-import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.Advanced.Debug
+import io.github.inductiveautomation.kindling.core.Kindling.General.HomeLocation
+import io.github.inductiveautomation.kindling.core.Kindling.UI.ScaleFactor
+import io.github.inductiveautomation.kindling.core.Kindling.UI.Theme
 import io.github.inductiveautomation.kindling.core.MultiTool
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
+import io.github.inductiveautomation.kindling.core.preferencesFrame
 import io.github.inductiveautomation.kindling.internal.FileTransferHandler
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.TabStrip
 import io.github.inductiveautomation.kindling.utils.chooseFiles
 import io.github.inductiveautomation.kindling.utils.getLogger
+import io.github.inductiveautomation.kindling.utils.jFrame
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
@@ -24,12 +32,12 @@ import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.desktop.OpenFilesHandler
 import java.awt.desktop.QuitStrategy
-import java.awt.event.ItemEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.File
-import javax.swing.ButtonGroup
 import javax.swing.JButton
-import javax.swing.JCheckBoxMenuItem
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JMenu
@@ -38,14 +46,14 @@ import javax.swing.JPanel
 import javax.swing.UIManager
 
 class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
-    private val fileChooser = JFileChooser(Kindling.homeLocation).apply {
+    private val fileChooser = JFileChooser(HomeLocation.currentValue.toFile()).apply {
         isMultiSelectionEnabled = true
         fileView = CustomIconView()
 
         Tool.byFilter.keys.forEach(this::addChoosableFileFilter)
         fileFilter = Tool.tools.first().filter
 
-        Kindling.addThemeChangeListener {
+        Theme.addChangeListener {
             updateUI()
         }
     }
@@ -61,6 +69,16 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
 
     private val tabs = TabStrip()
     private val openButton = JButton(openAction)
+
+    private val debugMenu = JMenu("Debug").apply {
+        add(
+            Action("UI Inspector") {
+                FlatUIDefaultsInspector.show()
+            },
+        )
+
+        isVisible = Debug.currentValue
+    }
 
     private val menuBar = JMenuBar().apply {
         add(
@@ -101,34 +119,20 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 }
             },
         )
-        add(
-            JMenu("Theme").apply {
-                val buttonGroup = ButtonGroup()
-
-                for (value in Kindling.Theme.values()) {
-                    add(
-                        JCheckBoxMenuItem(value.name, Kindling.theme == value).apply {
-                            addItemListener { e ->
-                                if (e.stateChange == ItemEvent.SELECTED) {
-                                    Kindling.theme = value
-                                }
+        if (!SystemInfo.isMacOS) {
+            add(
+                JMenu("Preferences").apply {
+                    addMouseListener(
+                        object : MouseAdapter() {
+                            override fun mouseClicked(e: MouseEvent?) {
+                                preferencesFrame.isVisible = !preferencesFrame.isVisible
                             }
-                            buttonGroup.add(this)
                         },
                     )
-                }
-            },
-        )
-        add(
-            JMenu("Debug").apply
-            {
-                add(
-                    Action("UI Inspector") {
-                        FlatUIDefaultsInspector.show()
-                    },
-                )
-            },
-        )
+                },
+            )
+        }
+        add(debugMenu)
     }
 
     /**
@@ -174,20 +178,19 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
                 tool.open(files.map(File::toPath))
             }
         } else {
-            files.groupBy { tool ?: Tool[it] }
-                .forEach { (tool, filesByTool) ->
-                    if (tool is MultiTool) {
-                        openOrError(tool.title, filesByTool.joinToString()) {
-                            tool.open(filesByTool.map(File::toPath))
-                        }
-                    } else {
-                        filesByTool.forEach { file ->
-                            openOrError(tool.title, file.toString()) {
-                                tool.open(file.toPath())
-                            }
+            files.groupBy { tool ?: Tool[it] }.forEach { (tool, filesByTool) ->
+                if (tool is MultiTool) {
+                    openOrError(tool.title, filesByTool.joinToString()) {
+                        tool.open(filesByTool.map(File::toPath))
+                    }
+                } else {
+                    filesByTool.forEach { file ->
+                        openOrError(tool.title, file.toString()) {
+                            tool.open(file.toPath())
                         }
                     }
                 }
+            }
         }
     }
 
@@ -196,6 +199,10 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
             add(openButton, "dock center")
         } else {
             add(tabs, "dock center")
+        }
+
+        Debug.addChangeListener { newValue ->
+            debugMenu.isVisible = newValue
         }
     }
 
@@ -206,45 +213,35 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         fun main(args: Array<String>) {
             System.setProperty("apple.awt.application.name", "Kindling")
             System.setProperty("apple.laf.useScreenMenuBar", "true")
+            System.setProperty("flatlaf.uiScale", ScaleFactor.currentValue.toString())
 
             EventQueue.invokeLater {
-                setupLaf()
+                lafSetup()
 
-                JFrame("Kindling").apply {
+                jFrame("Kindling", 1280, 800) {
                     defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-                    preferredSize = Dimension(1280, 800)
-                    iconImage = Kindling.frameIcon
 
                     val mainPanel = MainPanel(args.isEmpty())
                     add(mainPanel)
-                    pack()
                     jMenuBar = mainPanel.menuBar
 
                     if (args.isNotEmpty()) {
                         args.map(::File).let(mainPanel::openFiles)
                     }
 
-                    Desktop.getDesktop().apply {
-                        // MacOS specific stuff
-                        runCatching {
-                            disableSuddenTermination()
-                            setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
-                            setOpenFileHandler { event ->
-                                mainPanel.openFiles(event.files)
-                            }
-                        }
-                    }
+                    macOsSetup(
+                        openFilesHandler = { event ->
+                            mainPanel.openFiles(event.files)
+                        },
+                    )
 
                     transferHandler = FileTransferHandler(mainPanel::openFiles)
-
-                    setLocationRelativeTo(null)
-                    isVisible = true
                 }
             }
         }
 
-        private fun setupLaf() {
-            Kindling.initTheme()
+        private fun lafSetup() {
+            applyTheme(false)
 
             UIManager.getDefaults().apply {
                 put("ScrollBar.width", 16)
@@ -254,6 +251,41 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
             }
 
             PlatformDefaults.setGridCellGap(UnitValue(2.0F), UnitValue(2.0F))
+
+            Theme.addChangeListener {
+                applyTheme(true)
+            }
+        }
+
+        private fun applyTheme(animate: Boolean) {
+            try {
+                if (animate) {
+                    FlatAnimatedLafChange.showSnapshot()
+                }
+                UIManager.setLookAndFeel(Theme.currentValue.lookAndFeelClassname)
+                FlatLaf.updateUI()
+            } finally {
+                // Will no-op if not animated
+                FlatAnimatedLafChange.hideSnapshotWithAnimation()
+            }
+        }
+
+        private fun macOsSetup(openFilesHandler: OpenFilesHandler) = Desktop.getDesktop().run {
+            // MacOS specific stuff
+            if (isSupported(Desktop.Action.APP_SUDDEN_TERMINATION)) {
+                disableSuddenTermination()
+            }
+            if (isSupported(Desktop.Action.APP_QUIT_STRATEGY)) {
+                setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+            }
+            if (isSupported(Desktop.Action.APP_OPEN_FILE)) {
+                setOpenFileHandler(openFilesHandler)
+            }
+            if (isSupported(Desktop.Action.APP_PREFERENCES)) {
+                setPreferencesHandler {
+                    preferencesFrame.isVisible = true
+                }
+            }
         }
     }
 }

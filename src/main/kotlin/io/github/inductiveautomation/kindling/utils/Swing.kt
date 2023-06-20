@@ -1,8 +1,10 @@
-package io.github.inductiveautomation.kindling.utils // ktlint-disable filename
+package io.github.inductiveautomation.kindling.utils
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
 import com.jidesoft.swing.ListSearchable
+import com.jidesoft.swing.StyledLabel
+import com.jidesoft.swing.StyledLabelBuilder
 import io.github.inductiveautomation.kindling.core.Kindling
 import io.github.inductiveautomation.kindling.utils.ReifiedLabelProvider.Companion.setDefaultRenderer
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +21,8 @@ import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
 import java.awt.Component
+import java.awt.Image
+import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -28,6 +32,7 @@ import java.util.EventListener
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListSelectionModel
 import javax.swing.Icon
+import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JFrame
@@ -40,6 +45,7 @@ import javax.swing.ListCellRenderer
 import javax.swing.UIManager
 import javax.swing.event.EventListenerList
 import javax.swing.filechooser.FileFilter
+import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.table.TableModel
 import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
@@ -347,19 +353,47 @@ inline fun <reified T : EventListener> EventListenerList.getAll(): Array<T> {
     return getListeners(T::class.java)
 }
 
+val frameIcon: Image = Toolkit.getDefaultToolkit().getImage(Kindling::class.java.getResource("/icons/kindling.png"))
+
 /**
- * Constructs and immediately displays a JFrame of the given dimensions, centered on the screen.
+ * Constructs and (optionally) immediately displays a JFrame of the given dimensions, centered on the screen.
  */
-inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Unit): JFrame {
-    return JFrame(title).apply {
-        setSize(width, height)
-        iconImage = Kindling.frameIcon
-        defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
+inline fun jFrame(
+    title: String,
+    width: Int,
+    height: Int,
+    initiallyVisible: Boolean = true,
+    block: JFrame.() -> Unit,
+) = JFrame(title).apply {
+    setSize(width, height)
+    iconImage = frameIcon
+    defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
 
-        setLocationRelativeTo(null)
+    setLocationRelativeTo(null)
 
-        block()
+    block()
 
-        isVisible = true
+    isVisible = initiallyVisible
+}
+
+inline fun <reified T> JComboBox<T>.configureCellRenderer(
+    noinline block: BasicComboBoxRenderer.(list: JList<*>, value: T?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) -> Unit,
+) {
+    renderer = object : BasicComboBoxRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            block(list, value as T?, index, isSelected, cellHasFocus)
+            return this
+        }
     }
+}
+
+inline fun StyledLabel(block: StyledLabelBuilder.() -> Unit): StyledLabel {
+    return StyledLabelBuilder().apply(block).createLabel()
 }

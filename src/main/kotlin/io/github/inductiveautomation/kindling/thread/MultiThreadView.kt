@@ -60,7 +60,7 @@ import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 class MultiThreadView(
-    private val paths: List<Path>,
+    val paths: List<Path>,
 ) : ToolPanel() {
     private val threadDumps = paths.map { path ->
         ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
@@ -356,7 +356,7 @@ class MultiThreadView(
             add(sortButton(NATURAL_SORT_DESCENDING, "Sort Z-A", byNameDesc))
         }
 
-        add(JLabel("Version: ${threadDumps[0].version}"))
+        add(JLabel("Version: ${threadDumps.first().version}"))
         add(threadDumpCheckboxList, "gapleft 20px, pushx, growx, shpx 200")
         add(exportButton, "gapright 8")
         add(searchField, "wmin 300, wrap")

@@ -16,7 +16,7 @@ import java.sql.Connection
 import java.time.Instant
 import kotlin.io.path.name
 
-class IdbView(path: Path) : ToolPanel() {
+class IdbView(val path: Path) : ToolPanel() {
     private val connection = SQLiteConnection(path)
 
     private val tables: List<String> = connection.metaData.getTables("", "", "", null).toList { rs ->

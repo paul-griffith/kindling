@@ -1,86 +1,118 @@
 package io.github.inductiveautomation.kindling.core
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.FlatLightLaf
-import com.formdev.flatlaf.extras.FlatAnimatedLafChange
-import com.formdev.flatlaf.themes.FlatMacDarkLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
-import com.jthemedetecor.OsThemeDetector
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
-import org.jfree.chart.JFreeChart
-import java.awt.Image
-import java.awt.Toolkit
-import java.io.File
-import javax.swing.UIManager
+import io.github.inductiveautomation.kindling.utils.PathSerializer
+import io.github.inductiveautomation.kindling.utils.PathSerializer.serializedForm
+import io.github.inductiveautomation.kindling.utils.ThemeSerializer
+import org.jdesktop.swingx.JXTextField
+import java.awt.event.ItemEvent
+import java.nio.file.Path
+import javax.swing.JCheckBox
+import javax.swing.JSpinner
+import javax.swing.SpinnerNumberModel
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import kotlin.io.path.Path
-import kotlin.properties.Delegates
-import org.fife.ui.rsyntaxtextarea.Theme as RSyntaxTheme
+import io.github.inductiveautomation.kindling.core.Theme as KindlingTheme
 
 object Kindling {
-    val homeLocation: File = Path(System.getProperty("user.home"), "Downloads").toFile()
+    object General : PreferenceCategory() {
+        val HomeLocation: Preference<Path> by preference(
+            name = "Home Location",
+            description = "The default path to start looking for files.",
+            requiresRestart = true,
+            default = Path(System.getProperty("user.home"), "Downloads"),
+            serializer = PathSerializer,
+            editor = {
+                JXTextField("The fully qualified location to open by default").apply {
+                    text = currentValue.serializedForm
 
-    val frameIcon: Image = Toolkit.getDefaultToolkit().getImage(this::class.java.getResource("/icons/kindling.png"))
+                    document.addDocumentListener(
+                        object : DocumentListener {
+                            fun onChange() {
+                                currentValue = PathSerializer.fromString(text)
+                            }
 
-    @Suppress("ktlint:trailing-comma-on-declaration-site")
-    enum class Theme(val lookAndFeel: FlatLaf, private val rSyntaxThemeName: String) {
-        Light(
-            lookAndFeel = if (SystemInfo.isMacOS) FlatMacLightLaf() else FlatLightLaf(),
-            rSyntaxThemeName = "idea.xml",
-        ),
-        Dark(
-            lookAndFeel = if (SystemInfo.isMacOS) FlatMacDarkLaf() else FlatDarkLaf(),
-            rSyntaxThemeName = "dark.xml",
-        );
+                            override fun insertUpdate(e: DocumentEvent?) = onChange()
+                            override fun removeUpdate(e: DocumentEvent?) = onChange()
+                            override fun changedUpdate(e: DocumentEvent?) = onChange()
+                        },
+                    )
+                }
+            },
+        )
 
-        private val rSyntaxTheme: RSyntaxTheme by lazy {
-            RSyntaxTheme::class.java.getResourceAsStream("themes/$rSyntaxThemeName").use(org.fife.ui.rsyntaxtextarea.Theme::load)
+        val ShowFullLoggerNames: Preference<Boolean> by preference(
+            name = "Logger Names",
+            default = false,
+            editor = {
+                JCheckBox("Show full logger names on newly created tool tabs").apply {
+                    isSelected = currentValue
+                    addItemListener { e ->
+                        currentValue = e.stateChange == ItemEvent.SELECTED
+                    }
+                }
+            },
+        )
+
+        init {
+            // ensure delegates are initialized and in declaration order
+            HomeLocation.name
+            ShowFullLoggerNames.name
         }
 
-        fun apply(textArea: RSyntaxTextArea) {
-            rSyntaxTheme.apply(textArea)
-        }
-
-        fun apply(chart: JFreeChart) {
-            chart.xyPlot.apply {
-                backgroundPaint = UIManager.getColor("Panel.background")
-                domainAxis.tickLabelPaint = UIManager.getColor("ColorChooser.foreground")
-                rangeAxis.tickLabelPaint = UIManager.getColor("ColorChooser.foreground")
-            }
-            chart.backgroundPaint = UIManager.getColor("Panel.background")
-        }
+        override fun toString(): String = "General"
     }
 
-    private val themeListeners = mutableListOf<(Theme) -> Unit>()
+    object UI : PreferenceCategory() {
+        val Theme: Preference<KindlingTheme> by preference(
+            default = KindlingTheme.themes.getValue(if (SystemInfo.isMacOS) FlatMacLightLaf.NAME else FlatLightLaf.NAME),
+            serializer = ThemeSerializer,
+            editor = {
+                ThemeSelectionDropdown().apply {
+                    addActionListener {
+                        currentValue = selectedItem
+                    }
+                }
+            },
+        )
 
-    fun addThemeChangeListener(listener: (Theme) -> Unit) {
-        themeListeners.add(listener)
+        val ScaleFactor: Preference<Double> by preference(
+            name = "Scale Factor",
+            description = "Percentage to scale the UI.",
+            requiresRestart = true,
+            default = 1.0,
+            editor = {
+                JSpinner(SpinnerNumberModel(currentValue, 1.0, 2.0, 0.1)).apply {
+                    editor = JSpinner.NumberEditor(this, "0%")
+                    addChangeListener {
+                        currentValue = value as Double
+                    }
+                }
+            },
+        )
+
+        override fun toString(): String = "UI"
     }
 
-    private val themeDetector = OsThemeDetector.getDetector()
+    object Advanced : PreferenceCategory() {
+        val Debug: Preference<Boolean> by preference(
+            name = "Debug Mode",
+            default = false,
+            editor = {
+                JCheckBox("Enable debug features").apply {
+                    isSelected = currentValue
+                    addItemListener { e ->
+                        currentValue = e.stateChange == ItemEvent.SELECTED
+                    }
+                }
+            },
+        )
 
-    var theme: Theme by Delegates.observable(if (themeDetector.isDark) Theme.Dark else Theme.Light) { _, _, newValue ->
-        newValue.apply(true)
-        for (listener in themeListeners) {
-            listener.invoke(newValue)
-        }
+        override fun toString(): String = "Advanced"
     }
 
-    fun initTheme() {
-        theme.apply(false)
-    }
-
-    private fun Theme.apply(animate: Boolean) {
-        try {
-            if (animate) {
-                FlatAnimatedLafChange.showSnapshot()
-            }
-            UIManager.setLookAndFeel(lookAndFeel)
-            FlatLaf.updateUI()
-        } finally {
-            // Will no-op if not animated
-            FlatAnimatedLafChange.hideSnapshotWithAnimation()
-        }
-    }
+    val preferenceCategories: List<PreferenceCategory> = listOf(General, UI, Advanced)
 }
