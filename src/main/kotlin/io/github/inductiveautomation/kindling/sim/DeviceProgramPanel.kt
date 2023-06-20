@@ -53,7 +53,7 @@ class DeviceProgramPanel(
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.add(
             Action("Export to CSV") {
-                if (SimulatorView.directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                if (SimulatorView.directoryChooser.showSaveDialog(this@DeviceProgramPanel) == JFileChooser.APPROVE_OPTION) {
                     val outputFile = SimulatorView.directoryChooser.selectedFile.toPath().resolve("$deviceName-sim.csv")
                     programItems.exportToFile(outputFile)
                 }

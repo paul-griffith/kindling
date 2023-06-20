@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.swing.CheckBoxList
 import io.github.inductiveautomation.kindling.core.CustomIconView
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.HomeLocation
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.sim.model.ProgramDataType
@@ -12,13 +13,7 @@ import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Compan
 import io.github.inductiveautomation.kindling.sim.model.TagParser
 import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
-import io.github.inductiveautomation.kindling.utils.Action
-import io.github.inductiveautomation.kindling.utils.FloatableComponent
-import io.github.inductiveautomation.kindling.utils.TabStrip
-import io.github.inductiveautomation.kindling.utils.add
-import io.github.inductiveautomation.kindling.utils.getAll
-import io.github.inductiveautomation.kindling.utils.listCellRenderer
-import io.github.inductiveautomation.kindling.utils.tag
+import io.github.inductiveautomation.kindling.utils.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
@@ -35,6 +30,8 @@ import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
@@ -197,15 +194,12 @@ class SimulatorView(path: Path) : ToolPanel() {
     }
 
     companion object {
-        private const val MISSING_DEF_WARNING = "The following UDT definitions were not found in the tag export. Some bindings may not be resolved:\n"
-        val directoryChooser = JFileChooser(Kindling.homeLocation).apply {
+        private const val MISSING_DEF_WARNING =
+            "The following UDT definitions were not found in the tag export. Some bindings may not be resolved:\n"
+        val directoryChooser = JFileChooser(HomeLocation.currentValue.absolutePathString()).apply {
             isMultiSelectionEnabled = false
             fileView = CustomIconView()
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-
-            Kindling.addThemeChangeListener {
-                updateUI()
-            }
         }
     }
 
@@ -271,7 +265,7 @@ class SimulatorView(path: Path) : ToolPanel() {
             }
             setSize(300, 600)
             setLocationRelativeTo(null)
-            iconImage = Kindling.frameIcon
+            iconImage = Kindling.frameIcons[3]
             defaultCloseOperation = HIDE_ON_CLOSE
         }
 
@@ -298,14 +292,16 @@ class SimulatorView(path: Path) : ToolPanel() {
         val deviceName: String,
         numberOfTags: Int,
         supplier: () -> Component,
-    ) : TabStrip.LazyTab(supplier), FloatableComponent {
-        override val icon: Icon? = null
-        override val tabName: String = "$deviceName ($numberOfTags tags)"
-        override val tabTooltip: String = "$numberOfTags items"
+    ) : TabStrip.LazyTab(
+        "$deviceName ($numberOfTags tags)",
+        null,
+        "$numberOfTags items",
+        supplier,
+    ), FloatableComponent {
         override fun customizePopupMenu(menu: JPopupMenu) {
             menu.add(
                 Action("Export to CSV") {
-                    if (directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                    if (directoryChooser.showSaveDialog(this@SimulatorView) == JFileChooser.APPROVE_OPTION) {
                         val outputFile = directoryChooser.selectedFile.toPath().resolve("$deviceName-sim.csv")
                         programs[deviceName]!!.exportToFile(outputFile)
                         JOptionPane.showMessageDialog(this@SimulatorView, "Tag Export Finished.")
@@ -317,10 +313,21 @@ class SimulatorView(path: Path) : ToolPanel() {
 }
 
 object SimulatorViewer : Tool {
-    override val extensions = listOf("json")
-    override val description = "Opens a tag export as parses to a device simulator builder."
-    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-box.svg")
+    override val description = "Tag Export (json)"
+    override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-tag.svg")
     override val title = "Tag Export (Device Sim)"
+    override val filter = FileFilter(
+        description = description,
+        predicate = { file ->
+            file.extension == "json" &&
+                    "\"tagType\": \"Provider\"," in buildString {
+                file.bufferedReader().use { br ->
+                    repeat(10) { append(br.readLine()) }
+                }
+            }
+        },
+    )
+
     override fun open(path: Path): ToolPanel {
         return SimulatorView(path)
     }
