@@ -1,12 +1,11 @@
 package io.github.inductiveautomation.kindling.core
 
-import io.github.inductiveautomation.kindling.core.Kindling.General.HomeLocation
-import io.github.inductiveautomation.kindling.core.Kindling.UI.Theme
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.HomeLocation
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.UI.Theme
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.FileExtensionFilter
 import io.github.inductiveautomation.kindling.utils.FloatableComponent
 import io.github.inductiveautomation.kindling.utils.PopupMenuCustomizer
-import io.github.inductiveautomation.kindling.utils.Properties
 import io.github.inductiveautomation.kindling.utils.exportToCSV
 import io.github.inductiveautomation.kindling.utils.exportToXLSX
 import net.miginfocom.swing.MigLayout
@@ -73,13 +72,6 @@ abstract class ToolPanel(
             EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
 
             val fileFilter: FileFilter = FileExtensionFilter(description, listOf(extension))
-        }
-
-        val classMapsByVersion by lazy {
-            val versions = requireNotNull(this::class.java.getResourceAsStream("/javadocs/versions.txt")).reader().readLines()
-            versions.associateWith { version ->
-                Properties(requireNotNull(this::class.java.getResourceAsStream("/javadocs/$version/links.properties")))
-            }
         }
     }
 }
