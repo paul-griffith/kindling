@@ -57,7 +57,6 @@ import javax.swing.border.EmptyBorder
 import javax.swing.event.EventListenerList
 import javax.swing.filechooser.FileFilter
 import javax.swing.plaf.basic.BasicComboBoxRenderer
-import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.table.TableModel
 import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
@@ -221,6 +220,18 @@ inline fun <T : Component> T.attachPopupMenu(
 fun FlatSVGIcon.derive(colorer: (Color) -> Color): FlatSVGIcon {
     return FlatSVGIcon(name, scale).apply {
         colorFilter = FlatSVGIcon.ColorFilter(colorer)
+    }
+}
+
+fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (Any?) -> String): ListSearchable {
+    return object : ListSearchable(this) {
+        init {
+            setup()
+        }
+
+        override fun convertElementToString(element: Any?): String {
+            return element.let(conversion)
+        }
     }
 }
 

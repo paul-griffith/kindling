@@ -1,34 +1,152 @@
 package io.github.inductiveautomation.kindling.sim.model
 
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.functions
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-class TagParser(private val tagProvider: TagProviderStructure) {
-    val deviceSimProgramItems = run {
-        // Source of truth for UDT definitions defined in the tag export
-        val udtPathsToStructures: MutableMap<String, JsonObject> = mutableMapOf<String, JsonObject>().apply {
-            val defs: NodeStructure? = tagProvider.tags.find { node -> node.name == "_types_" }
-            buildUdtMap(defs?.tags)
+class TagParser(tagProvider: NodeStructure) {
+    private val udtPathsToStructures = buildMap {
+        val definitions = tagProvider.tags.find { node -> node.name == "_types_" } ?: return@buildMap
+        val nodeStack = ArrayDeque(listOf(definitions))
+        val pathStack = ArrayDeque(listOf(""))
+
+        while (nodeStack.isNotEmpty() && pathStack.isNotEmpty()) {
+            val folder = nodeStack.removeLast()
+            val relativePath = pathStack.removeLast()
+            for (tag in folder.tags) {
+                if (tag.isFolder()) {
+                    pathStack.addLast("$relativePath${tag.name}/")
+                    nodeStack.addLast(tag)
+                } else {
+                    this["$relativePath${tag.name}"] = tag
+                }
+            }
+        }
+    }
+
+    private val opcTags: MutableList<NodeStructure> = mutableListOf()
+
+    val missingDefinitions = mutableSetOf<String>()
+
+    init {
+        tagProvider.tags.forEach(::resolveOpcTags)
+    }
+
+    val programItems: SimulatorProgram = mutableListOf<ProgramItem>().apply {
+        opcTags.forEach { tag ->
+            val actualPath = when (val path = tag.opcItemPath) {
+                is JsonObject -> (path["binding"] as JsonPrimitive).content // Case when binding couldn't be resolved
+                is JsonPrimitive -> path.content
+                else -> null
+            }
+
+            if (actualPath != null && actualPath.isIgnitionOpcItemPath()) {
+                val type = when (val path = tag.dataType) {
+                    is JsonObject -> (path["binding"] as JsonPrimitive).content
+                    is JsonPrimitive -> path.content
+                    else -> null
+                }?.let(TagDataType::valueOf)?.let(tagToSimDataType::get) ?: ProgramDataType.INT32
+
+                add(
+                    ProgramItem(
+                        ignitionBrowsePath = actualPath,
+                        dataType = type,
+                        valueSource = functions[SimulatorFunction.defaultFunctionForType(type)]!!.invoke(),
+                    ),
+                )
+            }
+        }
+    }.distinctBy(ProgramItem::browsePath).toMutableList()
+
+    private fun resolveOpcTags(struct: NodeStructure) {
+        when {
+            struct.isFolder() -> {
+                struct.tags.forEach(::resolveOpcTags)
+            }
+            struct.isUdtInstance() -> {
+                zipInstanceWithDefinition(struct)
+            }
+            struct.isOpcTag() -> {
+                resolveDataType(struct)
+                resolveOpcItemPath(struct)
+                opcTags.add(struct)
+            }
+        }
+    }
+
+    private fun zipInstanceWithDefinition(struct: NodeStructure) { // struct is a UdtInstance
+        val definitionOfInstance = udtPathsToStructures[struct.typeId]
+        if (definitionOfInstance == null) {
+            missingDefinitions.add(struct.typeId!!) // Nullity is checked previously
+            return
         }
 
-        val resolvedTags: MutableList<NodeStructure> = tagProvider.run {
-            val nodes = tags.filter { node -> node.name != "_types_" }
-            val resolvedTags = mutableListOf<NodeStructure>()
-
-            iterateTags(nodes, resolvedTags, udtPathsToStructures)
-            resolveParameters(resolvedTags, emptyList(), udtPathsToStructures)
-            resolvedTags
+        if (definitionOfInstance.isInherited()) {
+            resolveDefinitionInheritence(definitionOfInstance)
         }
-        resolvedTags.flatMap(::parseDeviceProgram)
+
+        // Zip all child tags/UDTs/Folders
+        struct.zipWith(definitionOfInstance)
+
+        // Resolve these parameters so that OPC tags are ready to grab the values
+        resolveParameters(struct)
+
+        // Now we repeate this process with all child UDT instances
+        struct.tags.forEach {
+            resolveOpcTags(it)
+        }
+    }
+
+    private fun NodeStructure.zipWith(parent: NodeStructure) {
+        when {
+            this.isFolder() -> {
+                parent.tags.forEach { parentTag ->
+                    val childTag = tags.find { parentTag.name == it.name }!!
+                    childTag.zipWith(parentTag)
+                }
+            }
+            this.isUdtInstance() -> {
+                parameters.addInheritedParameters(parent.parameters)
+                typeId = parent.typeId
+                parent.tags.forEach { parentTag ->
+                    val childTag = tags.find { parentTag.name == it.name }!!
+                    childTag.zipWith(parentTag)
+                }
+            }
+            this.isUdtDefinition() -> {
+                parameters.addInheritedParameters(parent.parameters)
+                parent.tags.forEach { parentTag ->
+                    val childTag = tags.find { parentTag.name == it.name }!!
+                    childTag.zipWith(parentTag)
+                }
+            }
+            this.isAtomicTag() -> {
+                opcItemPath = opcItemPath ?: parent.opcItemPath
+                opcServer = opcServer ?: parent.opcServer
+                dataType = dataType ?: parent.dataType
+                valueSource = valueSource ?: parent.valueSource
+            }
+        }
+    }
+
+    private fun resolveDefinitionInheritence(struct: NodeStructure) { // struct is a UdtDefiniion
+        val parentUdt = udtPathsToStructures[struct.typeId]
+
+        if (parentUdt == null) {
+            missingDefinitions.add(struct.typeId!!) // Nullity is checked previously
+            return
+        }
+        if (parentUdt.isInherited()) {
+            resolveDefinitionInheritence(parentUdt)
+        }
+
+        // Add all parameters and tags which the child doesn't explicitly have already.
+        struct.zipWith(parentUdt)
     }
 
     companion object {
@@ -39,189 +157,153 @@ class TagParser(private val tagProvider: TagProviderStructure) {
             explicitNulls = false
         }
 
-        private fun TagDataType.toSimDataType(): ProgramDataType? {
-            return mapOf(
-                TagDataType.Short to ProgramDataType.INT16,
-                TagDataType.Integer to ProgramDataType.INT32,
-                TagDataType.Long to ProgramDataType.INT64,
-                TagDataType.Float4 to ProgramDataType.FLOAT,
-                TagDataType.Float8 to ProgramDataType.DOUBLE,
-                TagDataType.Boolean to ProgramDataType.BOOLEAN,
-                TagDataType.String to ProgramDataType.STRING,
-                TagDataType.DateTime to ProgramDataType.DATETIME,
-                TagDataType.Text to ProgramDataType.STRING,
-            )[this]
-        }
+        val tagToSimDataType = mapOf(
+            TagDataType.Short to ProgramDataType.INT16,
+            TagDataType.Integer to ProgramDataType.INT32,
+            TagDataType.Int2 to ProgramDataType.INT16,
+            TagDataType.Int4 to ProgramDataType.INT32,
+            TagDataType.Int8 to ProgramDataType.INT64,
+            TagDataType.Long to ProgramDataType.INT64,
+            TagDataType.Float4 to ProgramDataType.FLOAT,
+            TagDataType.Float8 to ProgramDataType.DOUBLE,
+            TagDataType.Boolean to ProgramDataType.BOOLEAN,
+            TagDataType.String to ProgramDataType.STRING,
+            TagDataType.DateTime to ProgramDataType.DATETIME,
+            TagDataType.Text to ProgramDataType.STRING,
+            TagDataType.Document to ProgramDataType.STRING,
+            TagDataType.StringArray to ProgramDataType.STRING,
+        )
 
-        fun parseDeviceProgram(tagStructure: NodeStructure): SimulatorProgram {
-            return mutableListOf<ProgramItem>().apply {
-                tagStructure.tags?.forEach { tag ->
-                    when {
-                        tag.valueSource == "opc" -> {
-                            add(
-                                ProgramItem(
-                                    browsePath = when (val path = tag.opcItemPath) {
-                                        is JsonObject -> (path["binding"] as JsonPrimitive).content
-                                        is JsonPrimitive -> path.content
-                                        else -> throw IllegalArgumentException("OPC item path is ${this::class.java.name}")
-                                    },
-                                    dataType = TagDataType.valueOf(tag.dataType ?: "None").toSimDataType(),
-                                    valueSource = SimulatorFunction.defaultFunction,
-                                ),
-                            )
-                        }
+        // https://docs.inductiveautomation.com/display/DOC81/UDT+Parameters#UDTParameters-Pre-DefinedParameters
+        private val builtInParameters = mapOf<String, (NodeStructure) -> String>(
+            "InstanceName" to { it.getUdtParent()!!.name },
+            "ParentInstanceName" to { it.getUdtParent()!!.getUdtParent()?.name ?: it.getUdtParent()!!.name },
+            "PathToParentFolder" to { it.getBrowsableParent()!!.getPath() },
+            "TagName" to { it.name },
+            "PathToTag" to { it.getPath() },
+            "RootInstanceName" to {
+                var parentInstance = it.getUdtParent()
+                while (parentInstance!!.getUdtParent() != null) {
+                    parentInstance = parentInstance.getUdtParent()
+                }
+                parentInstance.name
+            },
+        )
 
-                        !tag.tags.isNullOrEmpty() -> { // Browsable node
-                            addAll(parseDeviceProgram(tag))
-                        }
-                    }
+        private val PARAM_REGEX = """\{(.*?)}""".toRegex()
+
+        fun resolveParameters(struct: NodeStructure) {
+            struct.parameters.forEach { param ->
+                if (param.value.isBoundValue()) {
+                    param.value = resolveBoundValue(struct, param.value)
                 }
             }
         }
 
-//        fun TagProviderStructure.resolveOpcTags(): MutableList<NodeStructure> {
-//            val nodes = tags.filter { node -> node.name != "_types_" }
-//            val resolvedTags = mutableListOf<NodeStructure>()
-//
-//            iterateTags(nodes, resolvedTags)
-//            resolveParameters(resolvedTags, emptyList())
-//            return resolvedTags
-//        }
+        fun resolveOpcItemPath(struct: NodeStructure) {
+            require(struct.isOpcTag())
+            if (struct.opcItemPath.isBoundValue()) {
+                struct.opcItemPath = resolveBoundValue(struct, struct.opcItemPath)
+            }
+        }
 
-        private fun MutableMap<String, JsonObject>.buildUdtMap(defs: List<NodeStructure>?, relativePath: String = "") {
-            if (defs == null) return
-            for (udt in defs) {
-                if (udt.tagType == "Folder") {
-                    buildUdtMap(udt.tags ?: emptyList(), "$relativePath${udt.name}/")
+        fun resolveDataType(struct: NodeStructure) {
+            require(struct.isOpcTag())
+            if (struct.dataType.isBoundValue()) {
+                struct.dataType = resolveBoundValue(struct, struct.dataType)
+            }
+        }
+
+        private fun resolveBoundValue(struct: NodeStructure, valueToResolve: JsonElement?): JsonPrimitive {
+            // This value is bound to a parent UDT parameter. Go to the parent and get the value
+            var boundStringValue = valueToResolve
+                ?.jsonObject
+                ?.get("binding")
+                ?.jsonPrimitive
+                ?.content!!
+
+            val boundParamNames = parseBoundValueNames(boundStringValue)
+
+            boundParamNames.forEach { boundParamName ->
+                val boundParamValue = if (boundParamName in builtInParameters) {
+                    resolveBuiltInParamBinding(struct, boundParamName)
                 } else {
-                    put("$relativePath${udt.name}", JSON.encodeToJsonElement(udt).jsonObject)
+                    findParentParameterValue(struct, boundParamName)
                 }
+
+                // While we can't find the param, go to parent UDT to see if it's there until all parents have been checked
+                boundStringValue = boundStringValue.replace(
+                    oldValue = "{$boundParamName}",
+                    newValue = boundParamValue,
+                )
             }
+            return JsonPrimitive(boundStringValue)
         }
 
-        private fun iterateTags(
-            nodes: List<NodeStructure>,
-            resolvedTags: MutableList<NodeStructure>,
-            udtDefinitionMap: MutableMap<String, JsonObject>,
-        ) {
-            for (node in nodes) {
-                when (node.tagType) {
-                    "Folder" -> {
-                        require(node.tags != null)
-                        val folderTags = mutableListOf<NodeStructure>()
-                        iterateTags(node.tags, folderTags, udtDefinitionMap)
-                        resolvedTags.add(
-                            NodeStructure(
-                                name = node.name,
-                                tagType = "Folder",
-                                tags = folderTags.toList(),
-                            ),
-                        )
-                    }
-
-                    "UdtInstance" -> {
-                        val defDict = udtDefinitionMap[node.typeId]
-                        val retTag = zipObject(defDict, JSON.encodeToJsonElement(node).jsonObject, udtDefinitionMap)
-                        resolvedTags.add(JSON.decodeFromJsonElement(retTag))
-                    }
-
-                    else -> resolvedTags.add(node)
-                }
-            }
+        private fun resolveBuiltInParamBinding(struct: NodeStructure, boundParamName: String): String {
+            return builtInParameters[boundParamName]!!.invoke(struct)
         }
 
-        private fun resolveParameters(
-            tags: List<NodeStructure>,
-            parameters: List<UdtParameter>,
-            udtDefinitionMap: MutableMap<String, JsonObject>,
-        ) {
-            for (tag in tags) {
-                if (tag.tagType == "UdtInstance" && tag.parameters.isNotEmpty() && !tag.tags.isNullOrEmpty()) {
-                    val udtParams = run {
-                        val params = JSON.encodeToJsonElement(UdtParameterListSerializer(), parameters).jsonObject
-                        val tagParams =
-                            JSON.encodeToJsonElement(UdtParameterListSerializer(), tag.parameters).jsonObject
-                        zipObject(params, tagParams, udtDefinitionMap)
-                    }
-
-                    resolveParameters(
-                        tag.tags,
-                        JSON.decodeFromJsonElement(UdtParameterListSerializer(), udtParams),
-                        udtDefinitionMap,
-                    )
-                } else if (tag.tagType == "Folder") {
-                    resolveParameters(tag.tags!!, parameters, udtDefinitionMap)
-                } else if (tag.valueSource == "opc" && tag.opcItemPath is JsonObject && (tag.opcItemPath as JsonObject)["bindType"]!!.jsonPrimitive.content == "parameter") {
-                    for (param in parameters) {
-                        val newItemPath = (tag.opcItemPath as JsonObject).toMutableMap().apply {
-                            val binding = this["binding"]!!.jsonPrimitive.content.run {
-                                val newParamValue = param.value?.jsonPrimitive?.content
-                                replace("{${param.name}}", newParamValue ?: "null")
-                            }
-                            this["binding"] = Json.encodeToJsonElement(binding)
-                        }
-                        tag.opcItemPath = JSON.encodeToJsonElement(newItemPath)
-                    }
-                }
-            }
+        private fun findParentParameterValue(struct: NodeStructure, parameterName: String): String {
+            val parentUdt = struct.getUdtParent() ?: return "{$parameterName}"
+            val boundParamValue = parentUdt.parameters.find { it.name == parameterName }?.value?.jsonPrimitive?.content
+            return boundParamValue ?: findParentParameterValue(parentUdt, parameterName)
         }
 
-        private fun zipObject(
-            def: JsonObject?,
-            instance: JsonObject,
-            udtDefinitionMap: MutableMap<String, JsonObject>,
-        ): JsonObject {
-            if (def == null) {
-                return instance
-            } else {
-                return buildJsonObject {
-                    def.entries.forEach { put(it.key, it.value) }
-
-                    instance.entries.forEach { (key, value) ->
-                        if (key == "tags" && value is JsonArray) {
-                            // Both should always be true - this check is for the compiler to smart cast value as JsonArray
-                            val defKey = def[key]
-                            require(defKey is JsonArray)
-                            put(key, zipTags(defKey, value, udtDefinitionMap))
-                        } else if (value is JsonObject) {
-                            val defKey = def[key]
-                            if (defKey is JsonObject) {
-                                put(key, zipObject(defKey, value, udtDefinitionMap))
-                            } else {
-                                put(key, value)
-                            }
-                        } else {
-                            put(key, value)
-                        }
-                    }
-                }
-            }
+        fun ParameterList.addInheritedParameters(parent: ParameterList) {
+            val parameterNames = map(UdtParameter::name)
+            addAll(
+                parent.filter {
+                    it.name !in parameterNames
+                },
+            )
         }
 
-        private fun zipTags(
-            def: JsonArray,
-            instance: JsonArray,
-            udtDefinitionMap: MutableMap<String, JsonObject>,
-        ): JsonArray {
-            return buildJsonArray {
-                def.forEach { tag ->
-                    require(tag is JsonObject)
-
-                    val instTag = instance.find { iTag ->
-                        require(iTag is JsonObject)
-                        iTag["name"] == tag["name"]
-                    }!!.jsonObject
-
-                    val retTag = if (tag["tagType"]?.jsonPrimitive?.content == "UdtInstance") {
-                        val typeId = tag["typeId"]!!.jsonPrimitive.content
-                        val udtOverride = zipObject(udtDefinitionMap[typeId]!!, tag, udtDefinitionMap)
-                        zipObject(udtOverride, instTag, udtDefinitionMap)
-                    } else {
-                        zipObject(tag, instTag, udtDefinitionMap)
-                    }
-                    add(retTag)
-                }
-            }
+        private fun parseBoundValueNames(boundValue: String): List<String> {
+            return PARAM_REGEX.findAll(boundValue).map { result ->
+                result.groupValues[1]
+            }.toList()
         }
+
+        private fun NodeStructure.getPath(): String {
+            return buildString {
+                var p = parent
+                while (!p.isTagProvider) {
+                    insert(0, "${p.name}/")
+                    p = p.parent
+                }
+            } + name
+        }
+        private fun NodeStructure.isAtomicTag(): Boolean = tagType == "AtomicTag"
+        private fun NodeStructure.isFolder(): Boolean = tagType == "Folder"
+        private fun NodeStructure.isUdtInstance(): Boolean = tagType == "UdtInstance"
+        private fun NodeStructure.isUdtDefinition(): Boolean = tagType == "UdtType"
+        private fun NodeStructure.isInherited(): Boolean = isUdtDefinition() && !typeId.isNullOrEmpty()
+        private fun NodeStructure.isUdtStructure(): Boolean = isUdtInstance() || isUdtDefinition()
+        private fun NodeStructure.isOpcTag(): Boolean = valueSource == "opc"
+        private fun NodeStructure.getUdtParent(): NodeStructure? {
+            var p = parent
+            while (!p.isUdtStructure()) {
+                if (p.isTagProvider) return null
+                p = p.parent
+            }
+            return p
+        }
+
+        private fun NodeStructure.getBrowsableParent(): NodeStructure? {
+            var p = parent
+            while (!p.isUdtStructure() && !p.isFolder()) {
+                if (p.isTagProvider) return null
+                p = p.parent
+            }
+            return p
+        }
+
+        private fun String.isIgnitionOpcItemPath(): Boolean {
+            val regex = """ns=[0-9];s=\[.*].*""".toRegex()
+            return regex.matches(this)
+        }
+
+        private fun JsonElement?.isBoundValue(): Boolean = this != null && this is JsonObject && get("binding") != null
     }
 }
