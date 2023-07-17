@@ -53,6 +53,14 @@ class SimulatorView(path: Path) : ToolPanel() {
         programItems.toMutableList()
     }
 
+    private var numberOfOpcTags: Int by Delegates.observable(tagParser.programItems.size) { _, _, newValue ->
+        countLabel.text = buildString {
+            tag("html") {
+                tag("b", "Number of OPC Tags: $newValue")
+            }
+        }
+    }
+
     private val countLabel = JLabel(
         buildString {
             tag("html") {
@@ -70,14 +78,6 @@ class SimulatorView(path: Path) : ToolPanel() {
         font = font.deriveFont(Font.BOLD)
         isVisible = tagParser.missingDefinitions.isNotEmpty()
         toolTipText = tagParser.missingDefinitions.joinToString("\n", prefix = MISSING_DEF_WARNING)
-    }
-
-    private var numberOfOpcTags: Int by Delegates.observable(tagParser.programItems.size) { _, _, newValue ->
-        countLabel.text = buildString {
-            tag("html") {
-                tag("b", "Number of OPC Tags: $newValue")
-            }
-        }
     }
 
     private val exportButton = JButton("Export All").apply {
@@ -133,19 +133,19 @@ class SimulatorView(path: Path) : ToolPanel() {
                 tabTooltip = "Right click to export",
                 select = false,
             )
+        }
 
-            setTabCloseCallback { thisRef, i ->
-                // Update tag count when a tab is closed entirely
-                val programName = (thisRef.getComponentAt(i) as DeviceProgramTab).deviceName
-                val simulatorprogram = programs[programName]
+        setTabCloseCallback { thisRef, i ->
+            // Update tag count when a tab is closed entirely
+            val programName = (thisRef.getComponentAt(i) as DeviceProgramTab).deviceName
+            val simulatorprogram = programs[programName]
 
-                if (simulatorprogram != null) {
-                    numberOfOpcTags -= simulatorprogram.size
-                    simulatorprogram.clear()
-                }
-
-                thisRef.removeTabAt(i)
+            if (simulatorprogram != null) {
+                numberOfOpcTags -= simulatorprogram.size
+                simulatorprogram.clear()
             }
+
+            thisRef.removeTabAt(i)
         }
     }
 
@@ -216,7 +216,9 @@ class SimulatorView(path: Path) : ToolPanel() {
             cellRenderer = listCellRenderer { _, value: KClass<*>, _, _, _ ->
                 text = value.simpleName
             }
+
             selectAll()
+
             checkBoxListSelectionModel.addListSelectionListener {
                 val possibleDataTypes = programs.values.flatten().map { it.dataType }.distinct()
 
