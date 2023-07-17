@@ -50,6 +50,7 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
         configureCellRenderer { _, value, _, _, _ ->
             text = value?.simpleName
         }
+
         selectedItem = item.valueSource?.let { it::class } ?: defaultFunctionForType(item.dataType)
     }
 
@@ -107,17 +108,15 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
                 item.dataType in dataTypes
             }.keys
 
-            val currentOptions = buildList {
-                repeat(functionDropdown.model.size) {
-                    add(functionDropdown.getItemAt(it))
-                }
-            }
+            val currentOptions = List(functionDropdown.model.size) { functionDropdown.getItemAt(it) }
 
             if (currentOptions != newOptions) {
                 functionDataChanging = true
+
                 val currentItem = functionDropdown.selectedItem
                 functionDropdown.removeAllItems()
                 newOptions.forEach(functionDropdown::addItem)
+
                 if (currentItem in newOptions) {
                     // Keep current param selection
                     functionDropdown.selectedItem = currentItem
@@ -247,7 +246,7 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
         }
 
         @Suppress("unchecked_cast")
-        private inline fun <reified T> assignParam(index: Int, newValue: T) {
+        private fun <T> assignParam(index: Int, newValue: T) {
             (function?.parameters?.get(index) as SimulatorFunctionParameter<T>).value = newValue
         }
     }
