@@ -155,7 +155,6 @@ sealed interface SimulatorFunction {
 
     @Serializable
     class Ramp(
-
         override val name: String = "ramp",
         @Transient
         override val parameters: kotlin.collections.List<SimulatorFunctionParameter<out Any>> = listOf(
@@ -290,7 +289,6 @@ sealed interface SimulatorFunction {
     }
 }
 
-// @Serializable
 sealed class SimulatorFunctionParameter<T>(
     val name: String,
     val defaultValue: T,

@@ -18,6 +18,7 @@ class TagParser(tagProvider: NodeStructure) {
         while (nodeStack.isNotEmpty() && pathStack.isNotEmpty()) {
             val folder = nodeStack.removeLast()
             val relativePath = pathStack.removeLast()
+
             for (tag in folder.tags) {
                 if (tag.isFolder()) {
                     pathStack.addLast("$relativePath${tag.name}/")
@@ -81,6 +82,7 @@ class TagParser(tagProvider: NodeStructure) {
 
     private fun zipInstanceWithDefinition(struct: NodeStructure) { // struct is a UdtInstance
         val definitionOfInstance = udtPathsToStructures[struct.typeId]
+
         if (definitionOfInstance == null) {
             missingDefinitions.add(struct.typeId!!) // Nullity is checked previously
             return
@@ -208,7 +210,6 @@ class TagParser(tagProvider: NodeStructure) {
         }
 
         fun resolveDataType(struct: NodeStructure) {
-            require(struct.isOpcTag())
             if (struct.dataType.isBoundValue()) {
                 struct.dataType = resolveBoundValue(struct, struct.dataType)
             }
@@ -231,7 +232,6 @@ class TagParser(tagProvider: NodeStructure) {
                     findParentParameterValue(struct, boundParamName)
                 }
 
-                // While we can't find the param, go to parent UDT to see if it's there until all parents have been checked
                 boundStringValue = boundStringValue.replace(
                     oldValue = "{$boundParamName}",
                     newValue = boundParamValue,
