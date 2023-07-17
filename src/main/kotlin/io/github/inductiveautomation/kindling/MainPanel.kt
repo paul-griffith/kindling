@@ -130,6 +130,10 @@ class MainPanel(empty: Boolean) : JPanel(MigLayout("ins 6, fill")) {
         )
     }
 
+    init {
+        Charsets
+    }
+
     /**
      * Opens a path in a tool (blocking). In the event of any error, opens an 'Error' tab instead.
      */

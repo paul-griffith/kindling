@@ -352,7 +352,7 @@ inline fun <reified T : EventListener> EventListenerList.getAll(): Array<T> {
 /**
  * Constructs and immediately displays a JFrame of the given dimensions, centered on the screen.
  */
-inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Unit): JFrame {
+inline fun jFrame(title: String, width: Int, height: Int, visible: Boolean = true, block: JFrame.() -> Unit): JFrame {
     return JFrame(title).apply {
         setSize(width, height)
         iconImage = Kindling.frameIcon
@@ -362,7 +362,7 @@ inline fun jFrame(title: String, width: Int, height: Int, block: JFrame.() -> Un
 
         block()
 
-        isVisible = true
+        isVisible = visible
     }
 }
 

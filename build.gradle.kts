@@ -49,7 +49,6 @@ dependencies {
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
-    implementation(libs.kotlinreflect)
     implementation(libs.bundles.ia.transitive)
     implementation(libs.osthemedetector)
 

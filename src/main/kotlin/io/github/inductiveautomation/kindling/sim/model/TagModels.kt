@@ -3,6 +3,7 @@ package io.github.inductiveautomation.kindling.sim.model
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -14,36 +15,48 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 @Serializable
-data class TagProviderStructure(
-    val name: String?,
-    val tagType: String?,
-    val tags: List<NodeStructure>,
-)
-
-@Serializable
 data class NodeStructure(
     // Basic:
     val name: String,
 
     // Value
-    val valueSource: String? = null,
-    val dataType: String? = null,
-    val opcServer: String? = null,
-    var opcItemPath: JsonElement? = null, // Can be primitive or Object
+    var valueSource: String? = null,
+    var dataType: JsonElement? = null,
+    var opcServer: JsonElement? = null,
+    var opcItemPath: JsonElement? = null, // Can be primitive or Object if bound
 
     // Other
-    val tags: List<NodeStructure>?,
+    var tags: MutableList<NodeStructure> = mutableListOf(),
     @Serializable(with = UdtParameterListSerializer::class)
-    val parameters: ParameterList = emptyList(),
-    val tagType: String,
-    val typeId: String? = null,
-    val sourceTagPath: JsonElement? = null,
-)
+    var parameters: ParameterList = mutableListOf(),
+    var tagType: String,
+    var typeId: String? = null,
+    var sourceTagPath: JsonElement? = null,
+) {
+    @Transient
+    lateinit var parent: NodeStructure
+
+    init {
+        tags.forEach { tag ->
+            tag.parent = this
+        }
+    }
+
+    override fun toString(): String {
+        return "Name: $name, Type: $tagType, Parent: $typeId"
+    }
+
+    val isTagProvider: Boolean
+        get() = tagType == "Provider"
+}
 
 enum class TagDataType {
     Byte,
     Short,
     Integer,
+    Int2,
+    Int4,
+    Int8,
     Long,
     Float4,
     Float8,
@@ -51,10 +64,12 @@ enum class TagDataType {
     String,
     DateTime,
     Text,
+    Document,
+    StringArray,
     None,
 }
 
-typealias ParameterList = List<UdtParameter>
+typealias ParameterList = MutableList<UdtParameter>
 
 @Serializable
 data class UdtParameter(
@@ -63,7 +78,7 @@ data class UdtParameter(
     var value: JsonElement?,
 )
 
-class UdtParameterListSerializer : KSerializer<ParameterList> {
+object UdtParameterListSerializer : KSerializer<ParameterList> {
     private val delegateSerializer = MapSerializer(String.serializer(), JsonObject.serializer())
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -82,74 +97,7 @@ class UdtParameterListSerializer : KSerializer<ParameterList> {
     override fun deserialize(decoder: Decoder): ParameterList {
         val map = decoder.decodeSerializableValue(delegateSerializer)
         return map.entries.map { (key: String, value: JsonObject) ->
-            UdtParameter(key, value["dataType"].toString(), value["value"] as JsonPrimitive?)
-        }
+            UdtParameter(key, value["dataType"].toString(), value["value"])
+        }.toMutableList()
     }
 }
-
-/*
-@Serializable
-data class FullTagStructure(
-    // Basic:
-    val name: String,
-    val enabled: Boolean?,
-    val tagGroup: String?,
-
-    // Meta Data
-    val tooltip: String?,
-    val documentation: String?,
-
-    // Value
-    val valueSource: String?,
-    val dataType: String?,
-    val opcServer: String?,
-    val opcItemPath: JsonElement?, // Can be primitive or Object
-
-    // Numeric
-    val deadbandMode: String?,
-    val deadband: Double?,
-    val scaleMode: String?,
-    val rawLow: Double?,
-    val rawHigh: Double?,
-    val scaledLow: Double?,
-    val scaledHigh: Double?,
-    val clampMode: String?,
-    val engUnit: String?,
-    val engLow: Double?,
-    val engHigh: Double?,
-    val engLimitMode: String?,
-    val formatString: String?,
-
-    // Security
-    val readOnly: Boolean?,
-    val readPermissions: JsonObject?,
-    val writePermissions: JsonObject?,
-
-    // Scripting
-    val eventScripts: JsonArray?,
-
-    // Alarms
-    val alarms: JsonArray?,
-
-    // History
-    val historyEnabled: Boolean?,
-    val historyProvider: String?,
-    val historicalDeadbandStyle: String?,
-    val historicalDeadbandMode: String?,
-    val historicalDeadband: Double?,
-    val sampleMode: String?,
-    val historyMaxAge: Int?, // Max time between samples
-    val historyMaxAgeUnits: String?,
-    val historySampleRate: Int?,
-    val historySampleRateUnits: String?,
-
-    // Other
-    val tags: List<FullTagStructure>?,
-    val parameters: JsonObject?,
-    val tagType: String,
-    val typeId: String?,
-    val sourceTagPath: JsonElement?,
-) {
-    val isBrowsable = tags != null
-}
-*/

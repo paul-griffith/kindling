@@ -127,20 +127,29 @@ class TabStrip : FlatTabbedPane() {
         )
     }
 
-    private class LazyTab(supplier: () -> Component) : JPanel(BorderLayout()) {
-        private var initialized = false
+    open class LazyTab(supplier: () -> Component) : JPanel(BorderLayout()), PopupMenuCustomizer {
+        val component = lazy(supplier)
 
         init {
             addComponentListener(
                 object : ComponentAdapter() {
                     override fun componentShown(e: ComponentEvent) {
-                        if (!initialized) {
-                            add(supplier(), BorderLayout.CENTER)
-                            initialized = true
+                        if (!component.isInitialized()) {
+                            val actualComponent = component.value
+                            add(actualComponent, BorderLayout.CENTER)
                         }
                     }
                 },
             )
+        }
+
+        override fun customizePopupMenu(menu: JPopupMenu) {
+            if (component.isInitialized()) {
+                val actualComponent = component.value
+                if (actualComponent is PopupMenuCustomizer) {
+                    actualComponent.customizePopupMenu(menu)
+                }
+            }
         }
     }
 
