@@ -19,10 +19,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
@@ -178,11 +174,6 @@ private suspend fun HttpClient.checkFileAndUser(
     return Pair(response.status, response.bodyAsText().toBoolean())
 }
 
-fun checkFileAndUserBlocking(filename: String, username: String): Pair<HttpStatusCode, Boolean> =
-    runBlocking(Dispatchers.IO) {
-        uploadClient.checkFileAndUser(filename, username)
-    }
-
 suspend fun HttpClient.upload(model: TableModel, filename: String, username: String): Boolean {
     val httpResponse = post(UPLOAD_URL) {
         url {
@@ -195,51 +186,58 @@ suspend fun HttpClient.upload(model: TableModel, filename: String, username: Str
     return httpResponse.body<String>().toBoolean()
 }
 
-fun uploadBlocking(model: TableModel, filename: String, username: String): Boolean =
-    runBlocking(Dispatchers.IO) { uploadClient.upload(model, filename, username) }
-
 fun TableModel.uploadToWeb(filename: String) {
     val username = User.currentValue.ifEmpty {
         JOptionPane.showInputDialog(null, "Enter Username:\n")
     }
     if (!username.isNullOrEmpty()) {
-        User.currentValue = username
-        val responseData = checkFileAndUserBlocking(filename, username)
-        val uploadExists = responseData.second
-        val responseCode = responseData.first
-        if (responseCode.value in 200..299) {
-            if (!uploadExists || JOptionPane.showConfirmDialog(
-                    null,
-                    "The filename for this thread already exists in the database. Would you like to overwrite it?",
-                    "Filename Already Exists",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                ) == JOptionPane.YES_OPTION
-            ) {
-                val uploaded = uploadBlocking(this, filename, username)
-                if (uploaded) {
-                    JOptionPane.showMessageDialog(
-                        null,
-                        "Uploaded $filename successfully",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE,
-                    )
+        CoroutineScope(Dispatchers.IO).launch {
+            User.currentValue = username
+            val responseData = uploadClient.checkFileAndUser(filename, username)
+            val uploadExists = responseData.second
+            val responseCode = responseData.first
+
+            EDT_SCOPE.launch {
+                if (responseCode.value in 200..299) {
+                    if (!uploadExists || JOptionPane.showConfirmDialog(
+                            null,
+                            "The filename for this thread already exists in the database. Would you like to overwrite it?",
+                            "Filename Already Exists",
+                            JOptionPane.YES_NO_CANCEL_OPTION,
+                        ) == JOptionPane.YES_OPTION
+                    ) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val uploaded = uploadClient.upload(this@uploadToWeb, filename, username)
+
+                            EDT_SCOPE.launch {
+                                if (uploaded) {
+                                    JOptionPane.showMessageDialog(
+                                        null,
+                                        "Uploaded $filename successfully",
+                                        "Success",
+                                        JOptionPane.INFORMATION_MESSAGE,
+                                    )
+                                } else {
+                                    JOptionPane.showMessageDialog(
+                                        null,
+                                        "Failed to upload $filename",
+                                        "Error",
+                                        JOptionPane.ERROR_MESSAGE,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 } else {
+                    User.currentValue = ""
                     JOptionPane.showMessageDialog(
                         null,
-                        "Failed to upload $filename",
+                        "Failed to upload $filename.\nError response: $responseCode",
                         "Error",
                         JOptionPane.ERROR_MESSAGE,
                     )
                 }
             }
-        } else {
-            User.currentValue = ""
-            JOptionPane.showMessageDialog(
-                null,
-                "Failed to upload $filename.\nError response: $responseCode",
-                "Error",
-                JOptionPane.ERROR_MESSAGE,
-            )
         }
     }
 }
@@ -250,62 +248,73 @@ fun uploadMultipleToWeb(namesAndModels: List<Pair<String, TableModel>>) {
     val username = User.currentValue.ifEmpty {
         JOptionPane.showInputDialog(null, "Enter Username:\n")
     }
+
     if (!username.isNullOrEmpty()) {
-        User.currentValue
-        val responseData = fileNames.map { checkFileAndUserBlocking(it, username) }
+        User.currentValue = username
 
-        fun invalidCode(res: Pair<HttpStatusCode, Boolean>) = res.first.value !in 200..299
+        CoroutineScope(Dispatchers.IO).launch {
+            val responseData = fileNames.map { uploadClient.checkFileAndUser(it, username) }
 
-        if (responseData.any(::invalidCode)) {
-            User.currentValue = ""
-            val codes = responseData.joinToString("\n") { it.first.toString() }
-            JOptionPane.showMessageDialog(
-                null,
-                "Failed to upload. Received the following response codes:\n$codes",
-                "Error",
-                JOptionPane.ERROR_MESSAGE,
-            )
-        } else {
-            val indicesOfExisting = responseData.mapIndexedNotNull { index, (_, exists) ->
-                if (exists) index else null
-            }
+            fun invalidCode(res: Pair<HttpStatusCode, Boolean>) = res.first.value !in 200..299
 
-            val overwriteUploadList = indicesOfExisting.joinToString("\n") { i ->
-                val fileName = fileNames[i]
-                "${i + 1}: $fileName"
-            }
-
-            if (indicesOfExisting.isEmpty() || JOptionPane.showConfirmDialog(
-                    null,
-                    "The following filename(s) already exist in the database. Overwrite?\n$overwriteUploadList",
-                    "Filename Already Exists",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                ) == JOptionPane.YES_OPTION
-            ) {
-                val (uploadSuccess, uploadFailed) = namesAndModels.partition {
-                    uploadBlocking(it.second, it.first, username)
-                }
-
-                val failedFileNames = uploadFailed.map { it.first }
-
-                if (uploadSuccess.isNotEmpty()) {
-                    JOptionPane.showMessageDialog(
-                        null,
-                        "Uploaded ${uploadSuccess.size} file(s) successfully",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE,
-                    )
-                }
-                if (uploadFailed.isNotEmpty()) {
+            EDT_SCOPE.launch {
+                if (responseData.any(::invalidCode)) {
                     User.currentValue = ""
+                    val codes = responseData.joinToString("\n") { it.first.toString() }
                     JOptionPane.showMessageDialog(
                         null,
-                        "Failed to upload the following:\n${failedFileNames.joinToString("\n")}",
+                        "Failed to upload. Received the following response codes:\n$codes",
                         "Error",
                         JOptionPane.ERROR_MESSAGE,
                     )
+                } else {
+                    val indicesOfExisting = responseData.mapIndexedNotNull { index, (_, exists) ->
+                        if (exists) index else null
+                    }
+
+                    val overwriteUploadList = indicesOfExisting.joinToString("\n") { i ->
+                        val fileName = fileNames[i]
+                        "${i + 1}: $fileName"
+                    }
+
+                    if (indicesOfExisting.isEmpty() || JOptionPane.showConfirmDialog(
+                            null,
+                            "The following filename(s) already exist in the database. Overwrite?\n$overwriteUploadList",
+                            "Filename Already Exists",
+                            JOptionPane.YES_NO_CANCEL_OPTION,
+                        ) == JOptionPane.YES_OPTION
+                    ) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val (uploadSuccess, uploadFailed) = namesAndModels.partition {
+                                uploadClient.upload(it.second, it.first, username)
+                            }
+
+                            val failedFileNames = uploadFailed.map { it.first }
+
+                            EDT_SCOPE.launch {
+                                if (uploadSuccess.isNotEmpty()) {
+                                    JOptionPane.showMessageDialog(
+                                        null,
+                                        "Uploaded ${uploadSuccess.size} file(s) successfully",
+                                        "Success",
+                                        JOptionPane.INFORMATION_MESSAGE,
+                                    )
+                                }
+                                if (uploadFailed.isNotEmpty()) {
+                                    User.currentValue = ""
+                                    JOptionPane.showMessageDialog(
+                                        null,
+                                        "Failed to upload the following:\n${failedFileNames.joinToString("\n")}",
+                                        "Error",
+                                        JOptionPane.ERROR_MESSAGE,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
+
         }
     } else {
         User.currentValue = ""

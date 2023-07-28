@@ -17,6 +17,7 @@ import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
+import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.FloatableComponent
 import io.github.inductiveautomation.kindling.utils.TabStrip
 import io.github.inductiveautomation.kindling.utils.add
@@ -261,7 +262,7 @@ class SimulatorView(path: Path) : ToolPanel() {
             }
             setSize(300, 600)
             setLocationRelativeTo(null)
-            iconImage = Kindling.frameIcon
+            iconImages = Kindling.frameIcons
             defaultCloseOperation = HIDE_ON_CLOSE
         }
 
@@ -350,10 +351,21 @@ class SimulatorView(path: Path) : ToolPanel() {
 }
 
 object SimulatorViewer : Tool {
-    override val extensions = listOf("json")
     override val description = "Opens a tag export and parses to a device simulator builder."
     override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-tag.svg")
     override val title = "Tag Export (Device Sim)"
+    override val filter = FileFilter(
+        description = description,
+        predicate = { file ->
+            file.extension == "json" &&
+            "\"tagType\": \"Provider\"," in buildString {
+                file.bufferedReader().use { br ->
+                    repeat(10) { append(br.readLine()) }
+                }
+            }
+        },
+    )
+
     override fun open(path: Path): ToolPanel {
         return SimulatorView(path)
     }

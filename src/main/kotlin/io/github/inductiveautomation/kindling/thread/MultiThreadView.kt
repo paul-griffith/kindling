@@ -16,6 +16,7 @@ import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.core.add
 import io.github.inductiveautomation.kindling.thread.model.MachineLearningModel
+import io.github.inductiveautomation.kindling.thread.model.MachineLearningModel.evaluator
 import io.github.inductiveautomation.kindling.thread.model.Thread
 import io.github.inductiveautomation.kindling.thread.model.ThreadColumnIdentifier
 import io.github.inductiveautomation.kindling.thread.model.ThreadDump
@@ -45,8 +46,6 @@ import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
 import org.jdesktop.swingx.table.TableColumnExt
-import org.jpmml.evaluator.LoadingModelEvaluatorBuilder
-import org.jpmml.evaluator.ModelEvaluator
 import org.jpmml.evaluator.ProbabilityDistribution
 import java.awt.Color
 import java.awt.Desktop
@@ -101,16 +100,6 @@ class MultiThreadView(
                 updateData()
             }
         }
-
-    private val evaluator: ModelEvaluator<*> = LoadingModelEvaluatorBuilder().run {
-        val pathToModel = MachineLearningModel.pmmlFilePath
-        try {
-            javaClass.getResourceAsStream(pathToModel).use(this::load)
-        } catch(e: Exception) {
-            Paths.get(pathToModel).inputStream().use(this::load)
-        }
-        build()
-    }
 
     private var threadsOfInterest: List<Thread> = emptyList()
 
@@ -198,9 +187,9 @@ class MultiThreadView(
             }
 
             actionMap.apply {
-                put("${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks", clearAllMarks)
+                put("$COLUMN_CONTROL_MARKER}.clearAllMarks", clearAllMarks)
                 put(
-                    "${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks",
+                    "${COLUMN_CONTROL_MARKER}.clearAllMarks",
                     Action(name = "Clear All Marks") {
                         for (lifespan in model.threadData) {
                             lifespan.forEach { thread ->
@@ -210,7 +199,7 @@ class MultiThreadView(
                     },
                 )
                 put(
-                    "${ColumnControlButton.COLUMN_CONTROL_MARKER}.markThreadsOfInterest",
+                    "${COLUMN_CONTROL_MARKER}.markThreadsOfInterest",
                     Action("Mark Threads of Interest") {
                         markThreadsOfInterest()
                     }
@@ -256,9 +245,7 @@ class MultiThreadView(
     }
 
     init {
-        BACKGROUND.launch {
-            updateThreadsOfInterest()
-        }
+        updateThreadsOfInterest()
     }
 
     private var comparison = ThreadComparisonPane(threadDumps.size, threadDumps[0].version)
@@ -638,7 +625,21 @@ data object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
-    override val filter = FileFilter(description, listOf("json", "txt"))
+    override val filter = FileFilter(
+        description = description,
+        predicate = { file ->
+            file.extension in listOf("json", "txt") &&
+            run {
+                val firstTwoLines =  buildString {
+                    file.bufferedReader().use { br ->
+                        append(br.readLine())
+                        append(br.readLine())
+                    }
+                }
+                "Ignition" in firstTwoLines || "version" in firstTwoLines
+            }
+        }
+    )
 
     override val respectsEncoding: Boolean = true
     override fun open(path: Path): ToolPanel = open(listOf(path))

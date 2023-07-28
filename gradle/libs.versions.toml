@@ -30,6 +30,7 @@ client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor"
 client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 client-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 jpmml = { group = "org.jpmml", name = "pmml-evaluator-metro", version = "1.6.4" }
+jsvg = { group = "com.github.weisj", name = "jsvg", version = "1.0.0" }
 
 # build
 jsoup = { group = "org.jsoup", name = "jsoup", version = "1.16.1" }

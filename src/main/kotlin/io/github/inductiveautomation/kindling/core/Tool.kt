@@ -16,6 +16,7 @@ interface Tool {
     val title: String
     val description: String
     val icon: FlatSVGIcon
+    val extensions: List<String>
     val respectsEncoding: Boolean
         get() = false
 

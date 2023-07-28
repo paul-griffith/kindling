@@ -4,7 +4,6 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
-import io.github.inductiveautomation.kindling.utils.transferTo
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider

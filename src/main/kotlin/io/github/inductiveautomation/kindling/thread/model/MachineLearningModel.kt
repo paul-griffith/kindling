@@ -1,17 +1,17 @@
 package io.github.inductiveautomation.kindling.thread.model
 
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.BETA_VERSION
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.enableMachineLearning
 import io.ktor.client.HttpClient
 import io.ktor.client.request.request
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import org.jpmml.evaluator.LoadingModelEvaluatorBuilder
+import org.jpmml.evaluator.ModelEvaluator
 import java.awt.Desktop
-import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
@@ -20,6 +20,7 @@ import javax.swing.ImageIcon
 import javax.swing.JFrame
 import javax.swing.JOptionPane
 import kotlin.io.path.bufferedWriter
+import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
 object MachineLearningModel {
@@ -36,29 +37,12 @@ object MachineLearningModel {
             val response: HttpResponse = client.request(VERSION_ENDPOINT) {
                 method = HttpMethod.Get
                 url {
-                    parameters.append("version", "1.1.0")
+                    parameters.append("version", BETA_VERSION)
                 }
             }
             response.bodyAsText()
         }
     }
-
-    init {
-        if (enableMachineLearning.currentValue) verifyPMML()
-    }
-
-    val pmmlFilePath: String
-        get() {
-            val folder = if (cacheFilePath.toFile().exists()) {
-                cacheFilePath
-            } else {
-                Paths.get("src/main/resources")
-            }
-
-            return folder.toFile().listFiles()?.findLast { file ->
-                file.isFile && file.name.contains(PMML_FILE_PREFIX)
-            }!!.absolutePath
-        }
 
     private val cacheFilePath = run {
         val userHome = System.getProperty("user.home")
@@ -66,15 +50,34 @@ object MachineLearningModel {
         Paths.get(userHome).resolve(pmmlRelativePath)
     }
 
-    private val oldPMMLVersion = run {
-        var folder = cacheFilePath.toFile()
-        if (!folder.exists()) { // If no cache file already, get bundled version
-            folder = File("src/main/resources")
+    private val pmmlFilePath: String
+        get() = run {
+            val folder = if (cacheFilePath.toFile().exists()) {
+                cacheFilePath
+            } else {
+                Paths.get("src/main/resources")
+            }
+
+            folder.toFile().listFiles()?.findLast { file ->
+                file.isFile && file.name.contains(PMML_FILE_PREFIX)
+            }!!.absolutePath
+    }
+
+    private val oldPMMLVersion = pmmlFilePath.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
+
+    init {
+        if (enableMachineLearning.currentValue) verifyPMML()
+    }
+
+    val evaluator: ModelEvaluator<*> by lazy {
+        LoadingModelEvaluatorBuilder().run {
+            try {
+                javaClass.getResourceAsStream(pmmlFilePath).use(this::load)
+            } catch(e: Exception) { // No pmml found in cache - fallback to jar
+                Paths.get(pmmlFilePath).inputStream().use(this::load)
+            }
+            build()
         }
-        val lastFileName = folder.listFiles()?.findLast { file ->
-            file.isFile && file.name.contains(PMML_FILE_PREFIX)
-        }?.toString()
-        lastFileName?.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
     }
 
     fun verifyPMML() {
@@ -127,9 +130,7 @@ object MachineLearningModel {
                 val response: HttpResponse = client.request(SUPPORT_APPS_GATEWAY_ENDPOINT) {
                     method = HttpMethod.Get
                 }
-                withContext(Dispatchers.IO) {
-                    Files.createDirectories(cacheFilePath)
-                }
+                Files.createDirectories(cacheFilePath)
                 val filename = "$PMML_FILE_PREFIX$currentPMMLVersion.pmml"
                 cacheFilePath.resolve(filename).bufferedWriter().use { out ->
                     out.write(response.bodyAsText())
@@ -146,7 +147,7 @@ object MachineLearningModel {
             title,
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
-            ImageIcon(Kindling.frameIcon),
+            ImageIcon(Kindling.frameIcons.first()),
             options,
             options[1]
         )

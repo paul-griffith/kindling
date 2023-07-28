@@ -12,6 +12,7 @@ import io.github.inductiveautomation.kindling.utils.CharsetSerializer
 import io.github.inductiveautomation.kindling.utils.EmptyBorder
 import io.github.inductiveautomation.kindling.utils.PathSerializer
 import io.github.inductiveautomation.kindling.utils.PathSerializer.serializedForm
+import io.github.inductiveautomation.kindling.utils.Properties
 import io.github.inductiveautomation.kindling.utils.ThemeSerializer
 import io.github.inductiveautomation.kindling.utils.ToolSerializer
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
