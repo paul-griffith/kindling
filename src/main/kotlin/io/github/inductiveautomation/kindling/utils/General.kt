@@ -8,9 +8,15 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -140,13 +146,6 @@ operator fun MatchGroupCollection.getValue(thisRef: Any?, property: KProperty<*>
     return requireNotNull(get(property.name))
 }
 
-val TableModel.rowIndices get() = 0 until rowCount
-val TableModel.columnIndices get() = 0 until columnCount
-
-fun TableModel.exportToCSV(file: File) {
-    file.printWriter().use(::toCSV)
-}
-
 fun TableModel.toCSV(appendable: Appendable) {
     (0 until columnCount).joinTo(buffer = appendable, separator = ",") { col ->
         getColumnName(col)
@@ -238,34 +237,6 @@ fun TableModel.uploadToWeb(filename: String) {
             )
         }
     }
-}
-
-fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
-    workbook {
-        sheet("Sheet 1") { // TODO: Some way to pipe in a more useful sheet name (or multiple sheets?)
-            row {
-                for (col in columnIndices) {
-                    cell(getColumnName(col))
-                }
-            }
-            for (row in rowIndices) {
-                row {
-                    for (col in columnIndices) {
-                        when (val value = getValueAt(row, col)) {
-                            is Double -> cell(
-                                value,
-                                createCellStyle {
-                                    dataFormat = xssfWorkbook.createDataFormat().getFormat("0.00")
-                                },
-                            )
-
-                            else -> cell(value ?: "")
-                        }
-                    }
-                }
-            }
-        }
-    }.xssfWorkbook.write(fos)
 }
 
 inline fun <reified S> loadService(): ServiceLoader<S> {

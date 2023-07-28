@@ -8,6 +8,7 @@ import io.github.inductiveautomation.kindling.utils.FloatableComponent
 import io.github.inductiveautomation.kindling.utils.PopupMenuCustomizer
 import io.github.inductiveautomation.kindling.utils.exportToCSV
 import io.github.inductiveautomation.kindling.utils.exportToXLSX
+import io.github.inductiveautomation.kindling.utils.uploadToWeb
 import net.miginfocom.swing.MigLayout
 import java.io.File
 import javax.swing.Icon

@@ -14,6 +14,7 @@ import io.github.inductiveautomation.kindling.core.PreferenceCategory
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.core.add
+import io.github.inductiveautomation.kindling.thread.model.MachineLearningModel
 import io.github.inductiveautomation.kindling.thread.model.Thread
 import io.github.inductiveautomation.kindling.thread.model.ThreadColumnIdentifier
 import io.github.inductiveautomation.kindling.thread.model.ThreadDump
@@ -412,9 +413,10 @@ class MultiThreadView(
                     }
                 }
             }
-            addThreadMarkedListener {
-                mainTable.repaint()
-            }
+        }
+
+        comparison.addThreadMarkedListener {
+            mainTable.repaint()
         }
 
         val sortButtons = ButtonGroup()

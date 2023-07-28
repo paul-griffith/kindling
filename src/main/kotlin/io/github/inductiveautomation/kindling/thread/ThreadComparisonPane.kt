@@ -155,27 +155,6 @@ class ThreadComparisonPane(
         }
     }
 
-    private class ComparisonEditorKit : HTMLEditorKit() {
-        init {
-            styleSheet.apply {
-                //language=CSS
-                addRule(
-                    """
-                b {
-                    font-size: larger;
-                }
-                pre { 
-                    font-size: 10px; 
-                }
-                object { 
-                    padding-left: 16px; 
-                }
-                    """.trimIndent(),
-                )
-            }
-        }
-    }
-
     private class HeaderPanel : JPanel(MigLayout("fill, ins 3")) {
         private val nameLabel = StyledLabel().apply {
             isLineWrap = false

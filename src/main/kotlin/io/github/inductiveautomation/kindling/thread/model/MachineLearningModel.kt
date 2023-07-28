@@ -1,6 +1,6 @@
-package io.github.paulgriffith.kindling.thread.model
+package io.github.inductiveautomation.kindling.thread.model
 
-import io.github.paulgriffith.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling
 import io.ktor.client.HttpClient
 import io.ktor.client.request.request
 import io.ktor.client.statement.HttpResponse
@@ -24,10 +24,10 @@ import kotlin.io.path.name
 object MachineLearningModel {
     private var needsUpdate = true
     var enabled = false
-    private const val pmmlFileNamePrefix = "thread_machine_learning_"
-    private const val supportAppsGatewayEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
-    private const val versionEndpoint = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
-    private const val kindlingDownloadUrl = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
+    private const val PMML_FILE_PREFIX = "thread_machine_learning_"
+    private const val SUPPORT_APPS_GATEWAY_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
+    private const val VERSION_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
+    private const val KINDLING_DOWNLOAD_URL = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
 
     val pmmlFilePath: String
         get() {
@@ -37,8 +37,8 @@ object MachineLearningModel {
                 Paths.get("src/main/resources")
             }
 
-            return folder.toFile().listFiles().findLast { file ->
-                file.isFile && file.name.contains(pmmlFileNamePrefix)
+            return folder.toFile().listFiles()?.findLast { file ->
+                file.isFile && file.name.contains(PMML_FILE_PREFIX)
             }!!.absolutePath
         }
 
@@ -51,10 +51,10 @@ object MachineLearningModel {
     private val currentPMMLVersion by lazy {
         val client = HttpClient()
         runBlocking {
-            val response: HttpResponse = client.request(versionEndpoint) {
+            val response: HttpResponse = client.request(VERSION_ENDPOINT) {
                 method = HttpMethod.Get
                 url {
-                    parameters.append("version", Kindling.VERSION)
+                    parameters.append("version", "1.1.0")
                 }
             }
             response.bodyAsText()
@@ -66,8 +66,8 @@ object MachineLearningModel {
         if (!folder.exists()) { // If no cache file already, get bundled version
             folder = File("src/main/resources")
         }
-        val lastFileName = folder.listFiles().findLast {file ->
-            file.isFile && file.name.contains(pmmlFileNamePrefix)
+        val lastFileName = folder.listFiles()?.findLast { file ->
+            file.isFile && file.name.contains(PMML_FILE_PREFIX)
         }?.toString()
         lastFileName?.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
     }
@@ -81,7 +81,7 @@ object MachineLearningModel {
                     val msg = "There is a new version of Kindling Beta available. Would you like to upgrade?"
                     if (pmmlPopup(title, msg, arrayOf("No", "Upgrade Now!")) == 1) {
                         val desk = Desktop.getDesktop()
-                        desk.browse(URI(kindlingDownloadUrl))
+                        desk.browse(URI(KINDLING_DOWNLOAD_URL))
                     }
                 }
                 else -> {
@@ -101,7 +101,7 @@ object MachineLearningModel {
         val listOfFiles = folder.listFiles()
         if (listOfFiles != null && currentPMMLVersion != "") {
             val filteredList = listOfFiles.filter { file ->
-                file.isFile && pmmlFileNamePrefix in file.name
+                file.isFile && PMML_FILE_PREFIX in file.name
             }
             filteredList.forEach { file ->
                 if (file.name.substringBeforeLast(".pmml").substringAfterLast("_") != currentPMMLVersion) {
@@ -119,13 +119,13 @@ object MachineLearningModel {
         if (cacheFilePath.name.isNotEmpty()){
             val client = HttpClient()
             runBlocking {
-                val response: HttpResponse = client.request(supportAppsGatewayEndpoint) {
+                val response: HttpResponse = client.request(SUPPORT_APPS_GATEWAY_ENDPOINT) {
                     method = HttpMethod.Get
                 }
                 withContext(Dispatchers.IO) {
                     Files.createDirectories(cacheFilePath)
                 }
-                val filename = "$pmmlFileNamePrefix$currentPMMLVersion.pmml"
+                val filename = "$PMML_FILE_PREFIX$currentPMMLVersion.pmml"
                 cacheFilePath.resolve(filename).bufferedWriter().use { out ->
                     out.write(response.bodyAsText())
                 }
