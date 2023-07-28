@@ -2,7 +2,7 @@ package io.github.inductiveautomation.kindling.utils
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatScrollPane
-import com.jidesoft.swing.ListSearchable
+import com.formdev.flatlaf.util.SystemInfo
 import com.jidesoft.swing.StyledLabel
 import com.jidesoft.swing.StyledLabelBuilder
 import io.github.evanrupert.excelkt.workbook
@@ -22,6 +22,8 @@ import org.jdesktop.swingx.sort.SortController
 import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Color
 import java.awt.Component
+import java.awt.Container
+import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -41,7 +43,11 @@ import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.JTree
 import javax.swing.ListCellRenderer
+import javax.swing.SortOrder.ASCENDING
+import javax.swing.SortOrder.DESCENDING
+import javax.swing.SortOrder.UNSORTED
 import javax.swing.UIManager
+import javax.swing.border.EmptyBorder
 import javax.swing.event.EventListenerList
 import javax.swing.filechooser.FileFilter
 import javax.swing.plaf.basic.BasicComboBoxRenderer
@@ -52,6 +58,7 @@ import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreeNode
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
+import kotlin.time.Duration.Companion.milliseconds
 
 typealias StringProvider<T> = (T?) -> String?
 typealias IconProvider<T> = (T?) -> Icon?
@@ -135,8 +142,12 @@ inline fun <reified T> listCellRenderer(crossinline customize: JLabel.(list: JLi
             focused: Boolean,
         ): Component {
             return super.getListCellRendererComponent(list, value, index, selected, focused).apply {
-                if (value is T) {
-                    customize.invoke(this as JLabel, list, value, index, selected, focused)
+                try {
+                    if (value is T) {
+                        customize.invoke(this as JLabel, list, value, index, selected, focused)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
@@ -203,18 +214,6 @@ fun FlatSVGIcon.derive(colorer: (Color) -> Color): FlatSVGIcon {
     }
 }
 
-fun JList<*>.installSearchable(setup: ListSearchable.() -> Unit, conversion: (Any?) -> String): ListSearchable {
-    return object : ListSearchable(this) {
-        init {
-            setup()
-        }
-
-        override fun convertElementToString(element: Any?): String {
-            return element.let(conversion)
-        }
-    }
-}
-
 class NoSelectionModel : DefaultListSelectionModel() {
     override fun setSelectionInterval(index0: Int, index1: Int) = Unit
     override fun addSelectionInterval(index0: Int, index1: Int) = Unit
@@ -239,6 +238,12 @@ class ReifiedJXTable<T : TableModel>(
 ) : JXTable(model) {
     private val setup = true
 
+    private val packLater: () -> Unit = debounce(
+        waitTime = 500.milliseconds,
+        coroutineScope = EDT_SCOPE,
+        destinationFunction = ::packAll,
+    )
+
     init {
         if (columns != null) {
             columnFactory = columns.toColumnFactory()
@@ -251,6 +256,8 @@ class ReifiedJXTable<T : TableModel>(
             getTooltip = { it },
         )
 
+        setSortOrderCycle(ASCENDING, DESCENDING, UNSORTED)
+
         // TODO header name as tooltip without breaking sorting
 
         addHighlighter(
@@ -259,12 +266,12 @@ class ReifiedJXTable<T : TableModel>(
             },
         )
 
-        packAll()
+        packLater()
         actionMap.remove("find")
     }
 
     override fun createDefaultColumnControl(): JComponent {
-        return ColumnControlButton(this, FlatSVGIcon("icons/bx-column.svg").derive(0.5F))
+        return ColumnControlButton(this, FlatSVGIcon("icons/bx-column.svg").derive(0.8F))
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -279,13 +286,23 @@ class ReifiedJXTable<T : TableModel>(
 
         val sortOrder = if (sortedColumn >= 0) (rowSorter as SortController<*>).getSortOrder(sortedColumn) else null
 
+        val previousColumnSizes = IntArray(columnCount) { i ->
+            getColumnExt(i).preferredWidth
+        }
+
         super.setModel(model)
 
         if (sortOrder != null && sortedColumnIsVisible) {
             setSortOrder(sortedColumn, sortOrder)
         }
         if (setup) {
-            packAll()
+            for (index in 0 until columnCount) {
+                val previousSize = previousColumnSizes.getOrNull(index)
+                if (previousSize != null) {
+                    getColumnExt(index).preferredWidth = previousSize
+                }
+            }
+            packLater()
         }
     }
 
@@ -360,9 +377,17 @@ inline fun jFrame(
     width: Int,
     height: Int,
     initiallyVisible: Boolean = true,
+    embedContentIntoTitleBar: Boolean = false,
     block: JFrame.() -> Unit,
 ) = JFrame(title).apply {
     setSize(width, height)
+
+    if (embedContentIntoTitleBar && SystemInfo.isMacFullWindowContentSupported) {
+        rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
+        rootPane.putClientProperty("apple.awt.fullWindowContent", true)
+        rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
+    }
+
     iconImage = frameIcon
     defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
 
@@ -394,6 +419,16 @@ inline fun <reified T> JComboBox<T>.configureCellRenderer(
 inline fun StyledLabel(block: StyledLabelBuilder.() -> Unit): StyledLabel {
     return StyledLabelBuilder().apply(block).createLabel()
 }
+
+inline fun StyledLabel.style(block: StyledLabelBuilder.() -> Unit) {
+    StyledLabelBuilder().apply {
+        block()
+        clearStyleRanges()
+        configure(this@style)
+    }
+}
+
+fun EmptyBorder(): EmptyBorder = EmptyBorder(0, 0, 0, 0)
 
 val TableModel.rowIndices get() = 0 until rowCount
 val TableModel.columnIndices get() = 0 until columnCount
@@ -440,3 +475,15 @@ fun TableModel.exportToXLSX(file: File) = file.outputStream().use { fos ->
         }
     }.xssfWorkbook.write(fos)
 }
+
+fun Component.traverseChildren(): Sequence<Component> = sequence {
+    if (this@traverseChildren is Container) {
+        val childComponents = synchronized(treeLock) { components.copyOf() }
+        for (component in childComponents) {
+            yield(component)
+            yieldAll(component.traverseChildren())
+        }
+    }
+}
+
+val menuShortcutKeyMaskEx = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx

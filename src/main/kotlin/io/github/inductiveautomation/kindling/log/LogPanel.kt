@@ -1,27 +1,34 @@
 package io.github.inductiveautomation.kindling.log
 
+import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import com.formdev.flatlaf.ui.FlatScrollBarUI
 import io.github.inductiveautomation.kindling.core.Detail.BodyLine
 import io.github.inductiveautomation.kindling.core.DetailsPane
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.Debug
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.HyperlinkStrategy
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.ShowFullLoggerNames
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.UseHyperlinks
 import io.github.inductiveautomation.kindling.core.LinkHandlingStrategy
+import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
-import io.github.inductiveautomation.kindling.log.LogViewer.SelectedTimeZone
 import io.github.inductiveautomation.kindling.log.LogViewer.ShowDensity
+import io.github.inductiveautomation.kindling.log.LogViewer.TimeStampFormatter
+import io.github.inductiveautomation.kindling.utils.Action
+import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.MajorVersion
 import io.github.inductiveautomation.kindling.utils.ReifiedJXTable
+import io.github.inductiveautomation.kindling.utils.attachPopupMenu
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
-import io.github.inductiveautomation.kindling.utils.getValue
+import io.github.inductiveautomation.kindling.utils.isSortedBy
 import io.github.inductiveautomation.kindling.utils.toBodyLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
+import org.jdesktop.swingx.table.ColumnControlButton
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -30,15 +37,16 @@ import java.awt.RenderingHints
 import java.awt.geom.AffineTransform
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.Temporal
-import java.time.temporal.TemporalUnit
+import java.util.EventListener
+import java.util.Vector
+import javax.swing.AbstractAction
 import javax.swing.Icon
+import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JScrollBar
 import javax.swing.JSplitPane
 import javax.swing.ListSelectionModel
@@ -50,21 +58,36 @@ import kotlin.properties.Delegates
 import io.github.inductiveautomation.kindling.core.Detail as DetailEvent
 
 class LogPanel(
+    /**
+     * Pass a **sorted** list of LogEvents, in ascending order.
+     */
     private val rawData: List<LogEvent>,
 ) : ToolPanel("ins 0, fill, hidemode 3") {
-    private val totalRows: Int = rawData.size
+    init {
+        if (rawData.isEmpty()) {
+            throw ToolOpeningException("Opening an empty log file is pointless")
+        }
+        if (!rawData.isSortedBy(LogEvent::timestamp)) {
+            throw ToolOpeningException("Input data must be sorted by timestamp, ascending")
+        }
+    }
 
-    var dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS")
-        .withZone(ZoneId.systemDefault())
+    private val totalRows: Int = rawData.size
 
     private val densityDisplay = GroupingScrollBar()
 
-    val header = Header(totalRows)
+    private val header = Header(totalRows)
+
+    private val columnList = if (rawData.first() is SystemLogEvent) {
+        SystemLogColumns
+    } else {
+        WrapperLogColumns
+    }
 
     val table = run {
         val initialModel = createModel(rawData)
-        ReifiedJXTable(initialModel, initialModel.columns).apply {
-            setSortOrder("Timestamp", SortOrder.ASCENDING)
+        ReifiedJXTable(initialModel, columnList).apply {
+            setSortOrder(columnList[columnList.Timestamp], SortOrder.ASCENDING)
         }
     }
 
@@ -72,15 +95,16 @@ class LogPanel(
         verticalScrollBar = densityDisplay
     }
 
-    private val details = DetailsPane()
-    private val sidebar = LoggerNamesPanel(rawData)
+    private val sidebar = Sidebar(rawData)
 
-    private val filters: List<(LogEvent) -> Boolean> = buildList {
+    private val details = DetailsPane()
+
+    private val filters: List<LogFilter> = buildList {
+        for (panel in sidebar.filterPanels) {
+            add(panel)
+        }
         add { event ->
-            event.logger in sidebar.list.checkBoxListSelectedIndices
-                .map { sidebar.list.model.getElementAt(it) }
-                .filterIsInstance<LoggerName>()
-                .mapTo(mutableSetOf()) { it.name }
+            !header.showOnlyMarked.selected || event.marked
         }
         add { event ->
             val text = header.search.text
@@ -88,17 +112,12 @@ class LogPanel(
                 true
             } else {
                 when (event) {
-                    is SystemLogsEvent -> {
-                        text in event.message ||
-                            event.logger.contains(text, ignoreCase = true) ||
-                            event.thread.contains(text, ignoreCase = true) ||
-                            event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
+                    is SystemLogEvent -> {
+                        text in event.message || event.logger.contains(text, ignoreCase = true) || event.thread.contains(text, ignoreCase = true) || event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
                     }
 
                     is WrapperLogEvent -> {
-                        text in event.message ||
-                            event.logger.contains(text, ignoreCase = true) ||
-                            event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
+                        text in event.message || event.logger.contains(text, ignoreCase = true) || event.stacktrace.any { stacktrace -> stacktrace.contains(text, ignoreCase = true) }
                     }
                 }
             }
@@ -107,9 +126,19 @@ class LogPanel(
 
     private fun updateData() {
         BACKGROUND.launch {
-            val filteredData = rawData.filter { event ->
-                filters.all { filter -> filter(event) }
+            val filteredData = if (Debug.currentValue) {
+                // use a less efficient, but more debuggable, filtering sequence
+                filters.fold(rawData) { acc, logFilter ->
+                    acc.filter(logFilter::filter).also {
+                        println("${it.size} left after $logFilter")
+                    }
+                }
+            } else {
+                rawData.filter { event ->
+                    filters.all { filter -> filter.filter(event) }
+                }
             }
+
             EDT_SCOPE.launch {
                 table.model = createModel(filteredData)
             }
@@ -117,11 +146,12 @@ class LogPanel(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun createModel(rawData: List<LogEvent>) = when (rawData.firstOrNull()) {
-        is WrapperLogEvent -> LogsModel(rawData as List<WrapperLogEvent>, WrapperLogColumns(this))
-        is SystemLogsEvent -> LogsModel(rawData as List<SystemLogsEvent>, SystemLogsColumns(this))
-        else -> LogsModel(rawData as List<WrapperLogEvent>, WrapperLogColumns(this))
+    private fun createModel(rawData: List<LogEvent>): LogsModel<out LogEvent> = when (columnList) {
+        is WrapperLogColumns -> LogsModel(rawData as List<WrapperLogEvent>, columnList)
+        is SystemLogColumns -> LogsModel(rawData as List<SystemLogEvent>, columnList)
     }
+
+    override val icon: Icon? = null
 
     init {
         add(header, "wrap, growx, spanx 2")
@@ -137,82 +167,132 @@ class LogPanel(
                     resizeWeight = 0.6
                 },
             ).apply {
+                isOneTouchExpandable = true
                 resizeWeight = 0.1
             },
             "push, grow",
         )
 
-        table.selectionModel.addListSelectionListener { selectionEvent ->
-            if (!selectionEvent.valueIsAdjusting) {
-                table.selectionModel.updateDetails()
+        table.apply {
+            selectionModel.addListSelectionListener { selectionEvent ->
+                if (!selectionEvent.valueIsAdjusting) {
+                    selectionModel.updateDetails()
+                }
+            }
+            addPropertyChangeListener("model") {
+                header.displayedRows = model.rowCount
+            }
+
+            val clearAllMarks = Action("Clear all marks") {
+                model.markRows { false }
+            }
+            actionMap.put(
+                "${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks",
+                clearAllMarks,
+            )
+            attachPopupMenu { mouseEvent ->
+                val rowAtPoint = rowAtPoint(mouseEvent.point)
+                if (rowAtPoint != -1) {
+                    addRowSelectionInterval(rowAtPoint, rowAtPoint)
+                }
+                val colAtPoint = columnAtPoint(mouseEvent.point)
+                if (colAtPoint != -1) {
+                    JPopupMenu().apply {
+                        val column = model.columns[convertColumnIndexToModel(colAtPoint)]
+                        val event = model[convertRowIndexToModel(rowAtPoint)]
+                        for (filterPanel in sidebar.filterPanels) {
+                            filterPanel.customizePopupMenu(this, column, event)
+                        }
+
+                        if (colAtPoint == model.markIndex) {
+                            add(clearAllMarks)
+                        }
+
+                        if (column == SystemLogColumns.Message || column == WrapperLogColumns.Message) {
+                            add(
+                                Action("Mark all with same message") {
+                                    model.markRows { row ->
+                                        (row.message == event.message).takeIf { it }
+                                    }
+                                },
+                            )
+                        }
+
+                        if (event.stacktrace.isNotEmpty()) {
+                            add(
+                                Action("Mark all with same stacktrace") {
+                                    model.markRows { row ->
+                                        (row.stacktrace == event.stacktrace).takeIf { it }
+                                    }
+                                },
+                            )
+                        }
+
+                        if (column == SystemLogColumns.Thread && event is SystemLogEvent) {
+                            add(
+                                Action("Mark all ${event.thread} events") {
+                                    model.markRows { row ->
+                                        ((row as SystemLogEvent).thread == event.thread).takeIf { it }
+                                    }
+                                },
+                            )
+                        }
+                    }.takeIf { it.componentCount > 0 }
+                } else {
+                    null
+                }
             }
         }
 
-        table.addPropertyChangeListener("model") {
-            header.displayedRows = table.model.rowCount
-        }
-
-        sidebar.list.checkBoxListSelectionModel.addListSelectionListener {
-            if (!it.valueIsAdjusting) {
+        header.apply {
+            search.addActionListener {
                 updateData()
             }
+            version.addActionListener {
+                table.selectionModel.updateDetails()
+            }
+            showOnlyMarked.addPropertyChangeListener { e ->
+                if (e.propertyName == AbstractAction.SELECTED_KEY) {
+                    updateData()
+                }
+            }
         }
 
-        header.search.addActionListener { updateData() }
-
-        header.version.addActionListener {
-            table.selectionModel.updateDetails()
-        }
-
-        SelectedTimeZone.addChangeListener { zoneId ->
-            dateFormatter = dateFormatter.withZone(zoneId)
+        ShowFullLoggerNames.addChangeListener {
             table.model.fireTableDataChanged()
-        }
-
-        ShowFullLoggerNames.addChangeListener { newValue ->
-            table.model.fireTableDataChanged()
-            sidebar.list.isShowFullLoggerName = newValue
         }
 
         HyperlinkStrategy.addChangeListener {
             // if the link strategy changes, we need to rebuild all the hyperlinks
             table.selectionModel.updateDetails()
         }
+
+        LogViewer.SelectedTimeZone.addChangeListener {
+            table.model.fireTableDataChanged()
+        }
     }
 
     private fun ListSelectionModel.updateDetails() {
-        details.events = selectedIndices
-            .filter { isSelectedIndex(it) }
-            .map { table.convertRowIndexToModel(it) }
-            .map { row -> table.model[row] }
-            .map { event ->
-                when (event) {
-                    is SystemLogsEvent -> DetailEvent(
-                        title = "${dateFormatter.format(event.timestamp)} ${event.thread}",
-                        message = event.message,
-                        body = event.stacktrace.map { element ->
-                            if (UseHyperlinks.currentValue) {
-                                element.toBodyLine((header.version.selectedItem as MajorVersion).version + ".0")
-                            } else {
-                                BodyLine(element)
-                            }
-                        },
-                        details = event.mdc,
-                    )
-
-                    is WrapperLogEvent -> DetailEvent(
-                        title = dateFormatter.format(event.timestamp),
-                        message = event.message,
-                        body = event.stacktrace.map { element ->
-                            if (UseHyperlinks.currentValue) {
-                                element.toBodyLine((header.version.selectedItem as MajorVersion).version + ".0")
-                            } else {
-                                BodyLine(element)
-                            }
-                        },
-                    )
-                }
-            }
+        details.events = selectedIndices.filter { isSelectedIndex(it) }.map { table.convertRowIndexToModel(it) }.map { row -> table.model[row] }.map { event ->
+            DetailEvent(
+                title = when (event) {
+                    is SystemLogEvent -> "${TimeStampFormatter.format(event.timestamp)} ${event.thread}"
+                    else -> TimeStampFormatter.format(event.timestamp)
+                },
+                message = event.message,
+                body = event.stacktrace.map { element ->
+                    if (UseHyperlinks.currentValue) {
+                        element.toBodyLine((header.version.selectedItem as MajorVersion).version + ".0")
+                    } else {
+                        BodyLine(element)
+                    }
+                },
+                details = when (event) {
+                    is SystemLogEvent -> event.mdc.associate { (key, value) -> key to value }
+                    is WrapperLogEvent -> emptyMap()
+                },
+            )
+        }
     }
 
     inner class GroupingScrollBar : JScrollBar() {
@@ -279,20 +359,24 @@ class LogPanel(
         }
     }
 
-    override val icon: Icon? = null
-
-    class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
+    private class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
         private val events = JLabel("$totalRows (of $totalRows) events")
 
         val search = JXSearchField("Search")
 
-        val version: JComboBox<MajorVersion> = JComboBox(MajorVersion.values()).apply {
+        val version: JComboBox<MajorVersion> = JComboBox(Vector(MajorVersion.entries)).apply {
             selectedItem = MajorVersion.EightOne
             configureCellRenderer { _, value, _, _, _ ->
                 text = "${value?.version}.*"
             }
         }
         private val versionLabel = JLabel("Version")
+
+        val showOnlyMarked = Action(
+            name = "Show Only Marked",
+            selected = false,
+            action = {},
+        )
 
         private fun updateVersionVisibility() {
             val isVisible = UseHyperlinks.currentValue && HyperlinkStrategy.currentValue == LinkHandlingStrategy.OpenInBrowser
@@ -302,6 +386,7 @@ class LogPanel(
 
         init {
             add(events, "pushx")
+            add(JCheckBox(showOnlyMarked))
 
             add(versionLabel)
             add(version)
@@ -314,6 +399,91 @@ class LogPanel(
 
         var displayedRows by Delegates.observable(totalRows) { _, _, newValue ->
             events.text = "$newValue (of $totalRows) events"
+        }
+    }
+
+    private inner class Sidebar(rawData: List<LogEvent>) : FlatTabbedPane() {
+        private val names = NamePanel(rawData)
+        private val levels = LevelPanel(rawData)
+
+        private val mdc: MDCPanel? = if (columnList == SystemLogColumns) {
+            @Suppress("UNCHECKED_CAST")
+            MDCPanel(rawData as List<SystemLogEvent>)
+        } else {
+            null
+        }
+
+        private val threads: ThreadPanel? = if (columnList == SystemLogColumns) {
+            @Suppress("UNCHECKED_CAST")
+            ThreadPanel(rawData as List<SystemLogEvent>)
+        } else {
+            null
+        }
+
+        private val time = TimePanel(
+            lowerBound = rawData.first().timestamp,
+            upperBound = rawData.last().timestamp,
+        )
+
+        val filterPanels: List<LogFilterPanel> = listOfNotNull(
+            names,
+            levels,
+            time,
+            mdc,
+            threads,
+        )
+
+        init {
+            tabLayoutPolicy = SCROLL_TAB_LAYOUT
+            tabsPopupPolicy = TabsPopupPolicy.asNeeded
+            scrollButtonsPolicy = ScrollButtonsPolicy.never
+            tabWidthMode = TabWidthMode.equal
+            tabType = TabType.underlined
+            tabHeight = 16
+
+            for (i in filterPanels.indices) {
+                val filterPanel = filterPanels[i]
+                addTab(filterPanel.tabName, filterPanel.component)
+
+                filterPanel.addFilterChangeListener {
+                    filterPanel.updateTabState()
+                    updateData()
+
+                    selectedIndex = i
+                }
+            }
+
+            attachPopupMenu { event ->
+                val tabIndex = indexAtLocation(event.x, event.y)
+                if (tabIndex == -1) return@attachPopupMenu null
+
+                JPopupMenu().apply {
+                    add(
+                        Action("Reset") {
+                            filterPanels[tabIndex].reset()
+                        },
+                    )
+                }
+            }
+        }
+
+        private fun LogFilterPanel.updateTabState() {
+            val index = indexOfComponent(component)
+            if (isFilterApplied()) {
+                setBackgroundAt(index, UIManager.getColor("TabbedPane.focusColor"))
+                setTitleAt(index, "$tabName *")
+            } else {
+                setBackgroundAt(index, UIManager.getColor("TabbedPane.background"))
+                setTitleAt(index, tabName)
+            }
+        }
+
+        override fun updateUI() {
+            super.updateUI()
+            @Suppress("UNNECESSARY_SAFE_CALL")
+            filterPanels?.forEach {
+                it.updateTabState()
+            }
         }
     }
 
@@ -339,102 +509,31 @@ class LogPanel(
             Duration.ofHours(12),
             Duration.ofDays(1),
         )
-
-        private val DEFAULT_WRAPPER_LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
-            .withZone(ZoneId.systemDefault())
-        private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
-            "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] \\[(?<time>[^]]++)]: (?<message>.*)| (?<stack>.*))\$".toRegex()
-
-        fun parseLogs(lines: Sequence<String>): List<WrapperLogEvent> {
-            val events = mutableListOf<WrapperLogEvent>()
-            val currentStack = mutableListOf<String>()
-            var partialEvent: WrapperLogEvent? = null
-            var lastEventTimestamp: Instant? = null
-
-            fun WrapperLogEvent?.flush() {
-                if (this != null) {
-                    // flush our previously built event
-                    events += this.copy(stacktrace = currentStack.toList())
-                    currentStack.clear()
-                    partialEvent = null
-                }
-            }
-
-            for ((index, line) in lines.withIndex()) {
-                if (line.isBlank()) {
-                    continue
-                }
-
-                val match = DEFAULT_WRAPPER_MESSAGE_FORMAT.matchEntire(line)
-                if (match != null) {
-                    val timestamp by match.groups
-                    val time = DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(timestamp.value.trim(), Instant::from)
-
-                    // we hit an actual logged event
-                    if (match.groups["level"] != null) {
-                        partialEvent.flush()
-
-                        // now build up a new partial (the next line(s) may have stacktrace)
-                        val level by match.groups
-                        val logger by match.groups
-                        val message by match.groups
-                        lastEventTimestamp = time
-                        partialEvent = WrapperLogEvent(
-                            timestamp = time,
-                            message = message.value.trim(),
-                            logger = logger.value.trim(),
-                            level = Level.valueOf(level.value.single()),
-                        )
-                    } else {
-                        val stack by match.groups
-
-                        if (lastEventTimestamp == time) {
-                            // same timestamp - must be attached stacktrace
-                            currentStack += stack.value
-                        } else {
-                            partialEvent.flush()
-                            // different timestamp, but doesn't match our regex - just try to display it in a useful way
-                            events += WrapperLogEvent(
-                                timestamp = time,
-                                message = stack.value,
-                                level = Level.INFO,
-                            )
-                        }
-                    }
-                } else {
-                    throw IllegalArgumentException("Error parsing line $index, unparseable value: $line")
-                }
-            }
-            partialEvent.flush()
-            return events
-        }
     }
 }
 
-// Credit to https://stackoverflow.com/a/66203968
-class DurationUnit(private val duration: Duration) : TemporalUnit {
-    init {
-        require(!(duration.isZero || duration.isNegative)) { "Duration may not be zero or negative" }
-    }
+fun interface LogFilter {
+    /**
+     * Return true if this filter should display this event.
+     */
+    fun filter(event: LogEvent): Boolean
+}
 
-    override fun getDuration(): Duration = duration
-    override fun isDurationEstimated(): Boolean = duration.seconds >= SECONDS_PER_DAY
-    override fun isDateBased(): Boolean = duration.nano == 0 && duration.seconds % SECONDS_PER_DAY == 0L
-    override fun isTimeBased(): Boolean = duration.seconds < SECONDS_PER_DAY && NANOS_PER_DAY % duration.toNanos() == 0L
+fun interface FilterChangeListener : EventListener {
+    fun filterChanged()
+}
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <R : Temporal?> addTo(temporal: R, amount: Long): R =
-        duration.multipliedBy(amount).addTo(temporal) as R
+interface LogFilterPanel : LogFilter {
+    val tabName: String
+    fun isFilterApplied(): Boolean
+    val component: JComponent
+    fun addFilterChangeListener(listener: FilterChangeListener)
 
-    override fun between(temporal1Inclusive: Temporal, temporal2Exclusive: Temporal): Long {
-        return Duration.between(temporal1Inclusive, temporal2Exclusive).dividedBy(duration)
-    }
+    fun reset()
 
-    override fun toString(): String = duration.toString()
-
-    companion object {
-        private const val SECONDS_PER_DAY = 86400
-        private const val NANOS_PER_SECOND = 1000000000L
-        private const val NANOS_PER_DAY = NANOS_PER_SECOND * SECONDS_PER_DAY
-    }
+    fun customizePopupMenu(
+        menu: JPopupMenu,
+        column: Column<out LogEvent, *>,
+        event: LogEvent,
+    ) = Unit
 }

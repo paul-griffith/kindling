@@ -14,11 +14,8 @@ import io.github.inductiveautomation.kindling.core.PreferenceCategory
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.core.add
-import io.github.inductiveautomation.kindling.thread.FilterModel.Companion.byCountAsc
-import io.github.inductiveautomation.kindling.thread.FilterModel.Companion.byCountDesc
-import io.github.inductiveautomation.kindling.thread.FilterModel.Companion.byNameAsc
-import io.github.inductiveautomation.kindling.thread.FilterModel.Companion.byNameDesc
 import io.github.inductiveautomation.kindling.thread.model.Thread
+import io.github.inductiveautomation.kindling.thread.model.ThreadColumnIdentifier
 import io.github.inductiveautomation.kindling.thread.model.ThreadDump
 import io.github.inductiveautomation.kindling.thread.model.ThreadLifespan
 import io.github.inductiveautomation.kindling.thread.model.ThreadModel
@@ -27,6 +24,8 @@ import io.github.inductiveautomation.kindling.thread.model.ThreadModel.SingleThr
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
+import io.github.inductiveautomation.kindling.utils.FilterList
+import io.github.inductiveautomation.kindling.utils.FilterModel
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.ReifiedJXTable
 import io.github.inductiveautomation.kindling.utils.attachPopupMenu
@@ -46,7 +45,6 @@ import java.awt.Rectangle
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.ButtonGroup
-import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JMenu
 import javax.swing.JMenuBar
@@ -69,9 +67,9 @@ class MultiThreadView(
         ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
     }
 
-    private val poolList = FilterList("(No Pool)")
-    private val systemList = FilterList("Unassigned")
-    private val stateList = FilterList("")
+    private val poolList = FilterList { it?.toString() ?: "(No Pool)" }
+    private val systemList = FilterList { it?.toString() ?: "Unassigned" }
+    private val stateList = FilterList()
     private val searchField = JXSearchField("Search")
 
     private var visibleThreadDumps: List<ThreadDump?> = emptyList()
@@ -85,9 +83,9 @@ class MultiThreadView(
             field = value
             val allThreads = value.flatten().filterNotNull()
             if (allThreads.isNotEmpty()) {
-                stateList.model = FilterModel(allThreads.groupingBy { it.state.toString() }.eachCount())
-                systemList.model = FilterModel(allThreads.groupingBy(Thread::system).eachCount())
-                poolList.model = FilterModel(allThreads.groupingBy(Thread::pool).eachCount())
+                stateList.setModel(FilterModel(allThreads.groupingBy { it.state.name }.eachCount()))
+                systemList.setModel(FilterModel(allThreads.groupingBy(Thread::system).eachCount()))
+                poolList.setModel(FilterModel(allThreads.groupingBy(Thread::pool).eachCount()))
             }
             if (initialized) {
                 updateData()
@@ -102,7 +100,8 @@ class MultiThreadView(
         ReifiedJXTable(initialModel).apply {
             columnFactory = initialModel.columns.toColumnFactory()
             createDefaultColumnsFromModel()
-            setSortOrder(initialModel.columns[initialModel.columns.id], SortOrder.ASCENDING)
+            setSortOrder(ThreadColumnIdentifier.ID, SortOrder.ASCENDING)
+
             selectionMode = ListSelectionModel.SINGLE_SELECTION
 
             addHighlighter(
@@ -156,22 +155,25 @@ class MultiThreadView(
                 }
             }
 
-            actionMap.put(
-                "${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks",
-                Action(name = "Clear All Marks") {
-                    for (lifespan in model.threadData) {
-                        lifespan.forEach { thread ->
-                            thread?.marked = false
-                        }
+            val clearAllMarks = Action(name = "Clear all marks") {
+                for (lifespan in model.threadData) {
+                    lifespan.forEach { thread ->
+                        thread?.marked = false
                     }
-                },
-            )
+                }
+            }
+            actionMap.put("${ColumnControlButton.COLUMN_CONTROL_MARKER}.clearAllMarks", clearAllMarks)
 
             attachPopupMenu table@{ event ->
                 val rowAtPoint = rowAtPoint(event.point)
                 selectionModel.setSelectionInterval(rowAtPoint, rowAtPoint)
 
                 JPopupMenu().apply {
+                    val colAtPoint = columnAtPoint(event.point)
+                    if (colAtPoint != -1 && getColumn(convertColumnIndexToModel(colAtPoint)).identifier == ThreadColumnIdentifier.MARK) {
+                        add(clearAllMarks)
+                    }
+
                     add(
                         JMenu("Filter all with same...").apply {
                             for (column in this@table.model.columns.filterableColumns) {
@@ -349,14 +351,22 @@ class MultiThreadView(
             }
         }
 
-        val sortButtons = ButtonGroup().apply {
-            val countDescButton = sortButton(NUMERIC_SORT_DESCENDING, "Sort by count (descending)", byCountDesc)
-            add(countDescButton)
-            setSelected(countDescButton.model, true)
+        val sortButtons = ButtonGroup()
 
-            add(sortButton(NUMERIC_SORT_ASCENDING, "Sort by count (ascending)", byCountAsc))
-            add(sortButton(NATURAL_SORT_ASCENDING, "Sort A-Z", byNameAsc))
-            add(sortButton(NATURAL_SORT_DESCENDING, "Sort Z-A", byNameDesc))
+        for ((i, sortAction) in stateList.sortActions.withIndex()) {
+            sortButtons.add(
+                JToggleButton(
+                    Action(
+                        description = sortAction.description,
+                        icon = sortAction.icon,
+                        selected = sortAction.selected,
+                    ) { e ->
+                        sortAction.actionPerformed(e)
+                        systemList.sortActions[i].actionPerformed(e)
+                        poolList.sortActions[i].actionPerformed(e)
+                    },
+                ),
+            )
         }
 
         add(JLabel("Version: ${threadDumps.first().version}"))
@@ -370,7 +380,7 @@ class MultiThreadView(
                     val sortGroupEnumeration = sortButtons.elements
                     add(sortGroupEnumeration.nextElement(), "split ${sortButtons.buttonCount}, flowx")
                     for (element in sortGroupEnumeration) {
-                        add(element)
+                        add(element, "gapx 2")
                     }
                     add(FlatScrollPane(stateList), "w 220, h 100!")
                     // if all the thread dumps are "unassigned", no need to add the system selector
@@ -393,19 +403,6 @@ class MultiThreadView(
 
     override val icon = MultiThreadViewer.icon
 
-    private fun sortButton(icon: Icon, description: String, comparator: FilterComparator): JToggleButton {
-        return JToggleButton(
-            Action(
-                description = description,
-                icon = icon,
-            ) {
-                stateList.model.comparator = comparator
-                poolList.model.comparator = comparator
-                systemList.model.comparator = comparator
-            },
-        )
-    }
-
     override fun customizePopupMenu(menu: JPopupMenu) {
         menu.addSeparator()
         menu.add(
@@ -426,11 +423,6 @@ class MultiThreadView(
 
     companion object {
         private val BACKGROUND = CoroutineScope(Dispatchers.Default)
-
-        private val NATURAL_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-a-z.svg")
-        private val NATURAL_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-z-a.svg")
-        private val NUMERIC_SORT_ASCENDING = FlatSVGIcon("icons/bx-sort-up.svg")
-        private val NUMERIC_SORT_DESCENDING = FlatSVGIcon("icons/bx-sort-down.svg")
 
         private fun List<ThreadDump?>.toLifespanList(): List<ThreadLifespan> {
             val idsToLifespans = mutableMapOf<Int, Array<Thread?>>()
@@ -485,11 +477,12 @@ class MultiThreadView(
     }
 }
 
-object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
+data object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
     override val title = "Thread Viewer"
     override val description = "Thread dump (.json or .txt) files"
     override val icon = FlatSVGIcon("icons/bx-file.svg")
     override val extensions = listOf("json", "txt")
+    override val respectsEncoding: Boolean = true
     override fun open(path: Path): ToolPanel = open(listOf(path))
     override fun open(paths: List<Path>): ToolPanel {
         return MultiThreadView(paths.sortedWith(compareBy(AlphanumComparator(), Path::name)))
@@ -520,5 +513,6 @@ object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
     )
 
     override val displayName: String = "Thread View"
+    override val key: String = "threadview"
     override val preferences = listOf(ShowNullThreads, ShowEmptyValues)
 }

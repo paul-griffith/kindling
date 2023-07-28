@@ -146,8 +146,12 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
     override fun getColumnCount(): Int = columns.size
     override fun getValueAt(row: Int, column: Int): Any? = get(row, columns[column])
     override fun getColumnClass(column: Int): Class<*> = columns[column].clazz
+    operator fun get(row: Int): ThreadLifespan {
+        return threadData[row]
+    }
+
     operator fun <T> get(row: Int, column: Column<ThreadLifespan, T>): T {
-        return threadData[row].let { info ->
+        return get(row).let { info ->
             column.getValue(info)
         }
     }
@@ -164,7 +168,7 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
     }
 
     @Suppress("unused", "MemberVisibilityCanBePrivate")
-    object MultiThreadColumns : ThreadColumnList() {
+    data object MultiThreadColumns : ThreadColumnList() {
         private val MONOSPACED = Font(Font.MONOSPACED, Font.PLAIN, 13)
 
         val state = Column<ThreadLifespan, String>(
@@ -233,7 +237,7 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
     }
 
     @Suppress("unused", "MemberVisibilityCanBePrivate")
-    object SingleThreadColumns : ThreadColumnList() {
+    data object SingleThreadColumns : ThreadColumnList() {
         val state = Column<ThreadLifespan, ThreadState>(
             "State",
             columnCustomization = {

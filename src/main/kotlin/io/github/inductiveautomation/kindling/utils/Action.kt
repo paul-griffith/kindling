@@ -1,7 +1,6 @@
 package io.github.inductiveautomation.kindling.utils
 
 import java.awt.event.ActionEvent
-import java.awt.event.ActionListener
 import javax.swing.AbstractAction
 import javax.swing.Icon
 import javax.swing.KeyStroke
@@ -11,19 +10,21 @@ import kotlin.reflect.KProperty
 /**
  * More idiomatic Kotlin wrapper for AbstractAction.
  */
-class Action(
+open class Action(
     name: String? = null,
     description: String? = null,
     icon: Icon? = null,
     accelerator: KeyStroke? = null,
-    private val action: ActionListener,
+    selected: Boolean = false,
+    private val action: Action.(e: ActionEvent) -> Unit,
 ) : AbstractAction() {
     var name: String? by actionValue(NAME, name)
     var description: String? by actionValue(SHORT_DESCRIPTION, description)
     var icon: Icon? by actionValue(SMALL_ICON, icon)
     var accelerator: KeyStroke? by actionValue(ACCELERATOR_KEY, accelerator)
+    var selected: Boolean by actionValue(SELECTED_KEY, selected)
 
-    private fun <V> actionValue(name: String, initialValue: V) = object : ReadWriteProperty<AbstractAction, V> {
+    protected fun <V> actionValue(name: String, initialValue: V) = object : ReadWriteProperty<AbstractAction, V> {
         init {
             putValue(name, initialValue)
         }
@@ -38,5 +39,5 @@ class Action(
         }
     }
 
-    override fun actionPerformed(e: ActionEvent) = action.actionPerformed(e)
+    override fun actionPerformed(e: ActionEvent) = action(this, e)
 }
