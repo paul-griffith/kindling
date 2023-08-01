@@ -8,10 +8,9 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 
 class DeviceProgramPanel(
-    val deviceName: String,
     private val programItems: SimulatorProgram,
 ) : JScrollPane() {
-    val numberOfTags by programItems::size
+    private val numberOfTags by programItems::size
 
     private val itemPanels = programItems.map(::ProgramItemPanel).onEach { itemPanel ->
         itemPanel.addProgramItemDeletedListener {

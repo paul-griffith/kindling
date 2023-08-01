@@ -113,7 +113,7 @@ class SimulatorView(path: Path) : ToolPanel() {
     private val tabs = TabStrip().apply {
         programs.entries.forEach { (deviceName, programItems) ->
             val lazyTab = DeviceProgramTab(deviceName, programItems.size) {
-                DeviceProgramPanel(deviceName, programItems).apply {
+                DeviceProgramPanel(programItems).apply {
                     addPropertyChangeListener("numItems") { evt ->
                         // Change Main label count
                         val change = evt.newValue as Int - evt.oldValue as Int
@@ -289,7 +289,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                         it is SimulatorFunctionParameter.QualityCode
                     } as SimulatorFunctionParameter<QualityCodes>
 
-                    qualityParam.value = QualityCodes.values().random()
+                    qualityParam.value = QualityCodes.entries.toTypedArray().random()
                     valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
                 }
                 is SimulatorFunction.List -> {

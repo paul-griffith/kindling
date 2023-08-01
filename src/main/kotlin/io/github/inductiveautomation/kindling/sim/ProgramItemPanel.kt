@@ -57,7 +57,7 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
     private val parameterEntry = FunctionPanel(item.valueSource)
 
     private val dataTypeEntry = FlatComboBox<ProgramDataType>().apply {
-        ProgramDataType.values().forEach(::addItem)
+        ProgramDataType.entries.forEach(::addItem)
 
         configureCellRenderer { _, value, _, _, _ ->
             text = value?.name ?: ""
@@ -215,7 +215,7 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
                             }
                         }
                         is SimulatorFunctionParameter.QualityCode -> {
-                            JComboBox(QualityCodes.values()).apply {
+                            JComboBox(QualityCodes.entries.toTypedArray()).apply {
                                 selectedItem = param.value
                                 addActionListener {
                                     val newValue = model.selectedItem as QualityCodes
