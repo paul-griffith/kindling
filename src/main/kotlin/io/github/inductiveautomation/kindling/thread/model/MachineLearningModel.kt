@@ -63,7 +63,7 @@ object MachineLearningModel {
             }!!.absolutePath
     }
 
-    private val oldPMMLVersion = pmmlFilePath.substringBeforeLast(".pmml")?.substringAfterLast("_") ?: ""
+    private val oldPMMLVersion = pmmlFilePath.substringBeforeLast(".pmml").substringAfterLast("_")
 
     init {
         if (enableMachineLearning.currentValue) verifyPMML()
