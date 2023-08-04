@@ -43,6 +43,8 @@ import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass

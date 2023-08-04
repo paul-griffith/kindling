@@ -32,6 +32,7 @@ import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileFilter
+import java.nio.file.Path
 import java.util.Collections
 import java.util.Enumeration
 import java.util.EventListener
@@ -54,7 +55,6 @@ import javax.swing.SortOrder.UNSORTED
 import javax.swing.UIManager
 import javax.swing.border.EmptyBorder
 import javax.swing.event.EventListenerList
-import javax.swing.filechooser.FileFilter
 import javax.swing.plaf.basic.BasicComboBoxRenderer
 import javax.swing.table.TableModel
 import javax.swing.text.Document
@@ -326,7 +326,10 @@ class FileFilter(
     private val description: String,
     private val predicate: (path: Path) -> Boolean,
 ) : SwingFileFilter(), FileFilter {
-    constructor(description: String, extensions: List<String>) : this(description, { path -> path.extension in extensions })
+    constructor(description: String, extensions: List<String>) : this(
+        description,
+        { path -> path.extension in extensions },
+    )
 
     fun accept(path: Path): Boolean {
         return path.isDirectory() || predicate(path)
