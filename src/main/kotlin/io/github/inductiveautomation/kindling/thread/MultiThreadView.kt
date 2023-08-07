@@ -508,9 +508,9 @@ class MultiThreadView(
                     val evaluation = evaluator.evaluate(
                         evaluator.inputFields.associate { field ->
                             field.name to field.prepare(thread.getPmmlProperty(field.name))
-                        }
+                        },
                     )
-                    val result = (evaluation["marked"] as ProbabilityDistribution<*>).result as Int
+                    val result = (evaluation["marked"] as? ProbabilityDistribution<*>)?.result as? Int ?: 0
                     if (result == 1) add(thread)
                 }
             }

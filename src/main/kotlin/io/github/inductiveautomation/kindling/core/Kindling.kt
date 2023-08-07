@@ -26,6 +26,9 @@ import kotlinx.serialization.json.encodeToStream
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTextField
 import java.awt.Image
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Path
 import java.util.Vector

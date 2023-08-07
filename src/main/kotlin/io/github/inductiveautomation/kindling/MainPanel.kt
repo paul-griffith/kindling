@@ -331,7 +331,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     embedContentIntoTitleBar = true,
                 ) {
                     defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-                    iconImage = Kindling.frameIcons[0]
                     val mainPanel = MainPanel()
                     add(mainPanel)
                     jMenuBar = mainPanel.menuBar
