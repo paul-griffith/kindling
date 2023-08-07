@@ -2,11 +2,11 @@ import org.gradle.internal.os.OperatingSystem
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE
 import java.time.LocalDate
 
+@Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/KTIJ-19369
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.serialization)
     alias(libs.plugins.ktlint)
-    alias(libs.plugins.conveyor)
     application
     alias(libs.plugins.shadow)
     alias(libs.plugins.runtime)
@@ -24,6 +24,12 @@ repositories {
     }
     maven {
         url = uri("https://nexus.inductiveautomation.com/repository/inductiveautomation-thirdparty/")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+        content {
+            includeGroup("com.github.Dansoftowner")
+        }
     }
 }
 
@@ -44,14 +50,12 @@ dependencies {
     api(libs.bundles.ktor)
     api(libs.bundles.ignition) {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
-        isTransitive = true
+        isTransitive = false
     }
     api(libs.bundles.ktor)
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
-    implementation(libs.bundles.ia.transitive)
-    implementation(libs.osthemedetector)
     api(libs.jpmml)
     runtimeOnly(libs.bundles.ia.transitive)
 
@@ -78,7 +82,7 @@ tasks {
 
     shadowJar {
         manifest {
-            attributes["Main-Class"] = "io.github.paulgriffith.kindling.MainPanel"
+            attributes["Main-Class"] = "io.github.inductiveautomation.kindling.MainPanel"
         }
         archiveBaseName.set("kindling-bundle")
         archiveClassifier.set("")
@@ -153,7 +157,7 @@ runtime {
         }
 
         imageName = "kindling beta"
-        installerName = "kindling"
+        installerName = "kindling beta"
         mainJar = "kindling-bundle.jar"
     }
 }

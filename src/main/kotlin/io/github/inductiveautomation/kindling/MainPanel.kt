@@ -33,24 +33,13 @@ import io.github.inductiveautomation.kindling.utils.chooseFiles
 import io.github.inductiveautomation.kindling.utils.getLogger
 import io.github.inductiveautomation.kindling.utils.jFrame
 import io.github.inductiveautomation.kindling.utils.menuShortcutKeyMaskEx
-import io.github.inductiveautomation.kindling.utils.render
 import io.github.inductiveautomation.kindling.utils.traverseChildren
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
-import java.awt.BorderLayout
-import java.awt.Cursor
+import java.awt.*
 import java.awt.Cursor.HAND_CURSOR
-import java.awt.Desktop
-import java.awt.Dimension
-import java.awt.EventQueue
 import java.awt.Font.PLAIN
-import java.awt.Menu
-import java.awt.MenuItem
-import java.awt.PopupMenu
-import java.awt.Taskbar
-import java.awt.Toolkit
-import java.awt.Window
 import java.awt.datatransfer.DataFlavor
 import java.awt.desktop.QuitStrategy
 import java.awt.event.KeyEvent
@@ -259,6 +248,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 )
             }
         }
+        add(debugMenu)
     }
 
     /**
@@ -341,7 +331,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                     embedContentIntoTitleBar = true,
                 ) {
                     defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-
+                    iconImage = Kindling.frameIcons[0]
                     val mainPanel = MainPanel()
                     add(mainPanel)
                     jMenuBar = mainPanel.menuBar

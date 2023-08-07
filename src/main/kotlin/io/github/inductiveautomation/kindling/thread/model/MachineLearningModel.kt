@@ -55,7 +55,8 @@ object MachineLearningModel {
             val folder = if (cacheFilePath.toFile().exists()) {
                 cacheFilePath
             } else {
-                Paths.get("src/main/resources")
+//                Paths.get("src/main/resources")
+                return "/thread_machine_learning_1.0.4.pmml"
             }
 
             folder.toFile().listFiles()?.findLast { file ->
@@ -71,11 +72,11 @@ object MachineLearningModel {
 
     val evaluator: ModelEvaluator<*> by lazy {
         LoadingModelEvaluatorBuilder().run {
-            try {
-                javaClass.getResourceAsStream(pmmlFilePath).use(this::load)
-            } catch(e: Exception) { // No pmml found in cache - fallback to jar
-                Paths.get(pmmlFilePath).inputStream().use(this::load)
-            }
+//            try {
+            javaClass.getResourceAsStream(pmmlFilePath).use(this::load)
+//            } catch(e: Exception) { // No pmml found in cache - fallback to jar
+//                Paths.get(pmmlFilePath).inputStream().use(this::load)
+//            }
             build()
         }
     }

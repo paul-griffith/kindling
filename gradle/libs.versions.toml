@@ -1,8 +1,8 @@
 [versions]
 java = "17"
 kotlin = "1.9.0"
-coroutines = "1.7.3"
-flatlaf = "3.2"
+coroutines = "1.7.2"
+flatlaf = "3.1.1"
 kotest = "5.6.2"
 ignition = "8.1.1"
 ktor = "2.1.3"
@@ -11,7 +11,7 @@ ktor = "2.1.3"
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 conveyor = { id = "dev.hydraulic.conveyor", version = "1.6" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.5.1" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.5.0" }
 
 [libraries]
 # core functionality
@@ -24,7 +24,6 @@ logback = { group = "ch.qos.logback", name = "logback-classic", version = "1.4.1
 hsql = { group = "org.hsqldb", name = "hsqldb", version = "2.7.2" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version = "2.11.5" }
 excelkt = { group = "io.github.evanrupert", name = "excelkt", version = "1.0.2" }
-jsvg = { group = "com.github.weisj", name = "jsvg", version = "1.0.0" }
 client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
 client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
