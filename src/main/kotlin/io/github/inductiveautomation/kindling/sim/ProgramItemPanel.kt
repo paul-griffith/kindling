@@ -8,6 +8,7 @@ import io.github.inductiveautomation.kindling.sim.model.QualityCodes
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.defaultFunctionForType
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.functions
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.generateRandomParametersForFunction
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunctionParameter
 import io.github.inductiveautomation.kindling.utils.add
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
@@ -34,7 +35,7 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
     private val timeIntervalEntry = JSpinner(
         SpinnerNumberModel(
             item.timeInterval,
-            1,
+            0,
             100000,
             1,
         ),
@@ -88,7 +89,9 @@ class ProgramItemPanel(val item: ProgramItem) : JPanel(MigLayout("ins 5, flowy, 
 
         functionDropdown.addActionListener {
             if (!functionDataChanging) {
-                item.valueSource = functions[functionDropdown.selectedItem as KClass<*>]!!.invoke()
+                item.valueSource = functions[functionDropdown.selectedItem as KClass<*>]!!.invoke().apply {
+                    generateRandomParametersForFunction(item.dataType)
+                }
                 parameterEntry.function = item.valueSource
             }
         }

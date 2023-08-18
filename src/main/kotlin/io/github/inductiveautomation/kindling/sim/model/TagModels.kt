@@ -51,9 +51,9 @@ data class NodeStructure(
 }
 
 enum class TagDataType {
-    Byte,
     Short,
     Integer,
+    Int1,
     Int2,
     Int4,
     Int8,
@@ -65,8 +65,19 @@ enum class TagDataType {
     DateTime,
     Text,
     Document,
-    StringArray,
     None,
+    // Not supported:
+    Int1Array,
+    Int2Array,
+    Int4Array,
+    Int8Array,
+    Float4Array,
+    Float8Array,
+    BooleanArray,
+    StringArray,
+    DateTimeArray,
+    ByteArray,
+    DataSet,
 }
 
 typealias ParameterList = MutableList<UdtParameter>

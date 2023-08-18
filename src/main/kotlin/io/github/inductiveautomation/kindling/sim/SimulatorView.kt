@@ -7,10 +7,8 @@ import io.github.inductiveautomation.kindling.core.Kindling
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.sim.model.ProgramDataType
-import io.github.inductiveautomation.kindling.sim.model.ProgramItem
-import io.github.inductiveautomation.kindling.sim.model.QualityCodes
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction
-import io.github.inductiveautomation.kindling.sim.model.SimulatorFunctionParameter
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.generateRandomParametersForFunction
 import io.github.inductiveautomation.kindling.sim.model.TagParser
 import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
@@ -80,6 +78,23 @@ class SimulatorView(path: Path) : ToolPanel() {
         toolTipText = tagParser.missingDefinitions.joinToString("\n", prefix = MISSING_DEF_WARNING)
     }
 
+    private val unsupportedDataTypesWarning = JLabel(
+        "Unsupported tag data types!",
+        FlatSVGIcon("icons/bx-error.svg"), // .derive(10, 10),
+        JLabel.RIGHT,
+    ).apply {
+        foreground = Color.decode("#DB5860")
+        font = font.deriveFont(Font.BOLD)
+        isVisible = tagParser.unsupportedDataTypes.isNotEmpty()
+        toolTipText = tagParser.unsupportedDataTypes.entries.joinToString(
+            separator = "\n",
+            prefix = """The following tag data types, including number of occurances, are not supported.
+                |Tags of these data types have been omitted.\n
+            """.trimMargin(),
+            transform = { (type, num) -> "$type [$num]" }
+        )
+    }
+
     private val exportButton = JButton("Export All").apply {
         addActionListener {
             if (directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -101,6 +116,7 @@ class SimulatorView(path: Path) : ToolPanel() {
     private val infoPanel = JPanel(MigLayout("fill, ins 10")).apply {
         add(countLabel, "west")
         add(missingDefinitionsWarning, "west, gapleft 20")
+        add(unsupportedDataTypesWarning, "west, gapleft 20")
         add(exportButton, "east, gapleft 10")
         add(randomizeButton, "east")
     }
@@ -243,7 +259,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                         addActionListener {
                             val programItems = programs.values.flatten()
                             programItems.forEach { item ->
-                                val newFun = generateRandomFunction(item)
+                                val newFun = generateRandomFunction(item.dataType)
                                 if (newFun != null) item.valueSource = newFun
                             }
                             fireFunctionDataChanged()
@@ -260,9 +276,9 @@ class SimulatorView(path: Path) : ToolPanel() {
         }
 
         @Suppress("unchecked_cast")
-        private fun generateRandomFunction(item: ProgramItem): SimulatorFunction? {
+        private fun generateRandomFunction(dataType: ProgramDataType): SimulatorFunction? {
             val availableOptions = SimulatorFunction.compatibleTypes.filter { (_, dataTypes) ->
-                item.dataType in dataTypes
+                dataType in dataTypes
             }.keys
 
             val newFunClass = checkBoxList.checkBoxListSelectedValues.filter {
@@ -273,47 +289,7 @@ class SimulatorView(path: Path) : ToolPanel() {
 
             val newFunInstance = SimulatorFunction.functions[newFunClass]!!.invoke()
 
-            when (newFunInstance) {
-                is SimulatorFunction.QV -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-
-                    val qualityParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.QualityCode
-                    } as SimulatorFunctionParameter<QualityCodes>
-
-                    qualityParam.value = QualityCodes.values().random()
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.List -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.List
-                    } as SimulatorFunctionParameter<List<String>>
-                    valueParam.value = List(10) { SimulatorFunction.randomValueForDataType(item.dataType) }
-                }
-                is SimulatorFunction.ReadOnly -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.Writable -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.Random -> {
-                    if (item.dataType == ProgramDataType.BOOLEAN) {
-                        val maxParam = newFunInstance.parameters.find {
-                            it is SimulatorFunctionParameter.Max
-                        } as SimulatorFunctionParameter<Int>
-                        maxParam.value = 1
-                    }
-                }
-                else -> Unit
-            }
+            newFunInstance.generateRandomParametersForFunction(dataType)
 
             return newFunInstance
         }
