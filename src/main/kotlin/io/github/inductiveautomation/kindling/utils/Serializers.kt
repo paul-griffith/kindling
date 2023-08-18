@@ -56,3 +56,16 @@ object CharsetSerializer : KSerializer<Charset> {
 
     override fun serialize(encoder: Encoder, value: Charset) = encoder.encodeString(value.name())
 }
+
+@OptIn(ExperimentalStdlibApi::class)
+object ByteArraySerializer : KSerializer<ByteArray> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("java.lang.byte[]", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: ByteArray) {
+        encoder.encodeString(value.toHexString())
+    }
+
+    override fun deserialize(decoder: Decoder): ByteArray {
+        return decoder.decodeString().hexToByteArray()
+    }
+}

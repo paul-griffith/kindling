@@ -1,15 +1,16 @@
 package io.github.inductiveautomation.kindling.serialization
 
+import deser.SerializationDumper
 import io.github.inductiveautomation.kindling.serialization.Serialized.ClassDesc
 import io.github.inductiveautomation.kindling.serialization.Serialized.Field.ArrayField
 import io.github.inductiveautomation.kindling.serialization.Serialized.Field.ObjectField
 import io.github.inductiveautomation.kindling.serialization.Serialized.Field.PrimitiveField
+import io.github.inductiveautomation.kindling.utils.ByteArraySerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
@@ -123,6 +124,7 @@ private class JavaSerializationReader(bytes: ByteArray) : Sequence<Serialized?> 
                     }
                     desc.name to values
                 }
+
                 is ClassDesc.Proxy -> {
                     desc.proxyInterfaceNames.first() to emptyList()
                 }
@@ -477,25 +479,19 @@ sealed interface Serialized {
         val value: Any
     ) : Serialized {
         companion object Serializer : KSerializer<Primitive> {
-            override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Primitive", PrimitiveKind.STRING)
+            private val delegate = MapSerializer(String.serializer(), String.serializer())
+            override val descriptor: SerialDescriptor = delegate.descriptor
 
             override fun deserialize(decoder: Decoder): Primitive {
                 TODO("Not yet implemented")
             }
 
-            override fun serialize(encoder: Encoder, wValue: Primitive) {
-                when (val value = wValue.value) {
-                    is Boolean -> encoder.encodeBoolean(value)
-                    is Char -> encoder.encodeChar(value)
-                    is Float -> encoder.encodeFloat(value)
-                    is Double -> encoder.encodeDouble(value)
-                    is Short -> encoder.encodeShort(value)
-                    is Byte -> encoder.encodeByte(value)
-                    is Int -> encoder.encodeInt(value)
-                    is Long -> encoder.encodeLong(value)
-                }
+            override fun serialize(encoder: Encoder, value: Primitive) {
+                delegate.serialize(encoder, mapOf(
+                    "type" to value.value::class.java.simpleName,
+                    "value" to value.value.toString()
+                ))
             }
-
         }
     }
 
@@ -512,6 +508,7 @@ sealed interface Serialized {
 
     @Serializable
     data class BlockData(
+        @Serializable(with = ByteArraySerializer::class)
         val data: ByteArray
     ) : Serialized {
         override fun equals(other: Any?): Boolean {
@@ -593,22 +590,23 @@ sealed interface Serialized {
 }
 
 private val json = Json {
-//    classDiscriminator = "\$type"
-    useArrayPolymorphism = true
+    classDiscriminator = "\$type"
+    prettyPrint = true
 }
 
 fun main() {
     val mapOf: Map<String, () -> ByteArray> = mapOf(
 //        "basicTest" to ::basicTest,
-        "user" to ::userTest,
+//        "user" to ::userTest,
+        "alarms" to ::alarmTest
     )
     for ((name, getter) in mapOf) {
         println(name)
         val data = getter.invoke()
-//        println(SerializationDumper(data).parseStream())
-        for (element in JavaSerializationReader(data)) {
-            println(json.encodeToString(element))
-        }
+        println(SerializationDumper(data).parseStream())
+//        for (element in JavaSerializationReader(data)) {
+//            println(json.encodeToString(element))
+//        }
     }
 }
 
@@ -619,4 +617,8 @@ fun basicTest(): ByteArray {
 
 fun userTest(): ByteArray {
     return Path("/Users/pgriffith/Projects/kindling/user.ser").readBytes()
+}
+
+fun alarmTest(): ByteArray {
+    return Path("/Users/pgriffith/Projects/kindling/.alarms").readBytes()
 }
