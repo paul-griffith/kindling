@@ -1,6 +1,7 @@
 package io.github.inductiveautomation.kindling.sim.model
 
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.functions
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.generateRandomParametersForFunction
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -8,6 +9,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
 
 class TagParser(tagProvider: NodeStructure) {
     private val udtPathsToStructures = buildMap {
@@ -34,6 +36,8 @@ class TagParser(tagProvider: NodeStructure) {
 
     val missingDefinitions = mutableSetOf<String>()
 
+    val unsupportedDataTypes = mutableMapOf<TagDataType, Int>()
+
     init {
         tagProvider.tags.forEach(::resolveOpcTags)
     }
@@ -50,16 +54,32 @@ class TagParser(tagProvider: NodeStructure) {
                 val type = when (val path = tag.dataType) {
                     is JsonObject -> (path["binding"] as JsonPrimitive).content
                     is JsonPrimitive -> path.content
+                    null -> "Int4"
                     else -> null
-                }?.let(TagDataType::valueOf)?.let(tagToSimDataType::get) ?: ProgramDataType.INT32
+                }?.let(TagDataType::valueOf)?.let {
+                    tagToSimDataType[it] ?: run {
+                        unsupportedDataTypes.merge(it, 1) { _, v -> v + 1 }
+                        null
+                    }
+                }
 
-                add(
-                    ProgramItem(
-                        ignitionBrowsePath = actualPath,
-                        dataType = type,
-                        valueSource = functions[SimulatorFunction.defaultFunctionForType(type)]!!.invoke(),
-                    ),
-                )
+                if (type != null) {
+                    add(
+                        ProgramItem(
+                            ignitionBrowsePath = actualPath,
+                            dataType = type,
+                            valueSource = run {
+                                val clazz = SimulatorFunction.compatibleTypes.filter { (_, dataTypes) ->
+                                    type in dataTypes
+                                }.keys.random()
+
+                                functions[clazz]!!().apply {
+                                    generateRandomParametersForFunction(type)
+                                }
+                            }
+                        ),
+                    )
+                }
             }
         }
     }.distinctBy(ProgramItem::browsePath).toMutableList()
@@ -162,6 +182,7 @@ class TagParser(tagProvider: NodeStructure) {
         val tagToSimDataType = mapOf(
             TagDataType.Short to ProgramDataType.INT16,
             TagDataType.Integer to ProgramDataType.INT32,
+            TagDataType.Int1 to ProgramDataType.INT16,
             TagDataType.Int2 to ProgramDataType.INT16,
             TagDataType.Int4 to ProgramDataType.INT32,
             TagDataType.Int8 to ProgramDataType.INT64,
@@ -173,13 +194,12 @@ class TagParser(tagProvider: NodeStructure) {
             TagDataType.DateTime to ProgramDataType.DATETIME,
             TagDataType.Text to ProgramDataType.STRING,
             TagDataType.Document to ProgramDataType.STRING,
-            TagDataType.StringArray to ProgramDataType.STRING,
         )
 
         // https://docs.inductiveautomation.com/display/DOC81/UDT+Parameters#UDTParameters-Pre-DefinedParameters
         private val builtInParameters = mapOf<String, (NodeStructure) -> String>(
-            "InstanceName" to { it.getUdtParent()!!.name },
-            "ParentInstanceName" to { it.getUdtParent()!!.getUdtParent()?.name ?: it.getUdtParent()!!.name },
+            "InstanceName" to { if (it.isUdtInstance()) it.name else it.getUdtParent()!!.name },
+            "ParentInstanceName" to { it.getUdtParent()?.name ?: "" },
             "PathToParentFolder" to { it.getBrowsableParent()!!.getPath() },
             "TagName" to { it.name },
             "PathToTag" to { it.getPath() },
@@ -255,7 +275,7 @@ class TagParser(tagProvider: NodeStructure) {
             addAll(
                 parent.filter {
                     it.name !in parameterNames
-                },
+                }.map { it.copy() },
             )
         }
 
