@@ -275,7 +275,6 @@ class SimulatorView(path: Path) : ToolPanel() {
             defaultCloseOperation = HIDE_ON_CLOSE
         }
 
-        @Suppress("unchecked_cast")
         private fun generateRandomFunction(dataType: ProgramDataType): SimulatorFunction? {
             val availableOptions = SimulatorFunction.compatibleTypes.filter { (_, dataTypes) ->
                 dataType in dataTypes
