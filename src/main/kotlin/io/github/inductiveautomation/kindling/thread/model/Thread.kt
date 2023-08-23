@@ -48,8 +48,6 @@ data class Thread(
     }
 
     companion object {
-        private val threadPoolRegex = "(?<pool>.+)-\\d+\$".toRegex()
-
         private val threadPoolFile = "/thread_pool_dictionary.json"
 
         @OptIn(ExperimentalSerializationApi::class)
