@@ -1,0 +1,1424 @@
+{
+  "AsyncAppender-Worker-SysoutAsync": {
+    "pattern": "AsyncAppender-Worker-SysoutAsync",
+    "name": "AsyncAppender-Worker-SysoutAsync",
+    "description": "Something to do with wrapper logs",
+    "pool_id": 11
+  },
+  "mssql-jdbc-TimeoutTimer": {
+    "pattern": "mssql-jdbc-TimeoutTimer-{instance_id}",
+    "name": "mssql-jdbc-TimeoutTimer",
+    "description": "",
+    "pool_id": 152
+  },
+  "AWT-EventQueue": {
+    "pattern": "AWT-EventQueue-{instance_id}",
+    "name": "AWT-EventQueue",
+    "description": "",
+    "pool_id": 15
+  },
+  "sip-keepalive-timer": {
+    "pattern": "sip-keepalive-timer",
+    "name": "sip-keepalive-timer",
+    "description": "",
+    "pool_id": 197
+  },
+  "drivers-S71500Driver": {
+    "pattern": "drivers-S71500Driver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-S71500Driver",
+    "description": "",
+    "pool_id": 59
+  },
+  "OptimisticWriteManager": {
+    "pattern": "OptimisticWriteManager-{instance_id}",
+    "name": "OptimisticWriteManager",
+    "description": "",
+    "pool_id": 167
+  },
+  "opcua-scheduled-executor": {
+    "pattern": "opcua-scheduled-executor-{instance_id}",
+    "name": "opcua-scheduled-executor",
+    "description": "",
+    "pool_id": 163
+  },
+  "com.inductiveautomation.sqlbridge": {
+    "pattern": "com.inductiveautomation.sqlbridge-{instance_id}",
+    "name": "com.inductiveautomation.sqlbridge",
+    "description": "",
+    "pool_id": 29
+  },
+  "milo-shared-scheduled-executor": {
+    "pattern": "milo-shared-scheduled-executor-{instance_id}",
+    "name": "milo-shared-scheduled-executor",
+    "description": "",
+    "pool_id": 137
+  },
+  "ProductionContext": {
+    "pattern": "ProductionContext-{instance_id}",
+    "name": "ProductionContext",
+    "description": "",
+    "pool_id": 178
+  },
+  "cron4j::scheduler": {
+    "pattern": "cron4j::scheduler[{scheduled_object}]::timer",
+    "name": "cron4j::scheduler",
+    "description": "",
+    "pool_id": 37
+  },
+  "PrimaryHostControlWorker": {
+    "pattern": "PrimaryHostControlWorker-{hash_id}-{instance_id}",
+    "name": "PrimaryHostControlWorker",
+    "description": "",
+    "pool_id": 177
+  },
+  "drivers-slcethernetdriver": {
+    "pattern": "drivers-slcethernetdriver-{device_name}-{instance_id}",
+    "name": "drivers-slcethernetdriver",
+    "description": "",
+    "pool_id": 64
+  },
+  "gateway-tagchangescripts-project": {
+    "pattern": "gateway-tagchangescripts-project[{project_name}]-{instance_id}",
+    "name": "gateway-tagchangescripts-project",
+    "description": "",
+    "pool_id": 101
+  },
+  "MQTT Call:": {
+    "pattern": "MQTT Call:{id}",
+    "name": "MQTT Call:",
+    "description": "",
+    "pool_id": 141
+  },
+  "Connector-Scheduler": {
+    "pattern": "Connector-Scheduler-{8char_UUID}-{instance_id}",
+    "name": "Connector-Scheduler",
+    "description": "",
+    "pool_id": 36
+  },
+  "gateway-messagehandler": {
+    "pattern": "gateway-messagehandler-{project_name}-(sharedThread|{message_handler})-{instance_id}",
+    "name": "gateway-messagehandler",
+    "description": "Could be shared or dedicated",
+    "pool_id": 90
+  },
+  "gateway-scripts-pylib-notifier": {
+    "pattern": "gateway-scripts-pylib-notifier",
+    "name": "gateway-scripts-pylib-notifier",
+    "description": "",
+    "pool_id": 96
+  },
+  "MES Enterprise": {
+    "pattern": "MES Enterprise-{instance_id}",
+    "name": "MES Enterprise",
+    "description": "",
+    "pool_id": 128
+  },
+  "pool": {
+    "pattern": "pool-{?}-thread-{?}",
+    "name": "pool",
+    "description": "",
+    "pool_id": 176
+  },
+  "milo-netty-wheel-timer": {
+    "pattern": "milo-netty-wheel-timer",
+    "name": "milo-netty-wheel-timer",
+    "description": "",
+    "pool_id": 136
+  },
+  "MQTT Snd:": {
+    "pattern": "MQTT Snd:{id}",
+    "name": "MQTT Snd:",
+    "description": "",
+    "pool_id": 145
+  },
+  "mobile-vm-callback-acceptor": {
+    "pattern": "mobile-vm-callback-acceptor",
+    "name": "mobile-vm-callback-acceptor",
+    "description": "",
+    "pool_id": 139
+  },
+  "MES Live Analysis": {
+    "pattern": "MES Live Analysis-{instance_id}",
+    "name": "MES Live Analysis",
+    "description": "",
+    "pool_id": 130
+  },
+  "gatewaynetwork-streamingdecoder": {
+    "pattern": "gatewaynetwork-streamingdecoder",
+    "name": "gatewaynetwork-streamingdecoder",
+    "description": "",
+    "pool_id": 107
+  },
+  "Analysis Selector Perspective": {
+    "pattern": "Analysis Selector Perspective-{instance_id}",
+    "name": "Analysis Selector Perspective",
+    "description": "",
+    "pool_id": 7
+  },
+  "tag-group-manager": {
+    "pattern": "tag-group-manager",
+    "name": "tag-group-manager",
+    "description": "",
+    "pool_id": 209
+  },
+  "nioEventLoopGroup": {
+    "pattern": "nioEventLoopGroup-{instance_id}",
+    "name": "nioEventLoopGroup",
+    "description": "",
+    "pool_id": 157
+  },
+  "kotlinx.coroutines.DefaultExecutor": {
+    "pattern": "kotlinx.coroutines.DefaultExecutor",
+    "name": "kotlinx.coroutines.DefaultExecutor",
+    "description": "",
+    "pool_id": 123
+  },
+  "MySQL Statement Cancellation Timer": {
+    "pattern": "MySQL Statement Cancellation Timer",
+    "name": "MySQL Statement Cancellation Timer",
+    "description": "",
+    "pool_id": 153
+  },
+  "threadDeathWatcher": {
+    "pattern": "threadDeathWatcher-{instance_id}",
+    "name": "threadDeathWatcher",
+    "description": "",
+    "pool_id": 215
+  },
+  "Keep-Alive-SocketCleaner": {
+    "pattern": "Keep-Alive-SocketCleaner",
+    "name": "Keep-Alive-SocketCleaner",
+    "description": "",
+    "pool_id": 238
+  },
+  "gan-ping-executor": {
+    "pattern": "gan-ping-executor-{instance_id}",
+    "name": "gan-ping-executor",
+    "description": "",
+    "pool_id": 78
+  },
+  "AS400 Read Daemon": {
+    "pattern": "AS400 Read Daemon-{instance_id}",
+    "name": "AS400 Read Daemon",
+    "description": "Something to do with AS400 DB connection",
+    "pool_id": 9
+  },
+  "ForkJoinPool": {
+    "pattern": "ForkJoinPool-?",
+    "name": "ForkJoinPool",
+    "description": "",
+    "pool_id": 75
+  },
+  "MES General": {
+    "pattern": "MES General-{instance_id}",
+    "name": "MES General",
+    "description": "",
+    "pool_id": 129
+  },
+  "RMI TCP Accept": {
+    "pattern": "RMI TCP Accept-{instance_id}",
+    "name": "RMI TCP Accept",
+    "description": "",
+    "pool_id": 184
+  },
+  "drivers-MicroLogixDriver": {
+    "pattern": "drivers-MicroLogixDriver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-MicroLogixDriver",
+    "description": "",
+    "pool_id": 53
+  },
+  "Session-HouseKeeper": {
+    "pattern": "Session-HouseKeeper-{hash_id}-{instance_id}",
+    "name": "Session-HouseKeeper",
+    "description": "",
+    "pool_id": 190
+  },
+  "drivers-logix-async-delay-queue": {
+    "pattern": "drivers-micrologixdriver",
+    "name": "drivers-logix-async-delay-queue",
+    "description": "",
+    "pool_id": 51
+  },
+  "drivers-modbusovertcpdriver": {
+    "pattern": "drivers-modbusovertcpdriver-{device_name}-{instance_id}",
+    "name": "drivers-modbusovertcpdriver",
+    "description": "",
+    "pool_id": 55
+  },
+  "COLOS Client TCP Socket Thread": {
+    "pattern": "COLOS Client TCP Socket Thread",
+    "name": "COLOS Client TCP Socket Thread",
+    "description": "",
+    "pool_id": 27
+  },
+  "opcua-server-socket": {
+    "pattern": "opcua-server-socket",
+    "name": "opcua-server-socket",
+    "description": "",
+    "pool_id": 166
+  },
+  "drivers-s7300driver": {
+    "pattern": "drivers-s7300driver-{device_name}-{instance_id}",
+    "name": "drivers-s7300driver",
+    "description": "",
+    "pool_id": 62
+  },
+  "gateway-log-maintenance": {
+    "pattern": "gateway-log-maintenance",
+    "name": "gateway-log-maintenance",
+    "description": "",
+    "pool_id": 87
+  },
+  "UpdateExecuter": {
+    "pattern": "UpdateExecuter {instance_id}",
+    "name": "UpdateExecuter",
+    "description": "",
+    "pool_id": 223
+  },
+  "org.eclipse.jetty.server.session.HashSessionManager": {
+    "pattern": "org.eclipse.jetty.server.session.HashSessionManager@{UUID}Timer",
+    "name": "org.eclipse.jetty.server.session.HashSessionManager",
+    "description": "",
+    "pool_id": 169
+  },
+  "opc-ua-scheduled-executor": {
+    "pattern": "opc-ua-scheduled-executor-{instance_id}",
+    "name": "opc-ua-scheduled-executor",
+    "description": "",
+    "pool_id": 160
+  },
+  "AWS-KIN": {
+    "pattern": "AWS-KIN-{8char_UUID}-{instance_id}",
+    "name": "AWS-KIN",
+    "description": "",
+    "pool_id": 235
+  },
+  "sip-dialog-method-handler-timer": {
+    "pattern": "sip-dialog-method-handler-timer",
+    "name": "sip-dialog-method-handler-timer",
+    "description": "",
+    "pool_id": 196
+  },
+  "webserver": {
+    "pattern": "webserver-{thread_id}",
+    "name": "webserver",
+    "description": "Webserver threads are needed when communicating with the Gateway or if a subsystem does not have it's own thread pool. Some example subsystems that use webserver threads are:\n\nThe Gateway webpage,\nThe Designer,\nVision Clients,\nWebDev module requests.\n\n300 is the default size",
+    "pool_id": 225
+  },
+  "PrinterListener": {
+    "pattern": "PrinterListener",
+    "name": "PrinterListener",
+    "description": "",
+    "pool_id": 236
+  },
+  "Java2D Disposer": {
+    "pattern": "Java2D Disposer",
+    "name": "Java2D Disposer",
+    "description": "",
+    "pool_id": 119
+  },
+  "milo-shared-thread-pool": {
+    "pattern": "milo-shared-thread-pool-{instance_id}",
+    "name": "milo-shared-thread-pool",
+    "description": "",
+    "pool_id": 138
+  },
+  "ClientExecEngine": {
+    "pattern": "ClientExecEngine-{instance_id}",
+    "name": "ClientExecEngine",
+    "description": "",
+    "pool_id": 24
+  },
+  "LS-S-FIL_Filler_Videojet - Driver Thread": {
+    "pattern": "LS-S-FIL_Filler_Videojet - Driver Thread",
+    "name": "LS-S-FIL_Filler_Videojet - Driver Thread",
+    "description": "",
+    "pool_id": 124
+  },
+  "commons-pool-evictor": {
+    "pattern": "commons-pool-evictor",
+    "name": "commons-pool-evictor",
+    "description": "",
+    "pool_id": 32
+  },
+  "MariaDb-bulk": {
+    "pattern": "MariaDb-bulk-{instance_id}",
+    "name": "MariaDb-bulk",
+    "description": "",
+    "pool_id": 127
+  },
+  "Batik CleanerThread": {
+    "pattern": "Batik CleanerThread",
+    "name": "Batik CleanerThread",
+    "description": "",
+    "pool_id": 18
+  },
+  "HttpClient": {
+    "pattern": "HttpClient@{hash_id}-{instance_id}",
+    "name": "HttpClient",
+    "description": "",
+    "pool_id": 113
+  },
+  "Client_Id_Keepalive": {
+    "pattern": "Client_Id_Keepalive",
+    "name": "Client_Id_Keepalive",
+    "description": "",
+    "pool_id": 25
+  },
+  "SelectorHelper": {
+    "pattern": "SelectorHelper",
+    "name": "SelectorHelper",
+    "description": "",
+    "pool_id": 186
+  },
+  "drivers-request-cycle": {
+    "pattern": "drivers-request-cycle-{device_name}",
+    "name": "drivers-request-cycle",
+    "description": "",
+    "pool_id": 56
+  },
+  "opc-ua-executor": {
+    "pattern": "opc-ua-executor-{instance_id}",
+    "name": "opc-ua-executor",
+    "description": "",
+    "pool_id": 158
+  },
+  "oracle.jdbc.driver.BlockSource.ThreadedCachingBlockSource.BlockReleaser": {
+    "pattern": "oracle.jdbc.driver.BlockSource.ThreadedCachingBlockSource.BlockReleaser",
+    "name": "oracle.jdbc.driver.BlockSource.ThreadedCachingBlockSource.BlockReleaser",
+    "description": "",
+    "pool_id": 168
+  },
+  "Wrapper-Connection": {
+    "pattern": "Wrapper-Connection",
+    "name": "Wrapper-Connection",
+    "description": "",
+    "pool_id": 229
+  },
+  "Equipment Manager": {
+    "pattern": "Equipment Manager-{instance_id}",
+    "name": "Equipment Manager",
+    "description": "",
+    "pool_id": 71
+  },
+  "MQTT Ping:": {
+    "pattern": "MQTT Ping:{id}",
+    "name": "MQTT Ping:",
+    "description": "",
+    "pool_id": 143
+  },
+  "drivers-tcpudp-socket-listener": {
+    "pattern": "drivers-tcpudp-socket-listener",
+    "name": "drivers-tcpudp-socket-listener",
+    "description": "",
+    "pool_id": 66
+  },
+  "platform-scheduled-executor": {
+    "pattern": "platform-scheduled-executor-{instance_id}",
+    "name": "platform-scheduled-executor",
+    "description": "",
+    "pool_id": 175
+  },
+  "gateway-eventbus": {
+    "pattern": "gateway-eventbus-{instance_id}",
+    "name": "gateway-eventbus",
+    "description": "Used to send event data between subsystems, can be used by nearly any subsystem to send or read messages, see https://files.inductiveautomation.com/sdk/javadoc/ignition81/8.1.21/com/inductiveautomation/ignition/gateway/model/GatewayContext.html#:~:text=%2C%20getEdgeEditions%2C-,getEventBus,-%2C%20getExpressionFunctionFactory%2C",
+    "pool_id": 81
+  },
+  "gateway-script-shared-timer": {
+    "pattern": "gateway-script-shared-timer[{project_name}]",
+    "name": "gateway-script-shared-timer",
+    "description": "",
+    "pool_id": 95
+  },
+  "gateway-db-connection-validator": {
+    "pattern": "gateway-db-connection-validator-{instance_id}",
+    "name": "gateway-db-connection-validator",
+    "description": "",
+    "pool_id": 80
+  },
+  "Session-Scheduler": {
+    "pattern": "Session-Scheduler-{hash_id}-{instance_id}",
+    "name": "Session-Scheduler",
+    "description": "",
+    "pool_id": 191
+  },
+  "drivers-modbusdriver2": {
+    "pattern": "drivers-modbusdriver2-{device_name?}-{instance_id}",
+    "name": "drivers-modbusdriver2",
+    "description": "",
+    "pool_id": 54
+  },
+  "drivers-s71200driver": {
+    "pattern": "drivers-s71200driver-{device_name}-{instance_id}",
+    "name": "drivers-s71200driver",
+    "description": "",
+    "pool_id": 58
+  },
+  "gateway-scheduled-scripts": {
+    "pattern": "gateway-scheduled-scripts=[{project_name}]-{instance_id}",
+    "name": "gateway-scheduled-scripts",
+    "description": "",
+    "pool_id": 93
+  },
+  "DefaultUDPTransportMapping": {
+    "pattern": "DefaultUDPTransportMapping_{bind_address/port}",
+    "name": "DefaultUDPTransportMapping",
+    "description": "",
+    "pool_id": 240
+  },
+  "HttpClient-1-SelectorManager": {
+    "pattern": "HttpClient-{instance_id}-SelectorManager",
+    "name": "HttpClient-1-SelectorManager",
+    "description": "Created whenever an instance of java.net.http.HttpClient is created, most commonly through the scripting function system.net.httpClient().  \nThese threads don't get cleaned up once the associated client is no longer in scope, instead, if the client that it belonged to is no longer in scope, this thread will get cleaned in the next garbage collection.  \n",
+    "pool_id": 112
+  },
+  "ForkJoinPool.commonPool": {
+    "pattern": "ForkJoinPool.commonPool-worker-{instance_id}",
+    "name": "ForkJoinPool.commonPool",
+    "description": "",
+    "pool_id": 76
+  },
+  "alarm-notification-email-profile": {
+    "pattern": "alarm-notification-email-profile[{profile_name}]-{instance_id}",
+    "name": "alarm-notification-email-profile",
+    "description": "",
+    "pool_id": 4
+  },
+  "gateway-tags-eventscripts": {
+    "pattern": "gateway-tags-eventscripts-{instance_id}",
+    "name": "gateway-tags-eventscripts",
+    "description": "",
+    "pool_id": 103
+  },
+  "gateway-storeforward-countupdates": {
+    "pattern": "gateway-storeforward-countupdates",
+    "name": "gateway-storeforward-countupdates",
+    "description": "",
+    "pool_id": 99
+  },
+  "alarm-notification-pipeline-delay-schedule": {
+    "pattern": "alarm-notification-pipeline-delay-schedule-{instance_id}",
+    "name": "alarm-notification-pipeline-delay-schedule",
+    "description": "",
+    "pool_id": 5
+  },
+  "MES Operations": {
+    "pattern": "MES Operations-{instance_id}",
+    "name": "MES Operations",
+    "description": "",
+    "pool_id": 131
+  },
+  "LK-S-FIL_Filler_Videojet Client TCP Socket Thread": {
+    "pattern": "LK-S-FIL_Filler_Videojet Client TCP Socket Thread",
+    "name": "LK-S-FIL_Filler_Videojet Client TCP Socket Thread",
+    "description": "",
+    "pool_id": 125
+  },
+  "MES Shift Monitor": {
+    "pattern": "MES Shift Monitor-{instance_id}",
+    "name": "MES Shift Monitor",
+    "description": "",
+    "pool_id": 133
+  },
+  "automatic-thread-dump-manager": {
+    "pattern": "automatic-thread-dump-manager",
+    "name": "automatic-thread-dump-manager",
+    "description": "thread for auto tread dumps?",
+    "pool_id": 14
+  },
+  "gateway-logging-sqlite-appender": {
+    "pattern": "gateway-logging-sqlite-appender",
+    "name": "gateway-logging-sqlite-appender",
+    "description": "",
+    "pool_id": 89
+  },
+  "mobile-vm-creator": {
+    "pattern": "mobile-vm-creator",
+    "name": "mobile-vm-creator",
+    "description": "",
+    "pool_id": 140
+  },
+  "drivers-tcpconnection-asyncsocketiosession": {
+    "pattern": "drivers-tcpconnection-asyncsocketiosession-{instance_id}",
+    "name": "drivers-tcpconnection-asyncsocketiosession",
+    "description": "",
+    "pool_id": 65
+  },
+  "Cleaner": {
+    "pattern": "Cleaner-{instance_id}",
+    "name": "Cleaner",
+    "description": "",
+    "pool_id": 22
+  },
+  "alarm-notification-pipeline": {
+    "pattern": "alarm-notification-pipeline[{tag_provider}]",
+    "name": "alarm-notification-pipeline",
+    "description": "",
+    "pool_id": 6
+  },
+  "DesignerExecEngine": {
+    "pattern": "DesignerExecEngine-{instance_id}",
+    "name": "DesignerExecEngine",
+    "description": "",
+    "pool_id": 239
+  },
+  "MES Value Sync": {
+    "pattern": "MES Value Sync-{instance_id}",
+    "name": "MES Value Sync",
+    "description": "",
+    "pool_id": 134
+  },
+  "sip-transaction-timer": {
+    "pattern": "sip-transaction-timer",
+    "name": "sip-transaction-timer",
+    "description": "",
+    "pool_id": 200
+  },
+  "server-trust-manager": {
+    "pattern": "server-trust-manager-{instance_id}",
+    "name": "server-trust-manager",
+    "description": "",
+    "pool_id": 189
+  },
+  "MQTT Rec:": {
+    "pattern": "MQTT Rec:{id}",
+    "name": "MQTT Rec:",
+    "description": "",
+    "pool_id": 144
+  },
+  "gn": {
+    "pattern": "gn-{gateway_address}-(recv|send)-{instance_id}",
+    "name": "gn",
+    "description": "",
+    "pool_id": 109
+  },
+  "MQTTEngineCust": {
+    "pattern": "MQTTEngineCust-{?}",
+    "name": "MQTTEngineCust",
+    "description": "",
+    "pool_id": 146
+  },
+  "QueryExecuter": {
+    "pattern": "QueryExecuter {instance_id}",
+    "name": "QueryExecuter",
+    "description": "",
+    "pool_id": 180
+  },
+  "perspective-worker": {
+    "pattern": "perspective-worker-{instance_id}",
+    "name": "perspective-worker",
+    "description": "Dynamic Thread Pool for Perspective Sessions",
+    "pool_id": 173
+  },
+  "tag-expressions": {
+    "pattern": "tag-expressions-{instance_id}",
+    "name": "tag-expressions",
+    "description": "",
+    "pool_id": 208
+  },
+  "DNI-Client": {
+    "pattern": "DNI-Client({instance_id})",
+    "name": "DNI-Client",
+    "description": "",
+    "pool_id": 45
+  },
+  "catapult-filemonitor-handler": {
+    "pattern": "catapult-filemonitor-handler",
+    "name": "catapult-filemonitor-handler",
+    "description": "",
+    "pool_id": 20
+  },
+  "TwilioAccount": {
+    "pattern": "TwilioAccount[{notification_profile}]",
+    "name": "TwilioAccount",
+    "description": "",
+    "pool_id": 219
+  },
+  "DefaultDispatcher-worker": {
+    "pattern": "DefaultDispatcher-worker-{instance_id}",
+    "name": "DefaultDispatcher-worker",
+    "description": "",
+    "pool_id": 40
+  },
+  "perspective-queue": {
+    "pattern": "perspective-queue-{instance_id}",
+    "name": "perspective-queue",
+    "description": "",
+    "pool_id": 171
+  },
+  "gateway-alarm-pipelines-misc": {
+    "pattern": "gateway-alarm-pipelines-misc-{instance_id}",
+    "name": "gateway-alarm-pipelines-misc",
+    "description": "",
+    "pool_id": 79
+  },
+  "Connection evictor": {
+    "pattern": "Connection evictor",
+    "name": "Connection evictor",
+    "description": "",
+    "pool_id": 35
+  },
+  "sfc-thread-pool": {
+    "pattern": "sfc-thread-pool-{instance_id}",
+    "name": "sfc-thread-pool",
+    "description": "",
+    "pool_id": 193
+  },
+  "gateway-script-dedicated-timer": {
+    "pattern": "gateway-script-dedicated-timer[{project_name}/{timer_script}]-{instance_id}",
+    "name": "gateway-script-dedicated-timer",
+    "description": "",
+    "pool_id": 94
+  },
+  "MQTT Con:": {
+    "pattern": "MQTT Con:{id}",
+    "name": "MQTT Con:",
+    "description": "",
+    "pool_id": 142
+  },
+  "opc-ua-netty-wheel-timer": {
+    "pattern": "opc-ua-netty-wheel-timer",
+    "name": "opc-ua-netty-wheel-timer",
+    "description": "",
+    "pool_id": 159
+  },
+  "AsyncAppender-Worker-DBAsync": {
+    "pattern": "AsyncAppender-Worker-DBAsync",
+    "name": "AsyncAppender-Worker-DBAsync",
+    "description": "Something to do with logs idb",
+    "pool_id": 10
+  },
+  "gateway-gn-shared-exec": {
+    "pattern": "gateway-gn-shared-exec-{instance_id}",
+    "name": "gateway-gn-shared-exec",
+    "description": "",
+    "pool_id": 83
+  },
+  "TagEventHandler": {
+    "pattern": "TagEventHandler-{hash_id}-{instance_id}",
+    "name": "TagEventHandler",
+    "description": "",
+    "pool_id": 212
+  },
+  "RemotePrinterListener": {
+    "pattern": "RemotePrinterListener",
+    "name": "RemotePrinterListener",
+    "description": "",
+    "pool_id": 183
+  },
+  "ProductionModelRunner": {
+    "pattern": "ProductionModelRunner-{instance_id}",
+    "name": "ProductionModelRunner",
+    "description": "",
+    "pool_id": 179
+  },
+  "drivers-compactlogixdriver": {
+    "pattern": "drivers-compactlogixdriver-{device_name}-{instance_id}",
+    "name": "drivers-compactlogixdriver",
+    "description": "",
+    "pool_id": 47
+  },
+  "GatewayConnection": {
+    "pattern": "GatewayConnection-{instance_id}",
+    "name": "GatewayConnection",
+    "description": "",
+    "pool_id": 106
+  },
+  "mssql-jdbc-shared-timer-core": {
+    "pattern": "mssql-jdbc-shared-timer-core-{instance_id}",
+    "name": "mssql-jdbc-shared-timer-core",
+    "description": "",
+    "pool_id": 151
+  },
+  "tag-provider": {
+    "pattern": "tag-provider-{tag_provider}",
+    "name": "tag-provider",
+    "description": "Only 1 thread per provider.\nAsync Tag Provider Operations:\nRead,\nWrite,\nConfigure,\nRestart,\nDelete\n\nhttps://docs.google.com/document/d/1ib2nwPeKbVpFoe2VJo48BPK3L3Qs8ld8ouITuomno1g/edit",
+    "pool_id": 210
+  },
+  "InterruptTimer": {
+    "pattern": "InterruptTimer",
+    "name": "InterruptTimer",
+    "description": "",
+    "pool_id": 117
+  },
+  "CommonTagStructureListener": {
+    "pattern": "CommonTagStructureListener-{8char_UUID}{?-{instance_id}}",
+    "name": "CommonTagStructureListener",
+    "description": "",
+    "pool_id": 33
+  },
+  "sms-inbound-recv": {
+    "pattern": "sms-inbound-recv",
+    "name": "sms-inbound-recv",
+    "description": "",
+    "pool_id": 203
+  },
+  "Wicket-PageSavingThread": {
+    "pattern": "Wicket-PageSavingThread",
+    "name": "Wicket-PageSavingThread",
+    "description": "",
+    "pool_id": 228
+  },
+  "milo-netty-event-loop": {
+    "pattern": "milo-netty-event-loop-{instance_id}",
+    "name": "milo-netty-event-loop",
+    "description": "",
+    "pool_id": 135
+  },
+  "sip-transportmanager-servertransport": {
+    "pattern": "sip-transportmanager-servertransport",
+    "name": "sip-transportmanager-servertransport",
+    "description": "",
+    "pool_id": 201
+  },
+  "Sip-RegisterRefreshTimer": {
+    "pattern": "Sip-RegisterRefreshTimer",
+    "name": "Sip-RegisterRefreshTimer",
+    "description": "",
+    "pool_id": 199
+  },
+  "HSQLDB Timer": {
+    "pattern": "HSQLDB Timer @{hash_id}",
+    "name": "HSQLDB Timer",
+    "description": "",
+    "pool_id": 111
+  },
+  "gateway-tagprovider": {
+    "pattern": "gateway-tagprovider-{provider_name}-sc-{instance_id}",
+    "name": "gateway-tagprovider",
+    "description": "",
+    "pool_id": 102
+  },
+  "Common-Cleaner": {
+    "pattern": "Common-Cleaner",
+    "name": "Common-Cleaner",
+    "description": "",
+    "pool_id": 31
+  },
+  "drivers-udpdriver": {
+    "pattern": "drivers-udpdriver-{device_name}-{instance_id}",
+    "name": "drivers-udpdriver",
+    "description": "",
+    "pool_id": 67
+  },
+  "H2 TCP Server": {
+    "pattern": "H2 TCP Server ({tcp_address}) thread-{instance_id}",
+    "name": "H2 TCP Server",
+    "description": "",
+    "pool_id": 110
+  },
+  "MES Scheduling": {
+    "pattern": "MES Scheduling-{instance_id}",
+    "name": "MES Scheduling",
+    "description": "",
+    "pool_id": 132
+  },
+  "FileSystemWatchService": {
+    "pattern": "FileSystemWatchService",
+    "name": "FileSystemWatchService",
+    "description": "",
+    "pool_id": 73
+  },
+  "Signal Dispatcher": {
+    "pattern": "Signal Dispatcher",
+    "name": "Signal Dispatcher",
+    "description": "",
+    "pool_id": 194
+  },
+  "Swing-Shell": {
+    "pattern": "Swing-Shell",
+    "name": "Swing-Shell",
+    "description": "",
+    "pool_id": 205
+  },
+  "gateway-gn-shared-single-exec": {
+    "pattern": "gateway-gn-shared-single-exec-{instance_id}",
+    "name": "gateway-gn-shared-single-exec",
+    "description": "",
+    "pool_id": 85
+  },
+  "QM-Timer": {
+    "pattern": "QM-Timer",
+    "name": "QM-Timer",
+    "description": "",
+    "pool_id": 181
+  },
+  "drivers-ControlLogixDriver": {
+    "pattern": "drivers-ControlLogixDriver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-ControlLogixDriver",
+    "description": "",
+    "pool_id": 50
+  },
+  "AWT-Shutdown": {
+    "pattern": "AWT-Shutdown",
+    "name": "AWT-Shutdown",
+    "description": "",
+    "pool_id": 16
+  },
+  "gateway-usersources-cache-updater": {
+    "pattern": "gateway-usersources-cache-updater-{instance_id}",
+    "name": "gateway-usersources-cache-updater",
+    "description": "",
+    "pool_id": 104
+  },
+  "File Reaper": {
+    "pattern": "File Reaper",
+    "name": "File Reaper",
+    "description": "",
+    "pool_id": 72
+  },
+  "Alarm Manager": {
+    "pattern": "Alarm Manager-{instance_id}",
+    "name": "Alarm Manager",
+    "description": "",
+    "pool_id": 2
+  },
+  "opcua-executor": {
+    "pattern": "opcua-executor-{instance_id}",
+    "name": "opcua-executor",
+    "description": "",
+    "pool_id": 161
+  },
+  "Scheduler": {
+    "pattern": "Scheduler-{instance_id}",
+    "name": "Scheduler",
+    "description": "",
+    "pool_id": 185
+  },
+  "image-cache-maint": {
+    "pattern": "image-cache-maint",
+    "name": "image-cache-maint",
+    "description": "",
+    "pool_id": 116
+  },
+  "script-invoke-async": {
+    "pattern": "script-invoke-async",
+    "name": "script-invoke-async",
+    "description": "",
+    "pool_id": 233
+  },
+  "sms-ack-recv": {
+    "pattern": "sms-ack-recv",
+    "name": "sms-ack-recv",
+    "description": "",
+    "pool_id": 202
+  },
+  "platform-executor": {
+    "pattern": "platform-executor-{instance_id}",
+    "name": "platform-executor",
+    "description": "",
+    "pool_id": 174
+  },
+  "mysql-cj-abandoned-connection-cleanup": {
+    "pattern": "mysql-cj-abandoned-connection-cleanup",
+    "name": "mysql-cj-abandoned-connection-cleanup",
+    "description": "",
+    "pool_id": 154
+  },
+  "drivers-snmpv3driver": {
+    "pattern": "drivers-snmpv3driver-{device_name}",
+    "name": "drivers-snmpv3driver",
+    "description": "",
+    "pool_id": 242
+  },
+  "opcua-request-cycle": {
+    "pattern": "opcua-request-cycle-{?}",
+    "name": "opcua-request-cycle",
+    "description": "",
+    "pool_id": 162
+  },
+  "Finalizer": {
+    "pattern": "Finalizer",
+    "name": "Finalizer",
+    "description": "",
+    "pool_id": 74
+  },
+  "weakref reaper": {
+    "pattern": "weakref reaper",
+    "name": "weakref reaper",
+    "description": "",
+    "pool_id": 224
+  },
+  "gateway-gn-svcmgr": {
+    "pattern": "gateway-gn-svcmgr-{instance_id}",
+    "name": "gateway-gn-svcmgr",
+    "description": "",
+    "pool_id": 86
+  },
+  "DNI Cleaner": {
+    "pattern": "DNI Cleaner",
+    "name": "DNI Cleaner",
+    "description": "",
+    "pool_id": 43
+  },
+  "Keep-Alive-Timer": {
+    "pattern": "Keep-Alive-Timer",
+    "name": "Keep-Alive-Timer",
+    "description": "",
+    "pool_id": 122
+  },
+  "gateway-scripts-pylib-watcher": {
+    "pattern": "gateway-scripts-pylib-watcher",
+    "name": "gateway-scripts-pylib-watcher",
+    "description": "",
+    "pool_id": 97
+  },
+  "opcua-server-channel-io-session": {
+    "pattern": "opcua-server-channel-io-session-{instance_id}",
+    "name": "opcua-server-channel-io-session",
+    "description": "",
+    "pool_id": 165
+  },
+  "Thread": {
+    "pattern": "Thread-{thread_id}",
+    "name": "Thread",
+    "description": "",
+    "pool_id": 214
+  },
+  "drivers-snmpv2driver": {
+    "pattern": "drivers-snmpv2driver-{device_name}",
+    "name": "drivers-snmpv2driver",
+    "description": "",
+    "pool_id": 234
+  },
+  "certificate-store-watcher": {
+    "pattern": "certificate-store-watcher",
+    "name": "certificate-store-watcher",
+    "description": "",
+    "pool_id": 21
+  },
+  "gateway-shared-exec-engine": {
+    "pattern": "gateway-shared-exec-engine-{instance_id}",
+    "name": "gateway-shared-exec-engine",
+    "description": "",
+    "pool_id": 98
+  },
+  "I/O dispatcher": {
+    "pattern": "I/O dispatcher {instance_id}",
+    "name": "I/O dispatcher",
+    "description": "",
+    "pool_id": 114
+  },
+  "client-trust-manager": {
+    "pattern": "client-trust-manager-{instance_id}",
+    "name": "client-trust-manager",
+    "description": "",
+    "pool_id": 23
+  },
+  "DNI I-Client": {
+    "pattern": "DNI I/O-Client({instance_id})",
+    "name": "DNI I-Client",
+    "description": "",
+    "pool_id": 44
+  },
+  "alarm-event-processor": {
+    "pattern": "alarm-event-processor-{tag_provider}-{instance_id}",
+    "name": "alarm-event-processor",
+    "description": "",
+    "pool_id": 3
+  },
+  "DestroyJavaVM": {
+    "pattern": "DestroyJavaVM",
+    "name": "DestroyJavaVM",
+    "description": "",
+    "pool_id": 41
+  },
+  "drivers-S7300Driver": {
+    "pattern": "drivers-S7300Driver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-S7300Driver",
+    "description": "",
+    "pool_id": 61
+  },
+  "SwingWorker": {
+    "pattern": "SwingWorker-pool-{?}-thread-{instance_id}",
+    "name": "SwingWorker",
+    "description": "",
+    "pool_id": 206
+  },
+  "drivers-s71500driver": {
+    "pattern": "drivers-s71500driver-{device_name}-{instance_id}",
+    "name": "drivers-s71500driver",
+    "description": "",
+    "pool_id": 60
+  },
+  "MTF": {
+    "pattern": "MTF--{hash_id}",
+    "name": "MTF",
+    "description": "",
+    "pool_id": 155
+  },
+  "Enip1": {
+    "pattern": "Enip1-{?}",
+    "name": "Enip1",
+    "description": "",
+    "pool_id": 68
+  },
+  "db-tag-threads": {
+    "pattern": "db-tag-threads-({tag_provider})?-{instance_id}",
+    "name": "db-tag-threads",
+    "description": "",
+    "pool_id": 38
+  },
+  "EDT-Watchdog": {
+    "pattern": "EDT-Watchdog-{instance_id}",
+    "name": "EDT-Watchdog",
+    "description": "",
+    "pool_id": 70
+  },
+  "gateway-performance-metric-history": {
+    "pattern": "gateway-performance-metric-history-{instance_id}",
+    "name": "gateway-performance-metric-history",
+    "description": "",
+    "pool_id": 92
+  },
+  "InvokeLaterTimer": {
+    "pattern": "InvokeLaterTimer",
+    "name": "InvokeLaterTimer",
+    "description": "",
+    "pool_id": 118
+  },
+  "MTR": {
+    "pattern": "MTR--{hash_id}",
+    "name": "MTR",
+    "description": "",
+    "pool_id": 156
+  },
+  "COLOS Base Printer Thread": {
+    "pattern": "COLOS Base Printer Thread",
+    "name": "COLOS Base Printer Thread",
+    "description": "",
+    "pool_id": 26
+  },
+  "Reference Handler": {
+    "pattern": "Reference Handler",
+    "name": "Reference Handler",
+    "description": "",
+    "pool_id": 182
+  },
+  "gateway-storeforward-pipeline": {
+    "pattern": "gateway-storeforward-pipeline[{db_connection_name}]-engine[{engine_type}]",
+    "name": "gateway-storeforward-pipeline",
+    "description": "",
+    "pool_id": 100
+  },
+  "tag-provider-subs": {
+    "pattern": "tag-provider-subs-{tag_provider}",
+    "name": "tag-provider-subs",
+    "description": "",
+    "pool_id": 211
+  },
+  "EIP_Fast": {
+    "pattern": "EIP_Fast{?}",
+    "name": "EIP_Fast",
+    "description": "",
+    "pool_id": 69
+  },
+  "fsql": {
+    "pattern": "fsql-{instance_id}",
+    "name": "fsql",
+    "description": "",
+    "pool_id": 77
+  },
+  "MVStore background writer": {
+    "pattern": "MVStore background writer nio:{file_path}",
+    "name": "MVStore background writer",
+    "description": "",
+    "pool_id": 150
+  },
+  "webserver-acceptor": {
+    "pattern": "webserver-{thread_id}-acceptor-{instance_id}@{hash_id}-ServerConnector@{hash_id}{?}",
+    "name": "webserver-acceptor",
+    "description": "",
+    "pool_id": 226
+  },
+  "DNI (PR)": {
+    "pattern": "DNI (PR)",
+    "name": "DNI (PR)",
+    "description": "",
+    "pool_id": 42
+  },
+  "throttling-aggregator": {
+    "pattern": "throttling-aggregator",
+    "name": "throttling-aggregator",
+    "description": "",
+    "pool_id": 216
+  },
+  "xopc-tag-driver": {
+    "pattern": "xopc-tag-driver-{instance_id}",
+    "name": "xopc-tag-driver",
+    "description": "",
+    "pool_id": 232
+  },
+  "Abandoned connection cleanup thread": {
+    "pattern": "Abandoned connection cleanup thread",
+    "name": "Abandoned connection cleanup thread",
+    "description": "",
+    "pool_id": 1
+  },
+  "MQTTEngineGw": {
+    "pattern": "MQTTEngineGw-{?}",
+    "name": "MQTTEngineGw",
+    "description": "",
+    "pool_id": 148
+  },
+  "drivers-CompactLogixDriver": {
+    "pattern": "drivers-CompactLogixDriver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-CompactLogixDriver",
+    "description": "",
+    "pool_id": 48
+  },
+  "tags-history": {
+    "pattern": "tags-history-{instance_id}",
+    "name": "tags-history",
+    "description": "",
+    "pool_id": 213
+  },
+  "ua-netty-wheel-timer": {
+    "pattern": "ua-netty-wheel-timer",
+    "name": "ua-netty-wheel-timer",
+    "description": "",
+    "pool_id": 221
+  },
+  "gateway-log-monitoring-session-reaper": {
+    "pattern": "gateway-log-monitoring-session-reaper",
+    "name": "gateway-log-monitoring-session-reaper",
+    "description": "",
+    "pool_id": 88
+  },
+  "gateway-expr-pollingfunc-timer": {
+    "pattern": "gateway-expr-pollingfunc-timer",
+    "name": "gateway-expr-pollingfunc-timer",
+    "description": "",
+    "pool_id": 82
+  },
+  "gatewaynetwork-streamingencoder": {
+    "pattern": "gatewaynetwork-streamingencoder",
+    "name": "gatewaynetwork-streamingencoder",
+    "description": "",
+    "pool_id": 108
+  },
+  "Wrapper-Control-Event-Monitor": {
+    "pattern": "Wrapper-Control-Event-Monitor",
+    "name": "Wrapper-Control-Event-Monitor",
+    "description": "",
+    "pool_id": 230
+  },
+  "catapult-filemonitor": {
+    "pattern": "catapult-filemonitor",
+    "name": "catapult-filemonitor",
+    "description": "",
+    "pool_id": 19
+  },
+  "sms-notification-profile-Water_Plant_Airlink": {
+    "pattern": "sms-notification-profile-Water_Plant_Airlink",
+    "name": "sms-notification-profile-Water_Plant_Airlink",
+    "description": "",
+    "pool_id": 204
+  },
+  "bacnet-scheduled-executor": {
+    "pattern": "bacnet-scheduled-executor-{instance_id}",
+    "name": "bacnet-scheduled-executor",
+    "description": "",
+    "pool_id": 241
+  },
+  "CompletableFutureDelayScheduler": {
+    "pattern": "CompletableFutureDelayScheduler",
+    "name": "CompletableFutureDelayScheduler",
+    "description": "",
+    "pool_id": 34
+  },
+  "sfc-shared-scheduler": {
+    "pattern": "sfc-shared-scheduler-{instance_id}",
+    "name": "sfc-shared-scheduler",
+    "description": "",
+    "pool_id": 192
+  },
+  "WrapperSimpleAppMain": {
+    "pattern": "WrapperSimpleAppMain",
+    "name": "WrapperSimpleAppMain",
+    "description": "",
+    "pool_id": 231
+  },
+  "gateway.tags.subscriptionmodel": {
+    "pattern": "gateway.tags.subscriptionmodel-{instance_id}",
+    "name": "gateway.tags.subscriptionmodel",
+    "description": "",
+    "pool_id": 105
+  },
+  "SyntheticaCleanerThread": {
+    "pattern": "SyntheticaCleanerThread",
+    "name": "SyntheticaCleanerThread",
+    "description": "",
+    "pool_id": 207
+  },
+  "AsyncSocketIOSession": {
+    "pattern": "AsyncSocketIOSession[{?}]-{instance_id}",
+    "name": "AsyncSocketIOSession",
+    "description": "",
+    "pool_id": 12
+  },
+  "drivers-SLCEthernetDriver": {
+    "pattern": "drivers-SLCEthernetDriver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-SLCEthernetDriver",
+    "description": "",
+    "pool_id": 63
+  },
+  "PDP-asset": {
+    "pattern": "PDP-asset/{?}",
+    "name": "PDP-asset",
+    "description": "",
+    "pool_id": 170
+  },
+  "AWT-Windows": {
+    "pattern": "AWT-Windows",
+    "name": "AWT-Windows",
+    "description": "",
+    "pool_id": 17
+  },
+  "opcua-server": {
+    "pattern": "opcua-server-{instance_id}",
+    "name": "opcua-server",
+    "description": "",
+    "pool_id": 164
+  },
+  "gateway-performance-clockdrift-detector": {
+    "pattern": "gateway-performance-clockdrift-detector",
+    "name": "gateway-performance-clockdrift-detector",
+    "description": "",
+    "pool_id": 91
+  },
+  "MQTTEngineSparkplug": {
+    "pattern": "MQTTEngineSparkplug-{?}",
+    "name": "MQTTEngineSparkplug",
+    "description": "",
+    "pool_id": 149
+  },
+  "ua-netty-event-loop": {
+    "pattern": "ua-netty-event-loop-{instance_id}",
+    "name": "ua-netty-event-loop",
+    "description": "",
+    "pool_id": 220
+  },
+  "Image Fetcher": {
+    "pattern": "Image Fetcher {instance_id}",
+    "name": "Image Fetcher",
+    "description": "",
+    "pool_id": 115
+  },
+  "drivers-S71200Driver": {
+    "pattern": "drivers-S71200Driver[{device_name}]-asyncsocketiosession-{instance_id}",
+    "name": "drivers-S71200Driver",
+    "description": "",
+    "pool_id": 57
+  },
+  "Main message loop": {
+    "pattern": "Main message loop",
+    "name": "Main message loop",
+    "description": "",
+    "pool_id": 126
+  },
+  "java-sdk-http-connection-reaper": {
+    "pattern": "java-sdk-http-connection-reaper",
+    "name": "java-sdk-http-connection-reaper",
+    "description": "",
+    "pool_id": 237
+  },
+  "Jython-Netty-Client": {
+    "pattern": "Jython-Netty-Client-{instance_id}",
+    "name": "Jython-Netty-Client",
+    "description": "",
+    "pool_id": 120
+  },
+  "sip-callqueue-transfer": {
+    "pattern": "sip-callqueue-transfer",
+    "name": "sip-callqueue-transfer",
+    "description": "",
+    "pool_id": 195
+  },
+  "ua-shared-pool": {
+    "pattern": "ua-shared-pool-{thread_id}",
+    "name": "ua-shared-pool",
+    "description": "",
+    "pool_id": 222
+  },
+  "MQTTEngineGen": {
+    "pattern": "MQTTEngineGen-{?}",
+    "name": "MQTTEngineGen",
+    "description": "",
+    "pool_id": 147
+  },
+  "WebSocketClient": {
+    "pattern": "WebSocketClient@{hash_id}-{thread_id}",
+    "name": "WebSocketClient",
+    "description": "",
+    "pool_id": 227
+  },
+  "scheduled-tag-reads": {
+    "pattern": "{tcp-device-name}-scheduled-tag-reads-{instance_id}",
+    "name": "scheduled-tag-reads",
+    "description": "",
+    "pool_id": 188
+  },
+  "gateway-gn-shared-schedule": {
+    "pattern": "gateway-gn-shared-schedule-{instance_id}",
+    "name": "gateway-gn-shared-schedule",
+    "description": "",
+    "pool_id": 84
+  },
+  "drivers-micrologixdriver": {
+    "pattern": "drivers-micrologixdriver-{device_name}-{instance_id}",
+    "name": "drivers-micrologixdriver",
+    "description": "",
+    "pool_id": 52
+  },
+  "Timer": {
+    "pattern": "Timer-{instance_id}",
+    "name": "Timer",
+    "description": "",
+    "pool_id": 217
+  },
+  "sip-phonecall": {
+    "pattern": "sip-phonecall-{UUID}-{timestamp}@{address?}",
+    "name": "sip-phonecall",
+    "description": "",
+    "pool_id": 198
+  },
+  "TimerQueue": {
+    "pattern": "TimerQueue",
+    "name": "TimerQueue",
+    "description": "",
+    "pool_id": 218
+  },
+  "perspective-scheduler": {
+    "pattern": "perspective-scheduler-{instance_id}",
+    "name": "perspective-scheduler",
+    "description": "",
+    "pool_id": 172
+  },
+  "com.jniwrapper.NativeResourceCollector": {
+    "pattern": "com.jniwrapper.NativeResourceCollector",
+    "name": "com.jniwrapper.NativeResourceCollector",
+    "description": "",
+    "pool_id": 30
+  },
+  "kafka-producer-network-thread": {
+    "pattern": "kafka-producer-network-thread | ignition-publisher",
+    "name": "kafka-producer-network-thread",
+    "description": "",
+    "pool_id": 121
+  },
+  "drivers-controllogixdriver": {
+    "pattern": "drivers-controllogixdriver-{device_name}-{instance_id}",
+    "name": "drivers-controllogixdriver",
+    "description": "",
+    "pool_id": 49
+  },
+  "Attach Listener": {
+    "pattern": "Attach Listener",
+    "name": "Attach Listener",
+    "description": "",
+    "pool_id": 13
+  }
+}
