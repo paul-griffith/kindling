@@ -260,7 +260,7 @@ sealed interface SimulatorFunction {
             Writable::class to ProgramDataType.ALL_TYPES,
         )
 
-        fun randomValueForDataType(type: ProgramDataType): String {
+        private fun randomValueForDataType(type: ProgramDataType): String {
             val df = DecimalFormat("#.##")
             return when (type) {
                 ProgramDataType.BOOLEAN -> listOf(true, false).random()
