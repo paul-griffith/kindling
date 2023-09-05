@@ -200,6 +200,10 @@ class SimulatorView(path: Path) : ToolPanel() {
             isMultiSelectionEnabled = false
             fileView = CustomIconView()
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+
+            Kindling.Preferences.UI.Theme.addChangeListener {
+                updateUI()
+            }
         }
     }
 

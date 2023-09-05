@@ -64,7 +64,7 @@ data object Kindling {
 
     const val SECONDARY_ACTION_ICON_SCALE = 0.75F
 
-    const val BETA_VERSION = "1.1.0-Beta"
+    const val BETA_VERSION = "1.1.2"
 
     data object Preferences {
         data object General : PreferenceCategory {

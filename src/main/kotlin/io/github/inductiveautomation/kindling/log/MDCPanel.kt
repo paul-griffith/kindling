@@ -74,7 +74,7 @@ internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0,
             valueCombo.model = mdcValuesPerKey.getValue(selectedItem as String).map { it.value }.let { DefaultComboBoxModel(Vector(it)) }
         }
 
-        selectedIndex = 0
+//        selectedIndex = 0
     }
 
     private val addFilter = Action(
