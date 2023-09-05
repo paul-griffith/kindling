@@ -1,16 +1,22 @@
 package io.github.inductiveautomation.kindling.sim
 
 import io.github.inductiveautomation.kindling.sim.model.SimulatorProgram
+import io.github.inductiveautomation.kindling.sim.model.exportToFile
+import io.github.inductiveautomation.kindling.utils.Action
+import io.github.inductiveautomation.kindling.utils.PopupMenuCustomizer
 import io.github.inductiveautomation.kindling.utils.add
 import net.miginfocom.swing.MigLayout
 import javax.swing.BorderFactory
+import javax.swing.JFileChooser
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JScrollPane
 
 class DeviceProgramPanel(
+    val deviceName: String,
     private val programItems: SimulatorProgram,
-) : JScrollPane() {
-    private val numberOfTags by programItems::size
+) : JScrollPane(), PopupMenuCustomizer {
+    val numberOfTags by programItems::size
 
     private val itemPanels = programItems.map(::ProgramItemPanel).onEach { itemPanel ->
         itemPanel.addProgramItemDeletedListener {
@@ -42,5 +48,16 @@ class DeviceProgramPanel(
                 }
             }
         }
+    }
+
+    override fun customizePopupMenu(menu: JPopupMenu) {
+        menu.add(
+            Action("Export to CSV") {
+                if (SimulatorView.directoryChooser.showSaveDialog(this@DeviceProgramPanel) == JFileChooser.APPROVE_OPTION) {
+                    val outputFile = SimulatorView.directoryChooser.selectedFile.toPath().resolve("$deviceName-sim.csv")
+                    programItems.exportToFile(outputFile)
+                }
+            },
+        )
     }
 }

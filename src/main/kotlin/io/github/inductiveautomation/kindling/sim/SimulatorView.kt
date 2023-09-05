@@ -8,25 +8,12 @@ import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.sim.model.ProgramDataType
-import io.github.inductiveautomation.kindling.sim.model.ProgramItem
-import io.github.inductiveautomation.kindling.sim.model.QualityCodes
 import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction
-import io.github.inductiveautomation.kindling.sim.model.SimulatorFunctionParameter
+import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Companion.generateRandomParametersForFunction
 import io.github.inductiveautomation.kindling.sim.model.TagParser
 import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
-import io.github.inductiveautomation.kindling.utils.Action
-import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
-import io.github.inductiveautomation.kindling.utils.FileFilter
-import io.github.inductiveautomation.kindling.utils.FloatableComponent
-import io.github.inductiveautomation.kindling.utils.TabStrip
-import io.github.inductiveautomation.kindling.utils.add
-import io.github.inductiveautomation.kindling.utils.getAll
-import io.github.inductiveautomation.kindling.utils.listCellRenderer
-import io.github.inductiveautomation.kindling.utils.tag
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import io.github.inductiveautomation.kindling.utils.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
@@ -50,7 +37,7 @@ import kotlin.properties.Delegates
 import kotlin.reflect.KClass
 
 class SimulatorView(path: Path) : ToolPanel() {
-    override val icon: Icon = FlatSVGIcon("icons/bx-tag.svg")
+    override val icon: Icon = FlatSVGIcon("icons/bx-archive.svg")
 
     @OptIn(ExperimentalSerializationApi::class)
     private val tagParser = TagParser(path.inputStream().use(JSON::decodeFromStream))
@@ -88,6 +75,23 @@ class SimulatorView(path: Path) : ToolPanel() {
         toolTipText = tagParser.missingDefinitions.joinToString("\n", prefix = MISSING_DEF_WARNING)
     }
 
+    private val unsupportedDataTypesWarning = JLabel(
+        "Unsupported tag data types!",
+        FlatSVGIcon("icons/bx-error.svg"), // .derive(10, 10),
+        JLabel.RIGHT,
+    ).apply {
+        foreground = Color.decode("#DB5860")
+        font = font.deriveFont(Font.BOLD)
+        isVisible = tagParser.unsupportedDataTypes.isNotEmpty()
+        toolTipText = tagParser.unsupportedDataTypes.entries.joinToString(
+            separator = "\n",
+            prefix = """The following tag data types, including number of occurances, are not supported.
+                |Tags of these data types have been omitted.\n
+            """.trimMargin(),
+            transform = { (type, num) -> "$type [$num]" }
+        )
+    }
+
     private val exportButton = JButton("Export All").apply {
         addActionListener {
             if (directoryChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -109,6 +113,7 @@ class SimulatorView(path: Path) : ToolPanel() {
     private val infoPanel = JPanel(MigLayout("fill, ins 10")).apply {
         add(countLabel, "west")
         add(missingDefinitionsWarning, "west, gapleft 20")
+        add(unsupportedDataTypesWarning, "west, gapleft 20")
         add(exportButton, "east, gapleft 10")
         add(randomizeButton, "east")
     }
@@ -116,7 +121,7 @@ class SimulatorView(path: Path) : ToolPanel() {
     private val tabs = TabStrip().apply {
         programs.entries.forEach { (deviceName, programItems) ->
             val lazyTab = DeviceProgramTab(deviceName, programItems.size) {
-                DeviceProgramPanel(programItems).apply {
+                DeviceProgramPanel(deviceName, programItems).apply {
                     addPropertyChangeListener("numItems") { evt ->
                         // Change Main label count
                         val change = evt.newValue as Int - evt.oldValue as Int
@@ -171,30 +176,26 @@ class SimulatorView(path: Path) : ToolPanel() {
         add(tabs, "push, grow, span")
 
         addFunctionDataChangeListener {
-            BACKGROUND.launch {
-                // We only need to update the UI for "active" panels which have been initialized
-                val devicePanels = tabs.indices.asSequence().map {
-                    (tabs.getComponentAt(it) as TabStrip.LazyTab).component
-                }.filter { component ->
-                    component.isInitialized()
-                }.map { component ->
-                    component.value as DeviceProgramPanel
-                }
+            // We only need to update the UI for "active" panels which have been initialized
+            val devicePanels = tabs.indices.asSequence().map {
+                (tabs.getComponentAt(it) as TabStrip.LazyTab).component
+            }.filter { component ->
+                component.isInitialized()
+            }.map { component ->
+                component.value as DeviceProgramPanel
+            }
 
-                EDT_SCOPE.launch {
-                    devicePanels.forEach { panel ->
-                        panel.getListeners(FunctionDataChangeListener::class.java).forEach {
-                            it.functionDataChange()
-                        }
-                    }
+            devicePanels.forEach { panel ->
+                panel.getListeners(FunctionDataChangeListener::class.java).forEach {
+                    it.functionDataChange()
                 }
             }
         }
     }
 
     companion object {
-        private val BACKGROUND = CoroutineScope(Dispatchers.Default)
-        private const val MISSING_DEF_WARNING = "The following UDT definitions were not found in the tag export. Some bindings may not be resolved:\n"
+        private const val MISSING_DEF_WARNING =
+            "The following UDT definitions were not found in the tag export. Some bindings may not be resolved:\n"
         val directoryChooser = JFileChooser(HomeLocation.currentValue.absolutePathString()).apply {
             isMultiSelectionEnabled = false
             fileView = CustomIconView()
@@ -252,7 +253,7 @@ class SimulatorView(path: Path) : ToolPanel() {
                         addActionListener {
                             val programItems = programs.values.flatten()
                             programItems.forEach { item ->
-                                val newFun = generateRandomFunction(item)
+                                val newFun = generateRandomFunction(item.dataType)
                                 if (newFun != null) item.valueSource = newFun
                             }
                             fireFunctionDataChanged()
@@ -264,14 +265,13 @@ class SimulatorView(path: Path) : ToolPanel() {
             }
             setSize(300, 600)
             setLocationRelativeTo(null)
-            iconImages = Kindling.frameIcons
+            iconImage = Kindling.frameIcons[3]
             defaultCloseOperation = HIDE_ON_CLOSE
         }
 
-        @Suppress("unchecked_cast")
-        private fun generateRandomFunction(item: ProgramItem): SimulatorFunction? {
+        private fun generateRandomFunction(dataType: ProgramDataType): SimulatorFunction? {
             val availableOptions = SimulatorFunction.compatibleTypes.filter { (_, dataTypes) ->
-                item.dataType in dataTypes
+                dataType in dataTypes
             }.keys
 
             val newFunClass = checkBoxList.checkBoxListSelectedValues.filter {
@@ -282,47 +282,7 @@ class SimulatorView(path: Path) : ToolPanel() {
 
             val newFunInstance = SimulatorFunction.functions[newFunClass]!!.invoke()
 
-            when (newFunInstance) {
-                is SimulatorFunction.QV -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-
-                    val qualityParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.QualityCode
-                    } as SimulatorFunctionParameter<QualityCodes>
-
-                    qualityParam.value = QualityCodes.entries.toTypedArray().random()
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.List -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.List
-                    } as SimulatorFunctionParameter<List<String>>
-                    valueParam.value = List(10) { SimulatorFunction.randomValueForDataType(item.dataType) }
-                }
-                is SimulatorFunction.ReadOnly -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.Writable -> {
-                    val valueParam = newFunInstance.parameters.find {
-                        it is SimulatorFunctionParameter.Value
-                    } as SimulatorFunctionParameter<String>
-                    valueParam.value = SimulatorFunction.randomValueForDataType(item.dataType)
-                }
-                is SimulatorFunction.Random -> {
-                    if (item.dataType == ProgramDataType.BOOLEAN) {
-                        val maxParam = newFunInstance.parameters.find {
-                            it is SimulatorFunctionParameter.Max
-                        } as SimulatorFunctionParameter<Int>
-                        maxParam.value = 1
-                    }
-                }
-                else -> Unit
-            }
+            newFunInstance.generateRandomParametersForFunction(dataType)
 
             return newFunInstance
         }
@@ -353,14 +313,14 @@ class SimulatorView(path: Path) : ToolPanel() {
 }
 
 object SimulatorViewer : Tool {
-    override val description = "Opens a tag export and parses to a device simulator builder."
+    override val description = "Tag Export (json)"
     override val icon: FlatSVGIcon = FlatSVGIcon("icons/bx-tag.svg")
     override val title = "Tag Export (Device Sim)"
     override val filter = FileFilter(
         description = description,
         predicate = { file ->
             file.extension == "json" &&
-            "\"tagType\": \"Provider\"," in buildString {
+                    "\"tagType\": \"Provider\"," in buildString {
                 file.bufferedReader().use { br ->
                     repeat(10) { append(br.readLine()) }
                 }
@@ -372,3 +332,5 @@ object SimulatorViewer : Tool {
         return SimulatorView(path)
     }
 }
+
+class SimulatorViewerProxy : Tool by SimulatorViewer

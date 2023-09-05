@@ -56,7 +56,7 @@ data class ProgramItem(
     var deviceName: String = "",
 ) {
     constructor(
-        timeInterval: Int = 1000,
+        timeInterval: Int = 0,
         ignitionBrowsePath: String,
         valueSource: SimulatorFunction?,
         dataType: ProgramDataType,
@@ -260,7 +260,7 @@ sealed interface SimulatorFunction {
             Writable::class to ProgramDataType.ALL_TYPES,
         )
 
-        fun randomValueForDataType(type: ProgramDataType): String {
+        private fun randomValueForDataType(type: ProgramDataType): String {
             val df = DecimalFormat("#.##")
             return when (type) {
                 ProgramDataType.BOOLEAN -> listOf(true, false).random()
@@ -285,6 +285,51 @@ sealed interface SimulatorFunction {
                     kotlin.random.Random.nextLong(startTime.toEpochMilli(), endTime.toEpochMilli())
                 }
             }.toString()
+        }
+
+        @Suppress("unchecked_cast")
+        fun SimulatorFunction.generateRandomParametersForFunction(dataType: ProgramDataType) {
+            when (this) {
+                is QV -> {
+                    val valueParam = parameters.find {
+                        it is SimulatorFunctionParameter.Value
+                    } as SimulatorFunctionParameter<String>
+
+                    val qualityParam = parameters.find {
+                        it is SimulatorFunctionParameter.QualityCode
+                    } as SimulatorFunctionParameter<QualityCodes>
+
+                    qualityParam.value = QualityCodes.values().random()
+                    valueParam.value = randomValueForDataType(dataType)
+                }
+                is List -> {
+                    val valueParam = parameters.find {
+                        it is SimulatorFunctionParameter.List
+                    } as SimulatorFunctionParameter<kotlin.collections.List<String>>
+                    valueParam.value = List(10) { randomValueForDataType(dataType) }
+                }
+                is ReadOnly -> {
+                    val valueParam = parameters.find {
+                        it is SimulatorFunctionParameter.Value
+                    } as SimulatorFunctionParameter<String>
+                    valueParam.value = randomValueForDataType(dataType)
+                }
+                is Writable -> {
+                    val valueParam = parameters.find {
+                        it is SimulatorFunctionParameter.Value
+                    } as SimulatorFunctionParameter<String>
+                    valueParam.value = randomValueForDataType(dataType)
+                }
+                is Random -> {
+                    if (dataType == ProgramDataType.BOOLEAN) {
+                        val maxParam = parameters.find {
+                            it is SimulatorFunctionParameter.Max
+                        } as SimulatorFunctionParameter<Int>
+                        maxParam.value = 1
+                    }
+                }
+                else -> Unit
+            }
         }
     }
 }

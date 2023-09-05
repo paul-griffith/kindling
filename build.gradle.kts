@@ -50,7 +50,7 @@ dependencies {
     api(libs.bundles.ktor)
     api(libs.bundles.ignition) {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
-        isTransitive = false
+        isTransitive = true
     }
     api(libs.bundles.ktor)
     api(libs.excelkt)
