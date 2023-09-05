@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.inductiveautomation.kindling.cache.CacheViewer
 import io.github.inductiveautomation.kindling.idb.IdbViewer
 import io.github.inductiveautomation.kindling.log.LogViewer
+import io.github.inductiveautomation.kindling.sim.SimulatorViewer
 import io.github.inductiveautomation.kindling.thread.MultiThreadViewer
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.loadService
@@ -31,7 +32,6 @@ interface Tool {
                     LogViewer,
                     IdbViewer,
                     CacheViewer,
-                    SimulatorViewer,
                 )
         }
 
