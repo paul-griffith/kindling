@@ -61,6 +61,8 @@ import javax.swing.text.Document
 import javax.swing.tree.DefaultTreeCellRenderer
 import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreeNode
+import kotlin.io.path.extension
+import kotlin.io.path.isDirectory
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 import kotlin.time.Duration.Companion.milliseconds
