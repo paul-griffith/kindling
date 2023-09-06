@@ -27,9 +27,12 @@ object MachineLearningModel {
     private var needsUpdate = true
 
     private const val PMML_FILE_PREFIX = "thread_machine_learning_"
-    private const val SUPPORT_APPS_GATEWAY_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/LogisticRegressionThread.pmml"
-    private const val VERSION_ENDPOINT = "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
-    private const val KINDLING_DOWNLOAD_URL = "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
+    private const val PMML_FILE_ENDPOINT =
+        "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/pmml/$PMML_FILE_PREFIX"
+    private const val VERSION_ENDPOINT =
+        "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
+    private const val KINDLING_DOWNLOAD_URL =
+        "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
 
     private val currentPMMLVersion by lazy {
         val client = HttpClient()
@@ -55,7 +58,7 @@ object MachineLearningModel {
             val folder = if (cacheFilePath.toFile().exists()) {
                 cacheFilePath
             } else {
-                return "/thread_machine_learning_1.0.4.pmml"
+                return "/thread_machine_learning_1.1.2.pmml"
             }
 
             folder.toFile().listFiles()?.findLast { file ->
@@ -127,7 +130,7 @@ object MachineLearningModel {
         if (cacheFilePath.name.isNotEmpty()){
             val client = HttpClient()
             runBlocking {
-                val response: HttpResponse = client.request(SUPPORT_APPS_GATEWAY_ENDPOINT) {
+                val response: HttpResponse = client.request("$PMML_FILE_ENDPOINT$currentPMMLVersion.pmml") {
                     method = HttpMethod.Get
                 }
                 Files.createDirectories(cacheFilePath)

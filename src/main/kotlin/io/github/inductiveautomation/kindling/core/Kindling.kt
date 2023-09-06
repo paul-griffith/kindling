@@ -10,7 +10,6 @@ import io.github.inductiveautomation.kindling.utils.CharsetSerializer
 import io.github.inductiveautomation.kindling.utils.EmptyBorder
 import io.github.inductiveautomation.kindling.utils.PathSerializer
 import io.github.inductiveautomation.kindling.utils.PathSerializer.serializedForm
-import io.github.inductiveautomation.kindling.utils.Properties
 import io.github.inductiveautomation.kindling.utils.ThemeSerializer
 import io.github.inductiveautomation.kindling.utils.ToolSerializer
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
@@ -27,8 +26,6 @@ import kotlinx.serialization.json.encodeToStream
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTextField
 import java.awt.Image
-import java.awt.RenderingHints
-import java.awt.image.BufferedImage
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Path
