@@ -87,6 +87,7 @@ tasks {
         archiveBaseName.set("kindling-bundle")
         archiveClassifier.set("")
         archiveVersion.set("")
+        isZip64 = true
         mergeServiceFiles()
     }
 
