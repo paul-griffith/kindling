@@ -1,5 +1,7 @@
 package io.github.inductiveautomation.kindling.log
 
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.ShowFullLoggerNames
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
@@ -15,7 +17,7 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JToggleButton
 
-internal class NamePanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")), LogFilterPanel {
+internal class NamePanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")), FilterPanel<LogEvent> {
     private val countByLogger = events.groupingBy(LogEvent::logger).eachCount()
 
     private fun getSortKey(key: Any?): String {

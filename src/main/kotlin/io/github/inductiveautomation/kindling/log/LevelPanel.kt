@@ -1,5 +1,7 @@
 package io.github.inductiveautomation.kindling.log
 
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.FilterList
@@ -11,7 +13,7 @@ import javax.swing.JComponent
 import javax.swing.JPopupMenu
 import javax.swing.event.EventListenerList
 
-internal class LevelPanel(rawData: List<LogEvent>) : LogFilterPanel {
+internal class LevelPanel(rawData: List<LogEvent>) : FilterPanel<LogEvent> {
     private val filterList: FilterList = FilterList()
     override val component: JComponent = FlatScrollPane(filterList)
 

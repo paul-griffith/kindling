@@ -1,5 +1,7 @@
 package io.github.inductiveautomation.kindling.log
 
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.UI.Theme
 import io.github.inductiveautomation.kindling.log.LogViewer.TimeStampFormatter
 import io.github.inductiveautomation.kindling.utils.Action
@@ -39,7 +41,7 @@ import javax.swing.border.LineBorder
 internal class TimePanel(
     private val lowerBound: Instant,
     private val upperBound: Instant,
-) : JPanel(MigLayout("ins 0, fill, wrap 1")), LogFilterPanel {
+) : JPanel(MigLayout("ins 0, fill, wrap 1")), FilterPanel<LogEvent> {
     private var coveredRange: ClosedRange<Instant> = lowerBound..upperBound
     private val initialRange = coveredRange
 

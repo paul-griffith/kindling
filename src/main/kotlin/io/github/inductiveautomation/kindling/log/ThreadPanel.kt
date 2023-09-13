@@ -1,5 +1,7 @@
 package io.github.inductiveautomation.kindling.log
 
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.FilterList
@@ -14,7 +16,7 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JToggleButton
 
-internal class ThreadPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")), LogFilterPanel {
+internal class ThreadPanel(events: List<LogEvent>) : JPanel(MigLayout("ins 0, fill")), FilterPanel<LogEvent> {
     private val filterList = FilterList().apply {
         setModel(FilterModel(events.groupingBy { (it as SystemLogEvent).thread }.eachCount()))
     }

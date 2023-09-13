@@ -1,6 +1,8 @@
 package io.github.inductiveautomation.kindling.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.core.Kindling.SECONDARY_ACTION_ICON_SCALE
 import io.github.inductiveautomation.kindling.log.MDCTableModel.MDCColumns
 import io.github.inductiveautomation.kindling.utils.Action
@@ -26,7 +28,7 @@ import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.table.AbstractTableModel
 
-internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0, fill")), LogFilterPanel {
+internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0, fill")), FilterPanel<LogEvent> {
     private val allMDCs = events.flatMap(SystemLogEvent::mdc)
 
     private val countByKey = allMDCs
