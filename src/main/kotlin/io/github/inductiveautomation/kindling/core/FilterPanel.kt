@@ -1,30 +1,37 @@
 package io.github.inductiveautomation.kindling.core
 
 import io.github.inductiveautomation.kindling.utils.Column
+import io.github.inductiveautomation.kindling.utils.add
 import java.util.EventListener
 import javax.swing.JComponent
 import javax.swing.JPopupMenu
+import javax.swing.event.EventListenerList
 
-interface FilterPanel<T> : Filter<T> {
-    val tabName: String
-    fun isFilterApplied(): Boolean
-    val component: JComponent
-    fun addFilterChangeListener(listener: FilterChangeListener)
+abstract class FilterPanel<T> : Filter<T> {
+    abstract val tabName: String
+    abstract fun isFilterApplied(): Boolean
+    abstract val component: JComponent
 
-    fun reset()
+    protected val listeners = EventListenerList()
+    fun addFilterChangeListener(listener: FilterChangeListener) {
+        listeners.add(listener)
+    }
 
-    fun customizePopupMenu(
+    abstract fun reset()
+
+    abstract fun customizePopupMenu(
         menu: JPopupMenu,
         column: Column<out T, *>,
         event: T,
-    ) = Unit
+    )
+
 }
 
 fun interface Filter<T> {
     /**
      * Return true if this filter should display this event.
      */
-    fun filter(event: T): Boolean
+    fun filter(item: T): Boolean
 }
 
 fun interface FilterChangeListener : EventListener {

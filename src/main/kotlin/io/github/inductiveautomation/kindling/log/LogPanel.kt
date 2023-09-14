@@ -53,7 +53,6 @@ import javax.swing.SortOrder
 import javax.swing.SwingConstants
 import javax.swing.UIManager
 import kotlin.math.absoluteValue
-import kotlin.properties.Delegates
 import io.github.inductiveautomation.kindling.core.Detail as DetailEvent
 
 class LogPanel(
@@ -187,20 +186,17 @@ class LogPanel(
         add(header, "wrap, growx, spanx 2")
         add(
             JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT,
-                sidebar,
+                JSplitPane.VERTICAL_SPLIT,
                 JSplitPane(
-                    JSplitPane.VERTICAL_SPLIT,
+                    JSplitPane.HORIZONTAL_SPLIT,
+                    sidebar,
                     tableScrollPane,
-                    details,
                 ).apply {
-                    resizeWeight = 0.6
+                    isOneTouchExpandable = true
+                    dividerLocation = insets.left + 320
                 },
-            ).apply {
-                isOneTouchExpandable = true
-                resizeWeight = 0.1
-            },
-            "push, grow",
+                details,
+            ), "push, grow"
         )
 
         table.apply {
@@ -286,10 +282,8 @@ class LogPanel(
             }
         }
 
-        sidebar.apply {
-            for (filterPanel in filterPanels) {
-                filterPanel.addFilterChangeListener(::updateData)
-            }
+        sidebar.filterPanels.forEach { filterPanel ->
+            filterPanel.addFilterChangeListener(::updateData)
         }
 
         ShowFullLoggerNames.addChangeListener {
@@ -394,7 +388,7 @@ class LogPanel(
     }
 
     private class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
-        private val events = JLabel("$totalRows (of $totalRows) events")
+        private val events = JLabel("Showing $totalRows of $totalRows events")
 
         val search = JXSearchField("Search")
 
@@ -427,9 +421,11 @@ class LogPanel(
             add(search, "width 300, gap unrelated")
         }
 
-        var displayedRows by Delegates.observable(totalRows) { _, _, newValue ->
-            events.text = "$newValue (of $totalRows) events"
-        }
+        var displayedRows = totalRows
+            set(value) {
+                field = value
+                events.text = "Showing $value of $totalRows events"
+            }
     }
 
 

@@ -8,6 +8,8 @@ import io.github.inductiveautomation.kindling.core.Kindling.SECONDARY_ACTION_ICO
 import io.github.inductiveautomation.kindling.utils.FilterComparator.ByCountDescending
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
+import javax.swing.ButtonGroup
+import javax.swing.JToggleButton
 import javax.swing.ListModel
 
 data class FilterModelEntry(
@@ -186,4 +188,23 @@ class FilterList(
     ) {
         var comparator: FilterComparator by actionValue("filterComparator", comparator)
     }
+
+    fun createSortButtons(vararg comparators: FilterComparator): ButtonGroup = ButtonGroup().apply {
+        val actions = if (comparators.isEmpty()) sortActions else comparators.map(::SortAction)
+
+        for (sortAction in actions) {
+            add(
+                JToggleButton(
+                    Action(
+                        description = sortAction.description,
+                        icon = sortAction.icon,
+                        selected = sortAction.selected,
+                    ) { e ->
+                        sortAction.actionPerformed(e)
+                    },
+                ),
+            )
+        }
+    }
 }
+

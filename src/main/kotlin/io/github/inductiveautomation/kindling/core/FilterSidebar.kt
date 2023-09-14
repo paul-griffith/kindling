@@ -40,6 +40,8 @@ class FilterSidebar<T>(
                 )
             }
         }
+
+        selectedIndex = 0
     }
 
     private fun FilterPanel<*>.updateTabState() {

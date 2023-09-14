@@ -2,10 +2,11 @@ package io.github.inductiveautomation.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.comparator.AlphanumComparator
-import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.Detail
 import io.github.inductiveautomation.kindling.core.Detail.BodyLine
+import io.github.inductiveautomation.kindling.core.Filter
+import io.github.inductiveautomation.kindling.core.FilterSidebar
 import io.github.inductiveautomation.kindling.core.MultiTool
 import io.github.inductiveautomation.kindling.core.Preference
 import io.github.inductiveautomation.kindling.core.Preference.Companion.PreferenceCheckbox
@@ -25,7 +26,6 @@ import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FileFilter
-import io.github.inductiveautomation.kindling.utils.FilterList
 import io.github.inductiveautomation.kindling.utils.FilterModel
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.ReifiedJXTable
@@ -37,7 +37,6 @@ import io.github.inductiveautomation.kindling.utils.transferTo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
@@ -46,14 +45,11 @@ import java.awt.Desktop
 import java.awt.Rectangle
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.swing.ButtonGroup
 import javax.swing.JLabel
 import javax.swing.JMenu
 import javax.swing.JMenuBar
-import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSplitPane
-import javax.swing.JToggleButton
 import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.UIManager
@@ -69,14 +65,21 @@ class MultiThreadView(
         ThreadDump.fromStream(path.inputStream()) ?: throw ToolOpeningException("Failed to open $path as a thread dump")
     }
 
-    private val poolList = FilterList { it?.toString() ?: "(No Pool)" }
-    private val systemList = FilterList { it?.toString() ?: "Unassigned" }
-    private val stateList = FilterList()
+    private val poolPanel = PoolPanel()
+    private val systemPanel = SystemPanel()
+    private val statePanel = StatePanel()
     private val searchField = JXSearchField("Search")
+
+    private val sidebar = FilterSidebar(
+        statePanel,
+        systemPanel,
+        poolPanel,
+    )
 
     private var visibleThreadDumps: List<ThreadDump?> = emptyList()
         set(value) {
             field = value
+            threadCountLabel.totalThreads = value.sumOf { it?.threads?.size ?: 0 }
             currentLifespanList = value.toLifespanList()
         }
 
@@ -85,14 +88,33 @@ class MultiThreadView(
             field = value
             val allThreads = value.flatten().filterNotNull()
             if (allThreads.isNotEmpty()) {
-                stateList.setModel(FilterModel(allThreads.groupingBy { it.state.name }.eachCount()))
-                systemList.setModel(FilterModel(allThreads.groupingBy(Thread::system).eachCount()))
-                poolList.setModel(FilterModel(allThreads.groupingBy(Thread::pool).eachCount()))
+                statePanel.stateList.setModel(FilterModel(allThreads.groupingBy { it.state.name }.eachCount()))
+                systemPanel.systemList.setModel(FilterModel(allThreads.groupingBy(Thread::system).eachCount()))
+                poolPanel.poolList.setModel(FilterModel(allThreads.groupingBy(Thread::pool).eachCount()))
             }
             if (initialized) {
                 updateData()
             }
         }
+
+    private val threadCountLabel = object : JLabel() {
+        var totalThreads = threadDumps.sumOf { it.threads.size }
+            set(value) {
+                field = value
+                update()
+            }
+        var visibleThreads = totalThreads
+            set(value) {
+                field = value
+                update()
+            }
+
+        init {
+            update()
+        }
+
+        private fun update() = setText("Showing $visibleThreads of $totalThreads threads")
+    }
 
     private val mainTable: ReifiedJXTable<ThreadModel> = run {
         // populate initial state of all the filter lists
@@ -138,20 +160,20 @@ class MultiThreadView(
                 when (property) {
                     SingleThreadColumns.state -> {
                         val state = model[selectedRowIndex, SingleThreadColumns.state]
-                        stateList.select(state.name)
+                        statePanel.stateList.select(state.name)
                     }
 
                     SingleThreadColumns.system, MultiThreadColumns.system -> {
                         val system = model[selectedRowIndex, model.columns.system]
                         if (system != null) {
-                            systemList.select(system)
+                            systemPanel.systemList.select(system)
                         }
                     }
 
                     SingleThreadColumns.pool, MultiThreadColumns.pool -> {
                         val pool = model[selectedRowIndex, model.columns.pool]
                         if (pool != null) {
-                            poolList.select(pool)
+                            poolPanel.poolList.select(pool)
                         }
                     }
                 }
@@ -222,32 +244,29 @@ class MultiThreadView(
         exportMenu.isEnabled = mainTable.model.isSingleContext
     }
 
-    private fun filter(thread: Thread?): Boolean {
-        if (thread == null) {
-            return false
+    private val filters = buildList<ThreadFilter> {
+        addAll(sidebar.filterPanels)
+
+        add { thread -> thread != null }
+
+        add { thread ->
+            val query = if (!searchField.text.isNullOrEmpty()) searchField.text else return@add true
+
+            thread!!.id.toString().contains(query) ||
+                    thread.name.contains(query, ignoreCase = true) ||
+                    thread.system != null && thread.system.contains(query, ignoreCase = true) ||
+                    thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
+                    thread.state.name.contains(query, ignoreCase = true) ||
+                    thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
         }
-
-        if (thread.state.name !in stateList.checkBoxListSelectedValues ||
-            thread.system !in systemList.checkBoxListSelectedValues ||
-            thread.pool !in poolList.checkBoxListSelectedValues
-        ) {
-            return false
-        }
-
-        val query = searchField.text ?: return true
-
-        return thread.id.toString().contains(query) ||
-            thread.name.contains(query, ignoreCase = true) ||
-            thread.system != null && thread.system.contains(query, ignoreCase = true) ||
-            thread.scope != null && thread.scope.contains(query, ignoreCase = true) ||
-            thread.state.name.contains(query, ignoreCase = true) ||
-            thread.stacktrace.any { stack -> stack.contains(query, ignoreCase = true) }
     }
 
     private fun updateData() {
         BACKGROUND.launch {
             val filteredThreadDumps = currentLifespanList.filter { lifespan ->
-                lifespan.any(::filter)
+                lifespan.any {
+                    filters.all { threadFilter -> threadFilter.filter(it) }
+                }
             }
 
             EDT_SCOPE.launch {
@@ -285,6 +304,8 @@ class MultiThreadView(
                     columnExt.isVisible = true
                     mainTable.setSortOrder(sortedColumnIdentifier, sortOrder)
                 }
+
+                threadCountLabel.visibleThreads = mainTable.model.threadData.flatten().filterNotNull().size
             }
         }
     }
@@ -300,12 +321,15 @@ class MultiThreadView(
 
         toolTipText = paths.joinToString("\n", transform = Path::name)
 
-        poolList.selectAll()
-        poolList.checkBoxListSelectionModel.bind()
-        stateList.selectAll()
-        stateList.checkBoxListSelectionModel.bind()
-        systemList.selectAll()
-        systemList.checkBoxListSelectionModel.bind()
+        poolPanel.poolList.selectAll()
+        statePanel.stateList.selectAll()
+        systemPanel.systemList.selectAll()
+
+        sidebar.filterPanels.forEach { panel ->
+            panel.addFilterChangeListener {
+                if (!listModelsAdjusting) updateData()
+            }
+        }
 
         searchField.addActionListener {
             updateData()
@@ -353,45 +377,19 @@ class MultiThreadView(
             }
         }
 
-        val sortButtons = ButtonGroup()
-
-        for ((i, sortAction) in stateList.sortActions.withIndex()) {
-            sortButtons.add(
-                JToggleButton(
-                    Action(
-                        description = sortAction.description,
-                        icon = sortAction.icon,
-                        selected = sortAction.selected,
-                    ) { e ->
-                        sortAction.actionPerformed(e)
-                        systemList.sortActions[i].actionPerformed(e)
-                        poolList.sortActions[i].actionPerformed(e)
-                    },
-                ),
-            )
-        }
-
         add(JLabel("Version: ${threadDumps.first().version}"))
+        add(threadCountLabel)
         add(threadDumpCheckboxList, "gapleft 20px, pushx, growx, shpx 200")
         add(exportButton, "gapright 8")
         add(searchField, "wmin 300, wrap")
         add(
             JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
-                JPanel(MigLayout("ins 0, fill, flowy")).apply {
-                    val sortGroupEnumeration = sortButtons.elements
-                    add(sortGroupEnumeration.nextElement(), "split ${sortButtons.buttonCount}, flowx")
-                    for (element in sortGroupEnumeration) {
-                        add(element, "gapx 2")
-                    }
-                    add(FlatScrollPane(stateList), "w 220, h 100!")
-                    // if all the thread dumps are "unassigned", no need to add the system selector
-                    if (systemList.model.size > 2) {
-                        add(FlatScrollPane(systemList), "w 220, growy")
-                    }
-                    add(FlatScrollPane(poolList), "w 220, pushy 300, growy")
-                    add(FlatScrollPane(mainTable), "newline, spany, pushx, grow")
-                },
+                JSplitPane(
+                    JSplitPane.HORIZONTAL_SPLIT,
+                    sidebar,
+                    FlatScrollPane(mainTable)
+                ).apply { isOneTouchExpandable = true },
                 comparison,
             ).apply {
                 resizeWeight = 0.5
@@ -399,6 +397,8 @@ class MultiThreadView(
             },
             "push, grow, span",
         )
+
+        sidebar.selectedIndex = 0
     }
 
     private val initialized = true
@@ -413,14 +413,6 @@ class MultiThreadView(
                 paths.forEach { desktop.open(it.toFile()) }
             },
         )
-    }
-
-    private fun CheckBoxListSelectionModel.bind() {
-        addListSelectionListener { event ->
-            if (!event.valueIsAdjusting && !listModelsAdjusting) {
-                updateData()
-            }
-        }
     }
 
     companion object {
@@ -517,3 +509,5 @@ data object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
     override val key: String = "threadview"
     override val preferences = listOf(ShowNullThreads, ShowEmptyValues)
 }
+
+typealias ThreadFilter = Filter<Thread?>
