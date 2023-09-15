@@ -52,7 +52,7 @@ public class SerializationDumper {
      **/
     private void print(String s) {
         buffer.append("  ".repeat(indent));
-        buffer.append(s).append('\n');
+        buffer.append(s).append(" --- ").append(data.position()).append('\n');
     }
 
     private static String byteToHex(byte bite) {

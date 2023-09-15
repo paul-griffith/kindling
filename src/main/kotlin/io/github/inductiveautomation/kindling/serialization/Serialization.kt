@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
@@ -487,7 +488,7 @@ sealed interface Serialized {
             }
 
             override fun serialize(encoder: Encoder, value: Primitive) {
-                delegate.serialize(encoder, mapOf(
+                encoder.encodeSerializableValue(delegate, mapOf(
                     "type" to value.value::class.java.simpleName,
                     "value" to value.value.toString()
                 ))
@@ -604,9 +605,9 @@ fun main() {
         println(name)
         val data = getter.invoke()
         println(SerializationDumper(data).parseStream())
-//        for (element in JavaSerializationReader(data)) {
-//            println(json.encodeToString(element))
-//        }
+        for (element in JavaSerializationReader(data)) {
+            println(json.encodeToString(element))
+        }
     }
 }
 
