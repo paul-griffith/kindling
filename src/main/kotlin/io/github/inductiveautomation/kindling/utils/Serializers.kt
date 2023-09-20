@@ -10,6 +10,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.nio.charset.Charset
 import java.nio.file.Path
+import java.time.Instant
 import java.time.ZoneId
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
@@ -55,4 +56,10 @@ object CharsetSerializer : KSerializer<Charset> {
     override fun deserialize(decoder: Decoder): Charset = Charset.forName(decoder.decodeString())
 
     override fun serialize(encoder: Encoder, value: Charset) = encoder.encodeString(value.name())
+}
+
+object InstantSerializer : KSerializer<Instant> {
+    override val descriptor = PrimitiveSerialDescriptor("java.time.Instant", PrimitiveKind.LONG)
+    override fun serialize(encoder: Encoder, value: Instant) = encoder.encodeLong(value.toEpochMilli())
+    override fun deserialize(decoder: Decoder): Instant = Instant.ofEpochMilli(decoder.decodeLong())
 }

@@ -28,11 +28,11 @@ object MachineLearningModel {
 
     private const val PMML_FILE_PREFIX = "thread_machine_learning_"
     private const val PMML_FILE_ENDPOINT =
-        "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/pmml/$PMML_FILE_PREFIX"
+        "${Kindling.GATEWAY_ADDRESS}/system/webdev/ThreadCSVImportTool/pmml/$PMML_FILE_PREFIX"
     private const val VERSION_ENDPOINT =
-        "https://iazendesk.inductiveautomation.com/system/webdev/ThreadCSVImportTool/validate_pmml_version"
+        "${Kindling.GATEWAY_ADDRESS}/system/webdev/ThreadCSVImportTool/validate_pmml_version"
     private const val KINDLING_DOWNLOAD_URL =
-        "https://iazendesk.inductiveautomation.com/data/perspective/client/zendesk_display"
+        "${Kindling.GATEWAY_ADDRESS}/data/perspective/client/zendesk_display"
 
     private val currentPMMLVersion by lazy {
         val client = HttpClient()

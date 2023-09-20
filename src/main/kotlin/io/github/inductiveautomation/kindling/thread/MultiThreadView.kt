@@ -6,6 +6,7 @@ import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.Detail
 import io.github.inductiveautomation.kindling.core.Detail.BodyLine
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.betterThreadPools
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.enableMachineLearning
 import io.github.inductiveautomation.kindling.core.MultiTool
 import io.github.inductiveautomation.kindling.core.Preference
@@ -38,7 +39,6 @@ import io.github.inductiveautomation.kindling.utils.selectedRowIndices
 import io.github.inductiveautomation.kindling.utils.toBodyLine
 import io.github.inductiveautomation.kindling.utils.transferTo
 import io.github.inductiveautomation.kindling.utils.uploadMultipleToWeb
-import io.github.inductiveautomation.kindling.utils.transferTo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,7 +65,12 @@ import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
-import kotlin.io.path.*
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.extension
+import kotlin.io.path.inputStream
+import kotlin.io.path.name
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.outputStream
 
 class MultiThreadView(
     val paths: List<Path>,
@@ -133,7 +138,7 @@ class MultiThreadView(
                         model[rowNum, model.columns.id] in threadsOfInterest.map(Thread::id)
                     },
                     UIManager.getColor("Objects.YellowDark"),
-                    Color.BLACK
+                    Color.BLACK,
                 ),
             )
 
@@ -187,7 +192,7 @@ class MultiThreadView(
             actionMap.apply {
                 put("$COLUMN_CONTROL_MARKER}.clearAllMarks", clearAllMarks)
                 put(
-                    "${COLUMN_CONTROL_MARKER}.clearAllMarks",
+                    "$COLUMN_CONTROL_MARKER.clearAllMarks",
                     Action(name = "Clear All Marks") {
                         for (lifespan in model.threadData) {
                             lifespan.forEach { thread ->
@@ -197,12 +202,11 @@ class MultiThreadView(
                     },
                 )
                 put(
-                    "${COLUMN_CONTROL_MARKER}.markThreadsOfInterest",
+                    "$COLUMN_CONTROL_MARKER.markThreadsOfInterest",
                     Action("Mark Threads of Interest") {
                         markThreadsOfInterest()
-                    }
+                    },
                 )
-
             }
 
             attachPopupMenu table@{ event ->
@@ -333,7 +337,7 @@ class MultiThreadView(
                     fileName to model
                 }
                 uploadMultipleToWeb(models)
-            }
+            },
         )
     }
 
@@ -433,6 +437,41 @@ class MultiThreadView(
             }
         }
 
+        enableMachineLearning.addChangeListener { enable ->
+            if (enable) {
+                SwingUtilities.invokeLater {
+                    MachineLearningModel.verifyPMML()
+                }
+            }
+
+            BACKGROUND.launch {
+                updateThreadsOfInterest()
+
+                EDT_SCOPE.launch {
+                    mainTable.repaint()
+                }
+            }
+        }
+
+        betterThreadPools.addChangeListener {
+            val threads = mainTable.model.threadData.flatten().asSequence().filterNotNull()
+
+            if (it) {
+                threads.forEach { thread ->
+                    thread.pool = Thread.parseThreadPool(thread.name)
+                }
+            } else {
+                threads.forEach { thread ->
+                    thread.pool = Thread.extractPool(thread.name)
+                }
+            }
+
+            mainTable.model.fireTableDataChanged()
+
+            poolList.setModel(FilterModel(threads.groupingBy(Thread::pool).eachCount()))
+            poolList.selectAll()
+        }
+
         val sortButtons = ButtonGroup()
 
         for ((i, sortAction) in stateList.sortActions.withIndex()) {
@@ -479,22 +518,6 @@ class MultiThreadView(
             },
             "push, grow, span",
         )
-
-        enableMachineLearning.addChangeListener { enable ->
-            if (enable) {
-                SwingUtilities.invokeLater {
-                    MachineLearningModel.verifyPMML()
-                }
-            }
-
-            BACKGROUND.launch {
-                updateThreadsOfInterest()
-
-                EDT_SCOPE.launch {
-                    mainTable.repaint()
-                }
-            }
-        }
     }
 
     private fun updateThreadsOfInterest() {
@@ -522,13 +545,13 @@ class MultiThreadView(
 
         model.flatten().filterNotNull().forEach { thread ->
             if (thread in threadsOfInterest) {
-               thread.marked = true
+                thread.marked = true
             }
         }
         mainTable.model.fireTableDataChanged()
     }
 
-    private fun Thread.getPmmlProperty(prop: String): Any? = when(prop) {
+    private fun Thread.getPmmlProperty(prop: String): Any? = when (prop) {
         "thread_state" -> state.toString()
         "system" -> system
         "scope" -> scope
@@ -627,16 +650,16 @@ data object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
         description = description,
         predicate = { file ->
             file.extension in listOf("json", "txt") &&
-            run {
-                val firstTwoLines =  buildString {
-                    file.bufferedReader().use { br ->
-                        append(br.readLine())
-                        append(br.readLine())
+                run {
+                    val firstTwoLines = buildString {
+                        file.bufferedReader().use { br ->
+                            append(br.readLine())
+                            append(br.readLine())
+                        }
                     }
+                    "Ignition" in firstTwoLines || "version" in firstTwoLines
                 }
-                "Ignition" in firstTwoLines || "version" in firstTwoLines
-            }
-        }
+        },
     )
 
     override val respectsEncoding: Boolean = true

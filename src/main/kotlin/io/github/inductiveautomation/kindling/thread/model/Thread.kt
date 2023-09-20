@@ -1,12 +1,22 @@
 package io.github.inductiveautomation.kindling.thread.model
 
+import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.betterThreadPools
 import io.github.inductiveautomation.kindling.utils.StackTrace
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import java.lang.Thread.State
+import java.time.Instant
+import kotlin.io.path.Path
+import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
 
 @Serializable
 data class Thread(
@@ -27,7 +37,8 @@ data class Thread(
 ) {
     var marked: Boolean = false
 
-    val pool: String? = parseThreadPool(name)
+    var pool: String? = if (betterThreadPools.currentValue) parseThreadPool(name) else extractPool(name)
+//        get() = if (betterThreadPools.currentValue) parseThreadPool(name) else extractPool(name)
 
     @Serializable
     data class Monitors(
@@ -47,11 +58,50 @@ data class Thread(
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     companion object {
-        private val threadPoolFile = "/thread_pool_dictionary.json"
+        private const val THREAD_POOL_MAP_ENDPOINT =
+            "${Kindling.GATEWAY_ADDRESS}/system/webdev/ThreadCSVImportTool/get_thread_pool_dictionary"
+        private const val LAST_UPDATED_ENDPOINT =
+            "${Kindling.GATEWAY_ADDRESS}/system/webdev/ThreadCSVImportTool/get_thread_pool_dictionary_last_update"
 
-        @OptIn(ExperimentalSerializationApi::class)
-        val threadPoolMap: Map<String, ThreadPoolEntry> = Json.decodeFromStream(this::class.java.getResourceAsStream(threadPoolFile)!!)
+        private const val THREAD_POOL_FILENAME = "thread_pool_dictionary.json"
+
+        private val threadPoolFilePath = Path(System.getProperty("user.home"), ".kindling", THREAD_POOL_FILENAME)
+
+        val threadPoolMap: Map<String, ThreadPoolEntry> by lazy {
+            runBlocking {
+                val client = HttpClient()
+
+                val lastGatewayUpdate = try {
+                    Instant.ofEpochMilli(client.get(LAST_UPDATED_ENDPOINT).bodyAsText().toLong())
+                } catch (e: Exception) {
+                    Instant.ofEpochMilli(0)
+                }
+
+                try {
+                    if (Kindling.Preferences.Experimental.threadPoolsLastUpdated.currentValue < lastGatewayUpdate) { // File in disk needs update
+                        val threadPoolFile = client.get(THREAD_POOL_MAP_ENDPOINT).bodyAsText()
+
+                        // Update file on disk
+                        threadPoolFilePath.outputStream().use { out ->
+                            threadPoolFile.byteInputStream().use { input ->
+                                input.copyTo(out)
+                            }
+                        }
+
+                        Kindling.Preferences.Experimental.threadPoolsLastUpdated.currentValue = Instant.now()
+
+                        // We already have the file in memory so just use that
+                        Json.decodeFromStream(threadPoolFile.byteInputStream())
+                    } else {
+                        Json.decodeFromStream(threadPoolFilePath.inputStream())
+                    }
+                } catch (e: Exception) { // fallback to file in jar if something happens
+                    Json.decodeFromStream(this::class.java.getResourceAsStream("/$THREAD_POOL_FILENAME")!!)
+                }
+            }
+        }
 
         fun parseThreadPool(threadName: String): String? {
             if ("scheduled-tag-reads" in threadName) {
@@ -64,9 +114,9 @@ data class Thread(
 
             val dashTokens = threadName.split("-").map { token ->
                 token.split("[").first()
-                     .split("/").first()
-                     .split("@").first()
-                     .split("(").first()
+                    .split("/").first()
+                    .split("@").first()
+                    .split("(").first()
             }
 
             val spaceTokens = threadName.split(" ").map { token ->
@@ -85,6 +135,12 @@ data class Thread(
             }.find {
                 it in threadPoolMap.keys
             }
+        }
+
+        private val threadPoolRegex = "(?<pool>.+)-\\d+\$".toRegex()
+
+        internal fun extractPool(name: String): String? {
+            return threadPoolRegex.find(name)?.groups?.get("pool")?.value
         }
     }
 }

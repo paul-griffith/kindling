@@ -4,10 +4,12 @@ import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
 import com.github.weisj.jsvg.parser.SVGLoader
+import io.github.inductiveautomation.kindling.core.DependentPreference.Companion.dependentPreference
 import io.github.inductiveautomation.kindling.core.Preference.Companion.PreferenceCheckbox
 import io.github.inductiveautomation.kindling.core.Preference.Companion.preference
 import io.github.inductiveautomation.kindling.utils.CharsetSerializer
 import io.github.inductiveautomation.kindling.utils.EmptyBorder
+import io.github.inductiveautomation.kindling.utils.InstantSerializer
 import io.github.inductiveautomation.kindling.utils.PathSerializer
 import io.github.inductiveautomation.kindling.utils.PathSerializer.serializedForm
 import io.github.inductiveautomation.kindling.utils.ThemeSerializer
@@ -29,6 +31,7 @@ import java.awt.Image
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Path
+import java.time.Instant
 import java.util.Vector
 import javax.swing.JButton
 import javax.swing.JComboBox
@@ -62,6 +65,8 @@ data object Kindling {
     const val SECONDARY_ACTION_ICON_SCALE = 0.75F
 
     const val BETA_VERSION = "1.1.2"
+
+    const val GATEWAY_ADDRESS = "https://iazendesk.inductiveautomation.com"
 
     data object Preferences {
         data object General : PreferenceCategory {
@@ -217,21 +222,39 @@ data object Kindling {
                         add(textField)
                         add(submit)
                     }
-                }
+                },
             )
 
-            val enableMachineLearning: Preference<Boolean> = preference(
+            val betterThreadPools: Preference<Boolean> = preference(
+                name = "Better Thread Pools",
+                description = "Advanced thread parsing for better thread pool grouping.",
+                default = false,
+                editor = {
+                    PreferenceCheckbox("Enable better thread pool parsing")
+                },
+            )
+
+            val enableMachineLearning: Preference<Boolean> = dependentPreference(
                 name = "Machine Learning Model",
                 description = null,
                 default = false,
+                dependsOn = PreferenceDependency(betterThreadPools, true),
                 editor = {
                     PreferenceCheckbox("Enable Machine Learning Prediction for thread dumps")
                 },
             )
 
+            val threadPoolsLastUpdated: Preference<Instant> = preference(
+                name = "Thread Pool Catalogue Last Updated",
+                description = null,
+                default = Instant.ofEpochMilli(0),
+                serializer = InstantSerializer,
+                editor = null,
+            )
+
             override val displayName = "Experimental"
             override val key = "experimental"
-            override val preferences: List<Preference<*>> = listOf(User, enableMachineLearning)
+            override val preferences: List<Preference<*>> = listOf(User, enableMachineLearning, betterThreadPools, threadPoolsLastUpdated)
         }
 
         data object Advanced : PreferenceCategory {
