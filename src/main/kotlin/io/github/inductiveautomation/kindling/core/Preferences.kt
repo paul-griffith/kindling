@@ -209,7 +209,7 @@ val preferencesEditor by lazy {
                                                     if (preference is DependentPreference<*, *>) {
                                                         add(
                                                             "Requires ${preference.dependsOn.preference.name} to be set to ${preference.dependsOn.requiredValue}.",
-                                                            "superscript"
+                                                            "superscript",
                                                         )
                                                     }
                                                 }
