@@ -1,6 +1,8 @@
 package io.github.inductiveautomation.kindling.log
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.core.Kindling.SECONDARY_ACTION_ICON_SCALE
 import io.github.inductiveautomation.kindling.log.MDCTableModel.MDCColumns
 import io.github.inductiveautomation.kindling.utils.Action
@@ -8,7 +10,6 @@ import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.ColumnList
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.ReifiedJXTable
-import io.github.inductiveautomation.kindling.utils.add
 import io.github.inductiveautomation.kindling.utils.attachPopupMenu
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
 import io.github.inductiveautomation.kindling.utils.getAll
@@ -19,14 +20,13 @@ import java.util.Vector
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
 import javax.swing.JComboBox
-import javax.swing.JComponent
 import javax.swing.JMenu
 import javax.swing.JMenuItem
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.table.AbstractTableModel
 
-internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0, fill")), LogFilterPanel {
+internal class MDCPanel(events: List<SystemLogEvent>) : FilterPanel<LogEvent>() {
     private val allMDCs = events.flatMap(SystemLogEvent::mdc)
 
     private val countByKey = allMDCs
@@ -117,27 +117,31 @@ internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0,
         }
 
         tableModel.addTableModelListener {
-            listenerList.getAll<FilterChangeListener>().forEach(FilterChangeListener::filterChanged)
+            listeners.getAll<FilterChangeListener>().forEach(FilterChangeListener::filterChanged)
         }
     }
 
+    override val component = JPanel(MigLayout("ins 0, fill"))
+
     init {
-        add(keyCombo, "growx, wrap, wmax 100%")
-        add(valueCombo, "growx, wrap, wmax 100%")
-        add(
-            JButton(removeFilter).apply {
-                hideActionText = true
-            },
-            "align right, split",
-        )
-        add(JButton(addFilter), "gapx 2")
-        add(
-            JButton(removeAllFilters).apply {
-                hideActionText = true
-            },
-            "gapx 2",
-        )
-        add(FlatScrollPane(filterTable), "newline, pushy, grow")
+        component.apply {
+            add(keyCombo, "growx, wrap, wmax 100%")
+            add(valueCombo, "growx, wrap, wmax 100%")
+            add(
+                JButton(removeFilter).apply {
+                    hideActionText = true
+                },
+                "align right, split",
+            )
+            add(JButton(addFilter), "gapx 2")
+            add(
+                JButton(removeAllFilters).apply {
+                    hideActionText = true
+                },
+                "gapx 2",
+            )
+            add(FlatScrollPane(filterTable), "newline, pushy, grow")
+        }
 
         filterTable.attachPopupMenu { mouseEvent ->
             val rowAtPoint = rowAtPoint(mouseEvent.point)
@@ -153,15 +157,9 @@ internal class MDCPanel(events: List<SystemLogEvent>) : JPanel(MigLayout("ins 0,
 
     override fun isFilterApplied(): Boolean = tableModel.data.isNotEmpty()
 
-    override val component: JComponent = this
-
     override val tabName: String = "MDC"
 
-    override fun filter(event: LogEvent): Boolean = tableModel.filter(event)
-
-    override fun addFilterChangeListener(listener: FilterChangeListener) {
-        listenerList.add(listener)
-    }
+    override fun filter(item: LogEvent): Boolean = tableModel.filter(item)
 
     override fun customizePopupMenu(menu: JPopupMenu, column: Column<out LogEvent, *>, event: LogEvent) {
         if (column == SystemLogColumns.Message && (event as SystemLogEvent).mdc.isNotEmpty()) {
@@ -196,9 +194,9 @@ data class MDCTableRow(
     val value: String?,
     var inclusive: Boolean = true,
 ) : LogFilter {
-    override fun filter(event: LogEvent): Boolean {
-        check(event is SystemLogEvent)
-        val any = event.mdc.any { (key, value) ->
+    override fun filter(item: LogEvent): Boolean {
+        check(item is SystemLogEvent)
+        val any = item.mdc.any { (key, value) ->
             this.key == key && this.value?.equals(value) == true
         }
         return if (inclusive) any else !any
@@ -236,11 +234,11 @@ class MDCTableModel : AbstractTableModel(), LogFilter {
         }
     }
 
-    override fun filter(event: LogEvent): Boolean {
-        return when (event) {
+    override fun filter(item: LogEvent): Boolean {
+        return when (item) {
             is WrapperLogEvent -> true
             is SystemLogEvent -> _data.isEmpty() || _data.any { row ->
-                row.filter(event)
+                row.filter(item)
             }
         }
     }

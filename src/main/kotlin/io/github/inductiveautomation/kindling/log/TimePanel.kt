@@ -1,11 +1,12 @@
 package io.github.inductiveautomation.kindling.log
 
+import io.github.inductiveautomation.kindling.core.FilterChangeListener
+import io.github.inductiveautomation.kindling.core.FilterPanel
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.UI.Theme
 import io.github.inductiveautomation.kindling.log.LogViewer.TimeStampFormatter
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EmptyBorder
-import io.github.inductiveautomation.kindling.utils.add
 import io.github.inductiveautomation.kindling.utils.getAll
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXDatePicker
@@ -39,7 +40,7 @@ import javax.swing.border.LineBorder
 internal class TimePanel(
     private val lowerBound: Instant,
     private val upperBound: Instant,
-) : JPanel(MigLayout("ins 0, fill, wrap 1")), LogFilterPanel {
+) : FilterPanel<LogEvent>() {
     private var coveredRange: ClosedRange<Instant> = lowerBound..upperBound
     private val initialRange = coveredRange
 
@@ -50,16 +51,22 @@ internal class TimePanel(
         reset()
     }
 
+    override val tabName: String = "Time"
+
+    override val component = JPanel(MigLayout("ins 0, fill, wrap 1"))
+
     init {
-        add(startSelector, "pushx, growx")
-        add(
-            JLabel("To").apply {
-                horizontalAlignment = SwingConstants.CENTER
-            },
-            "align center, growx",
-        )
-        add(endSelector, "pushx, growx")
-        add(JButton(resetRange), "top, right, pushy")
+        component.apply {
+            add(startSelector, "pushx, growx")
+            add(
+                JLabel("To").apply {
+                    horizontalAlignment = SwingConstants.CENTER
+                },
+                "align center, growx",
+            )
+            add(endSelector, "pushx, growx")
+            add(JButton(resetRange), "top, right, pushy")
+        }
 
         startSelector.addPropertyChangeListener("time") {
             updateCoveredRange()
@@ -69,24 +76,15 @@ internal class TimePanel(
         }
     }
 
+    override fun isFilterApplied(): Boolean = coveredRange != initialRange
+
     private fun updateCoveredRange() {
         coveredRange = startSelector.time..endSelector.time
 
-        listenerList.getAll<FilterChangeListener>().forEach(FilterChangeListener::filterChanged)
+        listeners.getAll<FilterChangeListener>().forEach(FilterChangeListener::filterChanged)
     }
 
-    override fun isFilterApplied(): Boolean = coveredRange != initialRange
-
-    override val tabName: String = "Time"
-
-    override val component: JComponent = this
-
-    override fun filter(event: LogEvent): Boolean = event.timestamp in coveredRange
-
-    override fun addFilterChangeListener(listener: FilterChangeListener) {
-        listenerList.add(listener)
-    }
-
+    override fun filter(item: LogEvent): Boolean = item.timestamp in coveredRange
     override fun customizePopupMenu(
         menu: JPopupMenu,
         column: Column<out LogEvent, *>,

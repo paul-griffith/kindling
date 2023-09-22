@@ -8,6 +8,8 @@ import io.github.inductiveautomation.kindling.core.Kindling.SECONDARY_ACTION_ICO
 import io.github.inductiveautomation.kindling.utils.FilterComparator.ByCountDescending
 import java.text.DecimalFormat
 import javax.swing.AbstractListModel
+import javax.swing.ButtonGroup
+import javax.swing.JToggleButton
 import javax.swing.ListModel
 
 data class FilterModelEntry(
@@ -40,7 +42,6 @@ enum class FilterComparator(
         icon = FlatSVGIcon("icons/bx-sort-down.svg").derive(SECONDARY_ACTION_ICON_SCALE),
         comparator = ByCountAscending.reversed(),
     ),
-    ;
 }
 
 fun FilterModel(data: Map<String?, Int>) = FilterModel(data) { it }
@@ -157,21 +158,15 @@ class FilterList(
             currentSelection
         }
 
-        try {
-            checkBoxListSelectionModel.valueIsAdjusting = true
+        super.setModel(model)
 
-            super.setModel(model)
-
-            for (sortAction in sortActions) {
-                sortAction.selected = comparator == sortAction.comparator
-            }
-            addCheckBoxListSelectedValues(lastSelection)
-        } finally {
-            checkBoxListSelectionModel.valueIsAdjusting = false
+        for (sortAction in sortActions) {
+            sortAction.selected = comparator == sortAction.comparator
         }
+        addCheckBoxListSelectedValues(lastSelection)
     }
 
-    val sortActions: List<SortAction> = FilterComparator.entries.map { filterComparator ->
+    private val sortActions: List<SortAction> = FilterComparator.entries.map { filterComparator ->
         SortAction(filterComparator)
     }
 
@@ -185,5 +180,21 @@ class FilterList(
         },
     ) {
         var comparator: FilterComparator by actionValue("filterComparator", comparator)
+    }
+
+    fun createSortButtons(): ButtonGroup = ButtonGroup().apply {
+        for (sortAction in sortActions) {
+            add(
+                JToggleButton(
+                    Action(
+                        description = sortAction.description,
+                        icon = sortAction.icon,
+                        selected = sortAction.selected,
+                    ) { e ->
+                        sortAction.actionPerformed(e)
+                    },
+                ),
+            )
+        }
     }
 }

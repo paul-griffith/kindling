@@ -1,9 +1,9 @@
 package io.github.inductiveautomation.kindling.log
 
-import com.formdev.flatlaf.extras.components.FlatTabbedPane
 import com.formdev.flatlaf.ui.FlatScrollBarUI
 import io.github.inductiveautomation.kindling.core.Detail.BodyLine
 import io.github.inductiveautomation.kindling.core.DetailsPane
+import io.github.inductiveautomation.kindling.core.Filter
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.Debug
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.HyperlinkStrategy
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.ShowFullLoggerNames
@@ -14,11 +14,13 @@ import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.log.LogViewer.ShowDensity
 import io.github.inductiveautomation.kindling.log.LogViewer.TimeStampFormatter
 import io.github.inductiveautomation.kindling.utils.Action
-import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
+import io.github.inductiveautomation.kindling.utils.FilterSidebar
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
+import io.github.inductiveautomation.kindling.utils.HorizontalSplitPane
 import io.github.inductiveautomation.kindling.utils.MajorVersion
 import io.github.inductiveautomation.kindling.utils.ReifiedJXTable
+import io.github.inductiveautomation.kindling.utils.VerticalSplitPane
 import io.github.inductiveautomation.kindling.utils.attachPopupMenu
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
 import io.github.inductiveautomation.kindling.utils.isSortedBy
@@ -38,7 +40,6 @@ import java.awt.RenderingHints
 import java.awt.geom.AffineTransform
 import java.time.Duration
 import java.time.Instant
-import java.util.EventListener
 import java.util.Vector
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -48,14 +49,14 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JScrollBar
-import javax.swing.JSplitPane
 import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.SwingConstants
 import javax.swing.UIManager
 import kotlin.math.absoluteValue
-import kotlin.properties.Delegates
 import io.github.inductiveautomation.kindling.core.Detail as DetailEvent
+
+typealias LogFilter = Filter<LogEvent>
 
 class LogPanel(
     /**
@@ -87,7 +88,7 @@ class LogPanel(
     val table = run {
         val initialModel = createModel(rawData)
         ReifiedJXTable(initialModel, columnList).apply {
-            setSortOrder(columnList[columnList.Timestamp], SortOrder.ASCENDING)
+            setSortOrder(initialModel.columns.Timestamp, SortOrder.ASCENDING)
         }
     }
 
@@ -95,7 +96,26 @@ class LogPanel(
         verticalScrollBar = densityDisplay
     }
 
-    private val sidebar = Sidebar(rawData)
+    private val sidebar = FilterSidebar(
+        NamePanel(rawData),
+        LevelPanel(rawData),
+        if (rawData.first() is SystemLogEvent) {
+            @Suppress("UNCHECKED_CAST")
+            MDCPanel(rawData as List<SystemLogEvent>)
+        } else {
+            null
+        },
+        if (rawData.first() is SystemLogEvent) {
+            @Suppress("UNCHECKED_CAST")
+            ThreadPanel(rawData as List<SystemLogEvent>)
+        } else {
+            null
+        },
+        TimePanel(
+            lowerBound = rawData.first().timestamp,
+            upperBound = rawData.last().timestamp,
+        ),
+    )
 
     private val details = DetailsPane()
 
@@ -168,20 +188,14 @@ class LogPanel(
     init {
         add(header, "wrap, growx, spanx 2")
         add(
-            JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT,
-                sidebar,
-                JSplitPane(
-                    JSplitPane.VERTICAL_SPLIT,
+            VerticalSplitPane(
+                HorizontalSplitPane(
+                    sidebar,
                     tableScrollPane,
-                    details,
-                ).apply {
-                    resizeWeight = 0.6
-                },
-            ).apply {
-                isOneTouchExpandable = true
-                resizeWeight = 0.1
-            },
+                    resizeWeight = 0.1,
+                ),
+                details,
+            ),
             "push, grow",
         )
 
@@ -268,10 +282,8 @@ class LogPanel(
             }
         }
 
-        sidebar.apply {
-            for (filterPanel in filterPanels) {
-                filterPanel.addFilterChangeListener(::updateData)
-            }
+        sidebar.filterPanels.forEach { filterPanel ->
+            filterPanel.addFilterChangeListener(::updateData)
         }
 
         ShowFullLoggerNames.addChangeListener {
@@ -376,7 +388,7 @@ class LogPanel(
     }
 
     private class Header(private val totalRows: Int) : JPanel(MigLayout("ins 0, fill, hidemode 3")) {
-        private val events = JLabel("$totalRows (of $totalRows) events")
+        private val events = JLabel("Showing $totalRows of $totalRows events")
 
         val search = JXSearchField("Search")
 
@@ -409,94 +421,11 @@ class LogPanel(
             add(search, "width 300, gap unrelated")
         }
 
-        var displayedRows by Delegates.observable(totalRows) { _, _, newValue ->
-            events.text = "$newValue (of $totalRows) events"
-        }
-    }
-
-    private class Sidebar(rawData: List<LogEvent>) : FlatTabbedPane() {
-        private val names = NamePanel(rawData)
-        private val levels = LevelPanel(rawData)
-
-        private val systemLogs: Boolean = rawData.first() is SystemLogEvent
-
-        private val mdc: MDCPanel? = if (systemLogs) {
-            @Suppress("UNCHECKED_CAST")
-            MDCPanel(rawData as List<SystemLogEvent>)
-        } else {
-            null
-        }
-
-        private val threads: ThreadPanel? = if (systemLogs) {
-            @Suppress("UNCHECKED_CAST")
-            ThreadPanel(rawData as List<SystemLogEvent>)
-        } else {
-            null
-        }
-
-        private val time = TimePanel(
-            lowerBound = rawData.first().timestamp,
-            upperBound = rawData.last().timestamp,
-        )
-
-        val filterPanels: List<LogFilterPanel> = listOfNotNull(
-            names,
-            levels,
-            time,
-            mdc,
-            threads,
-        )
-
-        init {
-            tabLayoutPolicy = SCROLL_TAB_LAYOUT
-            tabsPopupPolicy = TabsPopupPolicy.asNeeded
-            scrollButtonsPolicy = ScrollButtonsPolicy.never
-            tabWidthMode = TabWidthMode.equal
-            tabType = TabType.underlined
-            tabHeight = 16
-
-            for (i in filterPanels.indices) {
-                val filterPanel = filterPanels[i]
-                addTab(filterPanel.tabName, filterPanel.component)
-
-                filterPanel.addFilterChangeListener {
-                    filterPanel.updateTabState()
-                    selectedIndex = i
-                }
+        var displayedRows = totalRows
+            set(value) {
+                field = value
+                events.text = "Showing $value of $totalRows events"
             }
-
-            attachPopupMenu { event ->
-                val tabIndex = indexAtLocation(event.x, event.y)
-                if (tabIndex == -1) return@attachPopupMenu null
-
-                JPopupMenu().apply {
-                    add(
-                        Action("Reset") {
-                            filterPanels[tabIndex].reset()
-                        },
-                    )
-                }
-            }
-        }
-
-        private fun LogFilterPanel.updateTabState() {
-            val index = indexOfComponent(component)
-            if (isFilterApplied()) {
-                setBackgroundAt(index, UIManager.getColor("TabbedPane.focusColor"))
-                setTitleAt(index, "$tabName *")
-            } else {
-                setBackgroundAt(index, UIManager.getColor("TabbedPane.background"))
-                setTitleAt(index, tabName)
-            }
-        }
-
-        override fun updateUI() {
-            super.updateUI()
-            @Suppress("UNNECESSARY_SAFE_CALL")
-            filterPanels?.forEach {
-                it.updateTabState()
-            }
-        }
     }
 
     companion object {
@@ -522,30 +451,4 @@ class LogPanel(
             Duration.ofDays(1),
         )
     }
-}
-
-fun interface LogFilter {
-    /**
-     * Return true if this filter should display this event.
-     */
-    fun filter(event: LogEvent): Boolean
-}
-
-fun interface FilterChangeListener : EventListener {
-    fun filterChanged()
-}
-
-interface LogFilterPanel : LogFilter {
-    val tabName: String
-    fun isFilterApplied(): Boolean
-    val component: JComponent
-    fun addFilterChangeListener(listener: FilterChangeListener)
-
-    fun reset()
-
-    fun customizePopupMenu(
-        menu: JPopupMenu,
-        column: Column<out LogEvent, *>,
-        event: LogEvent,
-    ) = Unit
 }
