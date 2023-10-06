@@ -13,11 +13,13 @@ jobs:
           distribution: 'corretto'
           java-version: 17
           cache: 'gradle'
+
       - name: Create Dokka docs
         run: >
           ./gradlew
           -Pversion=${{github.ref_name}}
           dokkaHtml
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
