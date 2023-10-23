@@ -13,7 +13,14 @@ import io.github.inductiveautomation.kindling.sim.model.SimulatorFunction.Compan
 import io.github.inductiveautomation.kindling.sim.model.TagParser
 import io.github.inductiveautomation.kindling.sim.model.TagParser.Companion.JSON
 import io.github.inductiveautomation.kindling.sim.model.exportToFile
-import io.github.inductiveautomation.kindling.utils.*
+import io.github.inductiveautomation.kindling.utils.Action
+import io.github.inductiveautomation.kindling.utils.FileFilter
+import io.github.inductiveautomation.kindling.utils.FloatableComponent
+import io.github.inductiveautomation.kindling.utils.TabStrip
+import io.github.inductiveautomation.kindling.utils.add
+import io.github.inductiveautomation.kindling.utils.getAll
+import io.github.inductiveautomation.kindling.utils.listCellRenderer
+import io.github.inductiveautomation.kindling.utils.tag
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
@@ -30,8 +37,6 @@ import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
@@ -88,7 +93,7 @@ class SimulatorView(path: Path) : ToolPanel() {
             prefix = """The following tag data types, including number of occurances, are not supported.
                 |Tags of these data types have been omitted.\n
             """.trimMargin(),
-            transform = { (type, num) -> "$type [$num]" }
+            transform = { (type, num) -> "$type [$num]" },
         )
     }
 
@@ -297,7 +302,8 @@ class SimulatorView(path: Path) : ToolPanel() {
         null,
         "$numberOfTags items",
         supplier,
-    ), FloatableComponent {
+    ),
+        FloatableComponent {
         override fun customizePopupMenu(menu: JPopupMenu) {
             menu.add(
                 Action("Export to CSV") {
@@ -320,7 +326,7 @@ object SimulatorViewer : Tool {
         description = description,
         predicate = { file ->
             file.extension == "json" &&
-                    "\"tagType\": \"Provider\"," in buildString {
+                "\"tagType\": \"Provider\"," in buildString {
                 file.bufferedReader().use { br ->
                     repeat(10) { append(br.readLine()) }
                 }

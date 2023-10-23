@@ -42,7 +42,6 @@ class DeviceProgramPanel(
     private fun createItemPanels(startIndex: Int, endIndex: Int): List<ProgramItemPanel> {
         return programItems.subList(startIndex, endIndex).map(::ProgramItemPanel).onEach { itemPanel ->
             itemPanel.addProgramItemDeletedListener {
-
                 val viewportView = (scrollPane.viewport.view as JPanel).also {
                     it.remove(itemPanel)
                 }

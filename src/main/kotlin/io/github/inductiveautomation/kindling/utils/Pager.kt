@@ -135,5 +135,4 @@ class Pager(
     fun interface PageSelectedListener : EventListener {
         fun onPageSelected(startIndex: Int, endIndex: Int, page: Int)
     }
-
 }

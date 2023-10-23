@@ -95,7 +95,6 @@ enum class ProgramDataType(val exportName: String) {
             FLOAT,
             DOUBLE,
         )
-        val ALL_TYPES = entries
     }
 }
 
@@ -299,7 +298,7 @@ sealed interface SimulatorFunction {
                         it is SimulatorFunctionParameter.QualityCode
                     } as SimulatorFunctionParameter<QualityCodes>
 
-                    qualityParam.value = QualityCodes.values().random()
+                    qualityParam.value = QualityCodes.entries.random()
                     valueParam.value = randomValueForDataType(dataType)
                 }
                 is List -> {
