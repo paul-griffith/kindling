@@ -95,7 +95,7 @@ enum class ProgramDataType(val exportName: String) {
             FLOAT,
             DOUBLE,
         )
-        val ALL_TYPES = values().toList()
+        val ALL_TYPES = entries
     }
 }
 
@@ -251,21 +251,21 @@ sealed interface SimulatorFunction {
             Cosine::class to ProgramDataType.NUMERIC_TYPES,
             Square::class to ProgramDataType.NUMERIC_TYPES,
             Ramp::class to ProgramDataType.NUMERIC_TYPES,
-            List::class to ProgramDataType.ALL_TYPES,
-            QV::class to ProgramDataType.ALL_TYPES,
+            List::class to ProgramDataType.entries,
+            QV::class to ProgramDataType.entries,
             Random::class to ProgramDataType.NUMERIC_TYPES + ProgramDataType.BOOLEAN,
-            ReadOnly::class to ProgramDataType.ALL_TYPES,
+            ReadOnly::class to ProgramDataType.entries,
             Realistic::class to ProgramDataType.NUMERIC_TYPES,
             Triangle::class to ProgramDataType.NUMERIC_TYPES,
-            Writable::class to ProgramDataType.ALL_TYPES,
+            Writable::class to ProgramDataType.entries,
         )
 
         private fun randomValueForDataType(type: ProgramDataType): String {
             val df = DecimalFormat("#.##")
             return when (type) {
                 ProgramDataType.BOOLEAN -> listOf(true, false).random()
-                ProgramDataType.INT16 -> kotlin.random.Random.nextBits(16)
-                ProgramDataType.UINT16 -> kotlin.random.Random.nextBits(16).toShort()
+                ProgramDataType.INT16 -> kotlin.random.Random.nextBits(16).toShort()
+                ProgramDataType.UINT16 -> kotlin.random.Random.nextBits(16)
                 ProgramDataType.INT32 -> kotlin.random.Random.nextInt()
                 ProgramDataType.UINT32 -> kotlin.random.Random.nextUInt()
                 ProgramDataType.INT64 -> kotlin.random.Random.nextLong()
