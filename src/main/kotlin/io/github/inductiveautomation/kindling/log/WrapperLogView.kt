@@ -64,6 +64,8 @@ class WrapperLogView(
             .withZone(ZoneId.systemDefault())
         private val DEFAULT_WRAPPER_MESSAGE_FORMAT =
             "^[^|]+\\|(?<jvm>[^|]+)\\|(?<timestamp>[^|]+)\\|(?: (?<level>[TDIWE]) \\[(?<logger>[^]]++)] \\[(?<time>[^]]++)]: (?<message>.*)| (?<stack>.*))\$".toRegex()
+        private val DEFAULT_LOGBACK_MESSAGE_FORMAT =
+            "^(?:(?<level>[TDIWE]) \\[(?<logger>.*)] \\[(?<timestamp>.*)]: (?<message>.*)|(?<stack>.*))\$".toRegex()
 
         fun parseLogs(lines: Sequence<String>): List<WrapperLogEvent> {
             val events = mutableListOf<WrapperLogEvent>()
@@ -79,16 +81,24 @@ class WrapperLogView(
                     partialEvent = null
                 }
             }
-
+            var previousTime = Instant.MIN
+            var messageFormat = DEFAULT_WRAPPER_MESSAGE_FORMAT
             for ((index, line) in lines.withIndex()) {
+                if (index == 0 && !DEFAULT_WRAPPER_MESSAGE_FORMAT.containsMatchIn(line)) {
+                    messageFormat = DEFAULT_LOGBACK_MESSAGE_FORMAT
+                }
                 if (line.isBlank()) {
                     continue
                 }
-
-                val match = DEFAULT_WRAPPER_MESSAGE_FORMAT.matchEntire(line)
+                val match = messageFormat.matchEntire(line)
                 if (match != null) {
-                    val timestamp by match.groups
-                    val time = DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(timestamp.value.trim(), Instant::from)
+                    val time = if (match.groups["timestamp"] != null) {
+                        val timestamp by match.groups
+                        DEFAULT_WRAPPER_LOG_TIME_FORMAT.parse(timestamp.value.trim(), Instant::from)
+                    } else {
+                        previousTime
+                    }
+                    previousTime = time
 
                     // we hit an actual logged event
                     if (match.groups["level"] != null) {
