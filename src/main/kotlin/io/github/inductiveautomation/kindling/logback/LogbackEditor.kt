@@ -6,6 +6,11 @@ import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.NumericEntryField
 import io.github.inductiveautomation.kindling.utils.chooseFiles
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import net.miginfocom.swing.MigLayout
+import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
@@ -23,15 +28,12 @@ import javax.swing.JSplitPane
 import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.io.path.name
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import net.miginfocom.swing.MigLayout
-import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator
 
 object LogbackEditor : Tool {
     override val title = "Logback Editor"
@@ -47,7 +49,7 @@ class LogbackView(path: Path) : ToolPanel() {
     private val configsFromXml = LogbackConfigDeserializer().getObjectFromXML(path.toString()) ?: LogbackConfigData()
     private val logbackConfigManager = LogbackConfigManager(configsFromXml)
 
-    val selectedLoggersList = logbackConfigManager.getLoggerConfigs()
+    private val selectedLoggersList = logbackConfigManager.getLoggerConfigs()
 
     private val directorySelectorPanel = DirectorySelectorPanel()
     private val scanForChangesPanel = ScanForChangesPanel()
@@ -68,15 +70,8 @@ class LogbackView(path: Path) : ToolPanel() {
         add(clearAllButton, "growx")
     }
 
-//    private val loggerPreviewPanel = JPanel(MigLayout("fill, ins 10")).apply {
-//        selectedLoggersList.forEach { logger ->
-//            add(SelectedLoggerPreviewCard(logger), "north, growx, wrap")
-//        }
-//    }
-
-    private val xmlPreviewLabel = JLabel("XML Output Preview")
-    private val xmlOutputPreview = JTextPane().apply {
-        contentType = "text/xml"
+    private val xmlOutputPreview = JTextArea().apply {
+        lineWrap = true
         isEditable = false
         font = UIManager.getFont("monospaced.font")
         text = logbackConfigManager.getXmlString()
@@ -90,13 +85,10 @@ class LogbackView(path: Path) : ToolPanel() {
     }
     private val saveXmlButton = JButton("Save XML file").apply {
         addActionListener {
-
             updateData()
-
             JFileChooser().apply {
                 fileFilter = FileNameExtensionFilter("XML file", "xml")
                 selectedFile = File("logback.xml")
-
                 val save = showSaveDialog(null)
                 if (save == JFileChooser.APPROVE_OPTION) {
                     logbackConfigManager.writeXmlFile(selectedFile.absolutePath)
@@ -104,19 +96,18 @@ class LogbackView(path: Path) : ToolPanel() {
             }
         }
     }
-    private val scrollPane = JScrollPane(xmlOutputPreview)
-    private val xmlPreviewPanel = JPanel(MigLayout("fill, ins 0")).apply {
-        add(xmlPreviewLabel, "north, growx, wrap")
+
+    private val scrollPane = JScrollPane(xmlOutputPreview).apply {
+        verticalScrollBar.unitIncrement = 16
+    }
+    private val previewPanel = JPanel(MigLayout("fill, ins 10")).apply {
+        add(JLabel("XML Output Preview"), "north, growx, wrap")
         add(scrollPane, "push, grow, wrap")
         add(copyXmlButton, "growx, wrap")
         add(saveXmlButton, "growx")
     }
-    private val previewPanel = JPanel(MigLayout("fill, ins 10")).apply {
-        add(xmlPreviewPanel, "grow, push")
-    }
 
     fun updateData() {
-        println("updateData()")
         val temp = xmlOutputPreview.caretPosition
 
         logbackConfigManager.configs.logHomeDir = LogHomeDirectory(
@@ -142,51 +133,19 @@ class LogbackView(path: Path) : ToolPanel() {
         logbackConfigManager.updateLoggerConfigs(selectedLoggersList)
 
         xmlOutputPreview.text = logbackConfigManager.getXmlString()
-
-        if (temp > xmlOutputPreview.text.length) {
-            xmlOutputPreview.caretPosition = xmlOutputPreview.text.length
-        } else {
-            xmlOutputPreview.caretPosition = temp
-        }
-//        updateHighlights()
-//    }
-//
-//    private fun updateHighlights() {
-//        val parser = logbackConfigManager.getXmlParser()
-//        try {
-//            while (parser.nextToken() != null) {
-//                if (parser.currentToken == JsonToken.FIELD_NAME) {
-//                    val fieldName: String = parser.currentName
-//                    val stringValue: String? = parser.valueAsString
-//                    println("$fieldName: $stringValue : ${parser.currentLocation}")
-//
-//                    parser.nextToken()
-//                }
-//            }
-//        } catch (e: IOException) {
-//            e.printStackTrace()
-//        }
-
-//        with(xmlOutputPreview) {
-//            val highlightColor = UIManager.getColor("TextField.highlight")
-//            val painter = DefaultHighlighter.DefaultHighlightPainter(highlightColor)
-//            val startOffset = text.indexOf("test")
-//            val endOffset = startOffset + "test".length
-//            highlighter.addHighlight(startOffset, endOffset, painter)
-//        }
+        xmlOutputPreview.caretPosition = if (temp > xmlOutputPreview.text.length) xmlOutputPreview.text.length else temp
     }
 
     init {
         name = path.name
         toolTipText = path.toString()
-
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 editorPanel,
                 previewPanel,
             ).apply {
-                isOneTouchExpandable
+                isOneTouchExpandable = true
                 resizeWeight = 0.5
             },
             "push, grow",
@@ -220,11 +179,19 @@ class LogbackView(path: Path) : ToolPanel() {
         init {
             add(JLabel("Log Home Directory"), "growx, wrap")
             add(logHomeField, "growx, push, split 2")
-            add(logHomeBrowseButton, "w 100")
+            add(logHomeBrowseButton, "w 100!")
         }
     }
-    inner class ScanForChangesPanel : JPanel(MigLayout("fill, hidemode 3, ins 0")) {
 
+    override fun updateUI() {
+        super.updateUI()
+        SwingUtilities.invokeLater {
+            xmlOutputPreview.font = UIManager.getFont("monospaced.font")
+            loggerConfigPanel.scrollPane.border = null
+        }
+    }
+
+    inner class ScanForChangesPanel : JPanel(MigLayout("fill, hidemode 3, ins 0")) {
         private val scanEnabled = logbackConfigManager.configs.scan ?: false
         private val scanPeriod = logbackConfigManager.configs.scanPeriod?.filter(Char::isDigit)?.toLong() ?: 30
 
@@ -251,15 +218,16 @@ class LogbackView(path: Path) : ToolPanel() {
             add(customEntryPanel, "growx")
         }
     }
-    inner class LoggerSelectorPanel : JPanel(MigLayout("fill, ins 0")) {
 
+    inner class LoggerSelectorPanel : JPanel(MigLayout("fill, ins 0")) {
         private val loggerItems = getLoggerList()
 
+        @OptIn(ExperimentalSerializationApi::class)
         private fun getLoggerList(): Array<String> {
             val filename = "src/main/resources/loggers.json"
-            val rawJsonString = File(filename).bufferedReader().readLines().joinToString(separator = "")
-            val obj = Json.decodeFromString<List<IgnitionLogger>>(rawJsonString)
-            return obj.map { it.name }.toTypedArray()
+            val stream = File(filename).inputStream()
+            val loggerList = Json.decodeFromStream<List<IgnitionLogger>>(stream)
+            return loggerList.map { it.name }.toTypedArray()
         }
 
         private val loggerComboBox = JComboBox(loggerItems).apply {
@@ -278,9 +246,7 @@ class LogbackView(path: Path) : ToolPanel() {
                 ) {
                     selectedLoggersList.add(SelectedLogger((loggerComboBox.selectedItem as String)))
                     selectedLoggersPanel.add(
-                        SelectedLoggerCard(
-                            selectedLoggersList.last(),
-                        ),
+                        SelectedLoggerCard(selectedLoggersList.last()),
                         "north, growx, shrinkx, wrap, gap 5 5 3 3",
                     )
                     revalidate()
@@ -296,8 +262,7 @@ class LogbackView(path: Path) : ToolPanel() {
             }
         }
 
-        private val scrollPane = JScrollPane(selectedLoggersPanel).apply {
-            border = null
+        val scrollPane = JScrollPane(selectedLoggersPanel).apply {
             verticalScrollBar.unitIncrement = 16
         }
 
@@ -314,7 +279,7 @@ class LogbackView(path: Path) : ToolPanel() {
         init {
             add(JLabel("Logger Selection"), "growx, wrap")
             add(loggerComboBox, "growx, split 2")
-            add(addButton, "w 100, wrap")
+            add(addButton, "w 100!, wrap")
             add(JLabel("Selected loggers:"), "wrap")
             add(
                 JPanel(MigLayout("fill, hidemode 0"))
@@ -334,15 +299,12 @@ class LogbackView(path: Path) : ToolPanel() {
     ) : JPanel(MigLayout("fill, ins 0")) {
 
         val textField = NumericEntryField(inputValue).apply {
-            border = null
             addNumericChangeListener(::updateData)
         }
 
         private val unit = JTextField(unitValue).apply {
-            border = null
             isEditable = false
             horizontalAlignment = SwingConstants.CENTER
-            foreground = UIManager.getColor("TextArea.inactiveForeground")
         }
 
         init {
@@ -355,17 +317,24 @@ class LogbackView(path: Path) : ToolPanel() {
             add(
                 JPanel(MigLayout("fill, ins 0")).apply {
                     border = BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor"))
-                    add(textField, "w 50!, growy")
-                    add(unit, "w 30!")
+                    add(textField, "wmin 60, grow, gap 0")
+                    add(unit, "w 40!, growy, gap 0")
                 },
                 "grow, shrinkx",
             )
         }
+
+        override fun updateUI() {
+            super.updateUI()
+            SwingUtilities.invokeLater {
+                textField.border = null
+                unit.border = null
+                unit.foreground = UIManager.getColor("TextArea.inactiveForeground")
+            }
+        }
     }
 
     inner class SelectedLoggerCard(logger: SelectedLogger) : JPanel(MigLayout("fill, ins 5, hidemode 3")) {
-
-//        private val loggerDescription = JLabel("<html>Description: <i>${logger.description}</i>")
         private val loggingLevels = arrayOf("OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL")
         val loggerLevelSelector = JComboBox(loggingLevels).apply {
             selectedItem = logger.level
@@ -383,8 +352,6 @@ class LogbackView(path: Path) : ToolPanel() {
         }
 
         private val closeButton = JButton(FlatSVGIcon("icons/bx-x.svg")).apply {
-            border = null
-            background = null
             addActionListener {
                 selectedLoggersList.remove(logger)
                 loggerConfigPanel.selectedLoggersPanel.components.forEachIndexed { index, component ->
@@ -421,10 +388,8 @@ class LogbackView(path: Path) : ToolPanel() {
         val maxDays = SizeEntryField("Max Days", logger.maxDaysHistory, "Days")
 
         private val separateOutputOptions = JPanel(MigLayout("fillx, ins 0")).apply {
-
             add(
                 JPanel(MigLayout("fill, ins 0")).apply {
-
                     add(JLabel("Output Folder:"), "cell 0 0")
                     add(loggerOutputFolder, "cell 1 0 2 0, push, growx, shrinkx")
                     add(JLabel("Filename Pattern:"), "cell 0 1")
@@ -436,7 +401,6 @@ class LogbackView(path: Path) : ToolPanel() {
             add(maxFileSize, "grow, shrinkx")
             add(totalSizeCap, "grow, shrinkx")
             add(maxDays, "grow, shrinkx")
-
             isVisible = logger.separateOutput
         }
 
@@ -444,31 +408,24 @@ class LogbackView(path: Path) : ToolPanel() {
             name = logger.name
             border = BorderFactory.createTitledBorder(logger.name)
             add(loggerLevelSelector, "w 100")
-//            add(loggerDescription, "growx, push")
             add(closeButton, "right, wrap, gap 5 5")
-
             add(loggerSeparateOutput, "growx, span 3, wrap")
             add(separateOutputOptions, "growx, span 3")
         }
+
+        override fun updateUI() {
+            super.updateUI()
+            SwingUtilities.invokeLater {
+                closeButton.border = null
+                closeButton.background = null
+            }
+        }
     }
-
-//    inner class SelectedLoggerPreviewCard(logger: SelectedLogger) : JPanel(MigLayout("fill")) {
-//
-//        private val loggerPreviewLabel = JLabel("Preview of ${logger.name} on ${logger.level}:")
-//        private val loggerPreviewBody = JTextArea("A preview of the selected logger on the selected logging level will appear here!")
-//
-//        init {
-//            add(loggerPreviewLabel, "growx, wrap")
-//            add(loggerPreviewBody, "growx")
-//        }
-//    }
-
     override val icon: Icon = LogbackEditor.icon
 }
 
 data class SelectedLogger(
     val name: String = "Logger name",
-    val description: String? = "Logger description",
     var level: String = "INFO",
     var separateOutput: Boolean = false,
     var outputFolder: String = "\${LOG_HOME}\\\\AdditionalLogs\\\\",
@@ -476,9 +433,4 @@ data class SelectedLogger(
     var maxFileSize: Long = 10,
     var totalSizeCap: Long = 1000,
     var maxDaysHistory: Long = 5,
-)
-
-@Serializable
-data class IgnitionLogger(
-    val name: String,
 )

@@ -13,8 +13,8 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import java.io.File
 import kotlinx.serialization.Serializable
+import java.io.File
 
 /*
 The very basic structure of the configuration file can be described as, <configuration> element,
@@ -131,7 +131,6 @@ data class Appender(
 
 )
 
-@JacksonXmlRootElement(localName = "appender-ref")
 data class AppenderRef(
 
     @field:JacksonXmlProperty(isAttribute = true, localName = "ref")
