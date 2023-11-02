@@ -17,10 +17,10 @@ import kotlinx.serialization.json.encodeToStream
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.putJsonArray
 import java.awt.Font
-import java.nio.file.Path
 import java.sql.Connection
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
+import kotlin.io.path.Path
 import kotlin.io.path.outputStream
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -82,35 +82,61 @@ class TagConfigView(connection: Connection) : ToolPanel() {
         // ////////// for any elements in folders tags array
         // //////////// call createJson
 
-        return when (config.tagType) {
+        /* We don't know the tag type.
+        * Probably because this record represents an override to a pre-existing node's config.
+        * We need to find the tag record, in some definition somehwere, which contains info about this node.
+        */
+        val originalDefinition = getOriginalDefinition()
+        val (resolvedConfig, isTopLevel) = if (config.tagType.isNullOrEmpty()) {
+            config.copy(
+                name = originalDefinition.config.name,
+                tagType = originalDefinition.config.tagType,
+            ) to false
+        } else {
+            config to true
+        }
+
+        return when (resolvedConfig.tagType) {
             "Folder",
             "UdtInstance",
             "UdtType",
             -> { // This is a node representing a folder-like structure
-                require(config.name != null) { "tagType not null but name is! \nRecord: $this" }
+                require(resolvedConfig.name != null) { "tagType not null but name is! \nRecord: $this" }
                 buildJsonObject {
-                    configAsJson.entries.forEach { (key, value) ->
+                    JSON.encodeToJsonElement(
+                        TagConfigSerializer,
+                        resolvedConfig,
+                    ).jsonObject.entries.forEach { (key, value) ->
                         put(key, value)
                     }
                     putJsonArray("tags") {
-                        val childNodes = getDirectChildren()
+                        val childNodes = if (isTopLevel) {
+                            getDirectChildren()
+                        } else {
+                            val overriddenChildren = getDirectChildren()
+                            val originalChildren = originalDefinition.getDirectChildren()
+                            val overriddenIDs = overriddenChildren.map {
+                                it.id.split(".").last()
+                            }
+
+                            overriddenChildren + originalChildren.filter { originalRecord ->
+                                val recordUUID = originalRecord.id.split(".").last()
+                                recordUUID !in overriddenIDs
+                            }
+                        }
+
                         addAll(childNodes.map { record -> record.createJson() })
                     }
                 }
             }
 
             "AtomicTag" -> { // We name it's name, tagType, so this is a leaf which represents an actual tag
-                require(config.name != null) { "tagType not null but name is! \nRecord: $this" }
-                configAsJson
+                require(resolvedConfig.name != null) { "tagType not null but name is! \nRecord: $this" }
+                JSON.encodeToJsonElement(TagConfigSerializer, resolvedConfig)
             }
 
             else -> {
-                /* We don't know the tag type.
-                * Probably because this record represents an override to a pre-existing node's config.
-                * We need to find the tag record, in some definition somehwere, which contains info about this node.
-                */
-                println("Config does not contain tagType information! $config")
-                configAsJson
+                throw IllegalArgumentException("Tag Type is not any predefined types!\n$resolvedConfig")
             }
         }
     }
@@ -135,42 +161,28 @@ class TagConfigView(connection: Connection) : ToolPanel() {
                 "tags" to JsonArray(listOf(JsonObject(typesFolderEntry))),
             ),
         )
-        Path.of("C:\\Users\\jortega\\Desktop\\patriarchy.json").outputStream().use {
+        Path(
+            System.getProperty("user.home"),
+            "Desktop",
+            "tag-export-dev-test.json",
+        ).outputStream().use {
             JSON.encodeToStream(jsonExportData, it)
         }
     }
     // Traversal Helper Functions:
 
     private fun TagRecord.getUdtDefinition(): TagRecord {
-        require(this.config.tagType == "UdtInstance" && this.config.typeId != null)
-        return udtDefinitions[this.config.typeId]
+        require(config.tagType == "UdtInstance" || config.tagType == "UdtType") {
+            "Not a top level UDT Instance or type! $this"
+        }
+        if (config.tagType == "UdtType") return this
+        return udtDefinitions[config.typeId]
             ?: throw IllegalArgumentException("Missing UDT Definition or Type ID. Current typeId: ${this.config.typeId}")
     }
 
     private fun TagRecord.getDirectChildren(): List<TagRecord> {
         return tagRecordData.filter { tagRecord -> tagRecord.folderId == id }
     }
-
-//    private fun TagRecord.getOriginalDefinition(): TagRecord {
-//        // Hierarchy: UdtInstanceA/UdtInstanceB/Tag <- This tag has an override or two or ten
-//        // UdtInstanceA_ID.UdtInstanceB_InsideDefinitionA_ID.TagDefinitionInsideDefinitionB
-//        val idParts = id.split(".")
-//
-//        val idOfInstanceA = idParts.first() // This is a top level UDT Instance
-//        val instanceARecord = tagRecordData.find { record -> record.id == idOfInstanceA }!!
-//        val definitionARecord = instanceARecord.getUdtDefinition()
-//
-//        val idOfinstanceBwithinDefinitionA = "${definitionARecord.id}.${idParts[1]}"
-//        val instanceBwithinDefinitionARecord =
-//            tagRecordData.find { record -> record.id == idOfinstanceBwithinDefinitionA }!!
-//        val definitionBRecord = instanceBwithinDefinitionARecord.getUdtDefinition()
-//
-//        val originalTagDefinition = definitionBRecord.getDirectChildren().find { record ->
-//            record.id.split(".").last() == idParts.last()
-//        }!!
-//
-//        return originalTagDefinition
-//    }
 
     private fun TagRecord.getOriginalDefinition(): TagRecord {
         fun TagRecord.getOriginalDefinitionRecursive(idParts: List<String>): TagRecord {
@@ -185,8 +197,8 @@ class TagConfigView(connection: Connection) : ToolPanel() {
             return topLevelDefinition.getOriginalDefinitionRecursive(idParts.subList(1, idParts.size))
         }
 
+        if (!config.tagType.isNullOrEmpty() && !config.name.isNullOrEmpty()) return this
         val originalIdParts = id.split(".")
-        if (originalIdParts.size == 1) return this
 
         val topLevelInstanceId = originalIdParts.first()
         val topLeveInstanceRecord = tagRecordData.find { record -> record.id == topLevelInstanceId }!!
@@ -212,6 +224,7 @@ data class TagRecord(
     val rank: Int,
     val name: String?,
 ) {
+    @Suppress("unused")
     val configAsJson: JsonObject
         get() = TagConfigView.JSON.encodeToJsonElement(TagConfigSerializer, config).jsonObject
 
