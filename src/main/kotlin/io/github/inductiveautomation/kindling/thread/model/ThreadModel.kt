@@ -34,7 +34,7 @@ sealed class ThreadColumnList : ColumnList<ThreadLifespan>() {
                 FlatSVGIcon("icons/bx-search.svg").derive(0.8F)
             }
         },
-        getValue = { it.firstNotNullOf { thread -> thread?.marked } },
+        getValue = { it.any { thread -> thread?.marked ?: false } },
     )
 
     val id = Column<ThreadLifespan, Int>(
@@ -142,6 +142,7 @@ class ThreadModel(val threadData: List<ThreadLifespan>) : AbstractTableModel() {
         threadData[rowIndex].forEach {
             it?.marked = aValue as Boolean
         }
+        fireTableRowsUpdated(rowIndex, rowIndex)
     }
 
     val markIndex = columns[

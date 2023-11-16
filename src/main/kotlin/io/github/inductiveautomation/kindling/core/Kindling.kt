@@ -7,6 +7,7 @@ import com.github.weisj.jsvg.parser.SVGLoader
 import io.github.inductiveautomation.kindling.core.Preference.Companion.PreferenceCheckbox
 import io.github.inductiveautomation.kindling.core.Preference.Companion.preference
 import io.github.inductiveautomation.kindling.utils.CharsetSerializer
+import io.github.inductiveautomation.kindling.utils.EmptyBorder
 import io.github.inductiveautomation.kindling.utils.PathSerializer
 import io.github.inductiveautomation.kindling.utils.PathSerializer.serializedForm
 import io.github.inductiveautomation.kindling.utils.ThemeSerializer
@@ -22,14 +23,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
+import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTextField
 import java.awt.Image
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Path
 import java.util.Vector
+import javax.swing.JButton
 import javax.swing.JComboBox
+import javax.swing.JPanel
 import javax.swing.JSpinner
+import javax.swing.JTextField
 import javax.swing.SpinnerNumberModel
 import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
@@ -55,6 +60,8 @@ data object Kindling {
     val forumThread = URI("https://forum.inductiveautomation.com/t/54689")
 
     const val SECONDARY_ACTION_ICON_SCALE = 0.75F
+
+    const val BETA_VERSION = "1.1.2"
 
     data object Preferences {
         data object General : PreferenceCategory {
@@ -193,6 +200,40 @@ data object Kindling {
             override val preferences: List<Preference<*>> = listOf(Theme, ScaleFactor)
         }
 
+        data object Experimental : PreferenceCategory {
+            val User: Preference<String> = preference(
+                name = "Username",
+                description = "Username used for authenticated thread dump uploads. Press enter to submit changes.",
+                default = "",
+                editor = {
+                    JPanel(MigLayout("ins 0, gap 8")).apply {
+                        border = EmptyBorder()
+                        val textField = JTextField(currentValue, 15)
+                        val submit = JButton("Submit").apply {
+                            addActionListener {
+                                currentValue = textField.text
+                            }
+                        }
+                        add(textField)
+                        add(submit)
+                    }
+                }
+            )
+
+            val enableMachineLearning: Preference<Boolean> = preference(
+                name = "Machine Learning Model",
+                description = null,
+                default = false,
+                editor = {
+                    PreferenceCheckbox("Enable Machine Learning Prediction for thread dumps")
+                },
+            )
+
+            override val displayName = "Experimental"
+            override val key = "experimental"
+            override val preferences: List<Preference<*>> = listOf(User, enableMachineLearning)
+        }
+
         data object Advanced : PreferenceCategory {
             val Debug: Preference<Boolean> = preference(
                 name = "Debug Mode",
@@ -240,6 +281,7 @@ data object Kindling {
             add(General)
             add(UI)
             addAll(Tool.tools.filterIsInstance<PreferenceCategory>())
+            add(Experimental)
             // put advanced last
             add(Advanced)
         }

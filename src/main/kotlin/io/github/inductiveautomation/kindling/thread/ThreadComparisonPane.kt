@@ -2,6 +2,7 @@ package io.github.inductiveautomation.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.formdev.flatlaf.extras.components.FlatButton
+import com.formdev.flatlaf.extras.components.FlatCheckBox
 import com.formdev.flatlaf.extras.components.FlatLabel
 import com.jidesoft.swing.StyledLabel
 import io.github.inductiveautomation.kindling.core.DetailsPane
@@ -25,6 +26,10 @@ import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
 import org.jdesktop.swingx.JXTaskPaneContainer
 import java.awt.Color
+import java.awt.Desktop
+import java.awt.event.ItemEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.awt.Font
 import java.text.DecimalFormat
 import java.util.EventListener
@@ -51,6 +56,9 @@ class ThreadComparisonPane(
                 if (blocker != null) {
                     fireBlockerSelectedEvent(blocker)
                 }
+            }
+            addPropertyChangeListener("threadMarked") { event ->
+                fireThreadMarkedEvent(event.newValue as Boolean)
             }
         }
     }
@@ -87,7 +95,7 @@ class ThreadComparisonPane(
         )
     }
 
-    private fun updateData() {
+    fun updateData() {
         threads.firstOrNull { it != null }?.let {
             header.setThread(it)
         }
@@ -131,6 +139,20 @@ class ThreadComparisonPane(
 
     fun interface BlockerSelectedEventListener : EventListener {
         fun onBlockerSelected(threadId: Int)
+    }
+
+    fun interface ThreadMarkedListener : EventListener {
+        fun onThreadMarked(value: Boolean)
+    }
+
+    fun addThreadMarkedListener(listener: ThreadMarkedListener) {
+        listeners.add(listener)
+    }
+
+    private fun fireThreadMarkedEvent(value: Boolean) {
+        for (listener in listeners.getAll<ThreadMarkedListener>()) {
+            listener.onThreadMarked(value)
+        }
     }
 
     private class HeaderPanel : JPanel(MigLayout("fill, ins 3")) {
@@ -215,6 +237,7 @@ class ThreadComparisonPane(
         var highlightStacktrace: Boolean = true
 
         private val titleLabel = FlatLabel()
+        private val markedCheckbox = FlatCheckBox()
         private val detailsButton = FlatButton().apply {
             icon = detailIcon
             toolTipText = "Open in details popup"
@@ -236,10 +259,17 @@ class ThreadComparisonPane(
         }
 
         init {
+            markedCheckbox.addItemListener { event ->
+                val value = event.stateChange == ItemEvent.SELECTED
+                thread?.marked = value
+                firePropertyChange("threadMarked", !value, value)
+            }
+
             add(
                 JPanel(MigLayout("fill, ins 5, hidemode 3")).apply {
                     add(detailsButton)
                     add(titleLabel, "push, grow, gapleft 8")
+                    add(markedCheckbox)
                     add(blockerButton)
                 },
             )
@@ -251,6 +281,8 @@ class ThreadComparisonPane(
 
         fun updateThreadInfo() {
             isVisible = thread != null || ShowNullThreads.currentValue
+
+            markedCheckbox.isSelected = thread?.marked ?: false
 
             titleLabel.text = buildString {
                 tag("html") {

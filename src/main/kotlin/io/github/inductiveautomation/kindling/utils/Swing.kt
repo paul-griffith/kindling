@@ -533,3 +533,24 @@ fun VerticalSplitPane(
 
     block()
 }
+
+inline fun <reified T> JComboBox<T>.configureCellRenderer(
+    configureDefault: Boolean = true,
+    noinline block: BasicComboBoxRenderer.(list: JList<*>?, value: T?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) -> Unit,
+) {
+    renderer = object : BasicComboBoxRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
+            if (configureDefault) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            }
+            block(list, value as T?, index, isSelected, cellHasFocus)
+            return this
+        }
+    }
+}

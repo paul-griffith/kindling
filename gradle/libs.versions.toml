@@ -10,6 +10,8 @@ ignition = "8.1.1"
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.0" }
+runtime = { id = "org.beryx.runtime", version = "1.13.0" }
 conveyor = { id = "dev.hydraulic.conveyor", version = "1.6" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.6.1" }
 dokka = { id = "org.jetbrains.dokka", version = "1.9.10" }
@@ -19,12 +21,19 @@ dokka = { id = "org.jetbrains.dokka", version = "1.9.10" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
 serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.6.0" }
+serialization-csv = { group = "de.brudaswen.kotlinx.serialization", name = "kotlinx-serialization-csv", version = "2.0.0" }
 xerial-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.43.2.2" }
 logback = { group = "ch.qos.logback", name = "logback-classic", version = "1.4.11" }
 hsql = { group = "org.hsqldb", name = "hsqldb", version = "2.7.2" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version = "2.11.5" }
 excelkt = { group = "io.github.evanrupert", name = "excelkt", version = "1.0.2" }
 jsvg = { group = "com.github.weisj", name = "jsvg", version = "1.2.0" }
+client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
+client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+client-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+jpmml = { group = "org.jpmml", name = "pmml-evaluator-metro", version = "1.6.4" }
+jsvg = { group = "com.github.weisj", name = "jsvg", version = "1.0.0" }
 
 # build
 jsoup = { group = "org.jsoup", name = "jsoup", version = "1.16.2" }
@@ -78,6 +87,12 @@ kotest = [
 ignition = [
     "ignition-common",
     "ignition-gateway",
+]
+ktor = [
+    "client-serialization-kotlinx-json",
+    "client-content-negotiation",
+    "client-cio",
+    "client-core",
 ]
 ia-transitive = [
     "apache-commons",
