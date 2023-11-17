@@ -333,10 +333,10 @@ object SimulatorViewer : Tool {
         predicate = { file ->
             file.extension == "json" &&
                 "\"tagType\": \"Provider\"," in buildString {
-                    file.bufferedReader().use { br ->
-                        repeat(10) { append(br.readLine()) }
-                    }
+                file.bufferedReader().use { br ->
+                    repeat(10) { append(br.readLine()) }
                 }
+            }
         },
     )
 
