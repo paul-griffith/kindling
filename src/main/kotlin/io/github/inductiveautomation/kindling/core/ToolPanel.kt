@@ -8,7 +8,6 @@ import io.github.inductiveautomation.kindling.utils.FloatableComponent
 import io.github.inductiveautomation.kindling.utils.PopupMenuCustomizer
 import io.github.inductiveautomation.kindling.utils.exportToCSV
 import io.github.inductiveautomation.kindling.utils.exportToXLSX
-import io.github.inductiveautomation.kindling.utils.uploadToWeb
 import net.miginfocom.swing.MigLayout
 import java.io.File
 import javax.swing.Icon
@@ -69,7 +68,8 @@ abstract class ToolPanel(
             val action: (TableModel, File) -> Unit,
         ) {
             CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
-            EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
+            EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX),
+            ;
 
             val fileFilter = FileFilter(description, listOf(extension))
         }

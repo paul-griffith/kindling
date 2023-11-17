@@ -64,9 +64,9 @@ data class Thread(
 
             val dashTokens = threadName.split("-").map { token ->
                 token.split("[").first()
-                     .split("/").first()
-                     .split("@").first()
-                     .split("(").first()
+                    .split("/").first()
+                    .split("@").first()
+                    .split("(").first()
             }
 
             val spaceTokens = threadName.split(" ").map { token ->

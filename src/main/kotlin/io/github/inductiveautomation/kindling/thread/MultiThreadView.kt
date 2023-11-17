@@ -2,10 +2,10 @@ package io.github.inductiveautomation.kindling.thread
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import com.jidesoft.comparator.AlphanumComparator
-import com.jidesoft.swing.CheckBoxListSelectionModel
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.Detail
 import io.github.inductiveautomation.kindling.core.Detail.BodyLine
+import io.github.inductiveautomation.kindling.core.Filter
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.enableMachineLearning
 import io.github.inductiveautomation.kindling.core.MultiTool
 import io.github.inductiveautomation.kindling.core.Preference
@@ -18,7 +18,6 @@ import io.github.inductiveautomation.kindling.core.add
 import io.github.inductiveautomation.kindling.thread.model.MachineLearningModel
 import io.github.inductiveautomation.kindling.thread.model.MachineLearningModel.evaluator
 import io.github.inductiveautomation.kindling.thread.model.Thread
-import io.github.inductiveautomation.kindling.thread.model.ThreadColumnIdentifier
 import io.github.inductiveautomation.kindling.thread.model.ThreadDump
 import io.github.inductiveautomation.kindling.thread.model.ThreadLifespan
 import io.github.inductiveautomation.kindling.thread.model.ThreadModel
@@ -28,7 +27,6 @@ import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.Column
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FileFilter
-import io.github.inductiveautomation.kindling.utils.FilterList
 import io.github.inductiveautomation.kindling.utils.FilterModel
 import io.github.inductiveautomation.kindling.utils.FilterSidebar
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
@@ -41,33 +39,28 @@ import io.github.inductiveautomation.kindling.utils.selectedRowIndices
 import io.github.inductiveautomation.kindling.utils.toBodyLine
 import io.github.inductiveautomation.kindling.utils.transferTo
 import io.github.inductiveautomation.kindling.utils.uploadMultipleToWeb
-import io.github.inductiveautomation.kindling.utils.transferTo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXSearchField
 import org.jdesktop.swingx.decorator.ColorHighlighter
 import org.jdesktop.swingx.table.ColumnControlButton.COLUMN_CONTROL_MARKER
-import org.jdesktop.swingx.table.TableColumnExt
 import org.jpmml.evaluator.ProbabilityDistribution
 import java.awt.Color
 import java.awt.Desktop
 import java.awt.Rectangle
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.swing.ButtonGroup
 import javax.swing.JLabel
 import javax.swing.JMenu
 import javax.swing.JMenuBar
-import javax.swing.JPanel
 import javax.swing.JPopupMenu
-import javax.swing.JSplitPane
-import javax.swing.JToggleButton
 import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
@@ -165,7 +158,7 @@ class MultiThreadView(
                         model[rowNum, model.columns.id] in threadsOfInterest.map(Thread::id)
                     },
                     UIManager.getColor("Objects.YellowDark"),
-                    Color.BLACK
+                    Color.BLACK,
                 ),
             )
 
@@ -219,7 +212,7 @@ class MultiThreadView(
             actionMap.apply {
                 put("$COLUMN_CONTROL_MARKER}.clearAllMarks", clearAllMarks)
                 put(
-                    "${COLUMN_CONTROL_MARKER}.clearAllMarks",
+                    "$COLUMN_CONTROL_MARKER.clearAllMarks",
                     Action(name = "Clear All Marks") {
                         for (lifespan in model.threadData) {
                             lifespan.forEach { thread ->
@@ -229,12 +222,11 @@ class MultiThreadView(
                     },
                 )
                 put(
-                    "${COLUMN_CONTROL_MARKER}.markThreadsOfInterest",
+                    "$COLUMN_CONTROL_MARKER.markThreadsOfInterest",
                     Action("Mark Threads of Interest") {
                         markThreadsOfInterest()
-                    }
+                    },
                 )
-
             }
 
             attachPopupMenu table@{ event ->
@@ -243,7 +235,8 @@ class MultiThreadView(
 
                 JPopupMenu().apply {
                     val colAtPoint = columnAtPoint(event.point)
-                    if (colAtPoint != -1 && getColumn(convertColumnIndexToModel(colAtPoint)).identifier == ThreadColumnIdentifier.MARK) {
+
+                    if (colAtPoint == model.markIndex) {
                         add(clearAllMarks)
                     }
 
@@ -290,11 +283,6 @@ class MultiThreadView(
         val firstThreadDump = threadDumps.first()
         val fileName = "threaddump_${firstThreadDump.version}_${firstThreadDump.hashCode()}"
         exportMenu(fileName) { mainTable.model }
-    }
-
-    private val exportButton = JMenuBar().apply {
-        add(exportMenu)
-        exportMenu.isEnabled = mainTable.model.isSingleContext
     }
 
     private val filters = buildList<Filter<Thread?>> {
@@ -378,7 +366,7 @@ class MultiThreadView(
                     fileName to model
                 }
                 uploadMultipleToWeb(models)
-            }
+            },
         )
     }
 
@@ -543,13 +531,13 @@ class MultiThreadView(
 
         model.flatten().filterNotNull().forEach { thread ->
             if (thread in threadsOfInterest) {
-               thread.marked = true
+                thread.marked = true
             }
         }
         mainTable.model.fireTableDataChanged()
     }
 
-    private fun Thread.getPmmlProperty(prop: String): Any? = when(prop) {
+    private fun Thread.getPmmlProperty(prop: String): Any? = when (prop) {
         "thread_state" -> state.toString()
         "system" -> system
         "scope" -> scope
@@ -560,8 +548,6 @@ class MultiThreadView(
         "version" -> threadDumps.first().version
         "thread_id" -> id
         else -> null
-
-        sidebar.selectedIndex = 0
     }
 
     private val initialized = true
@@ -642,16 +628,16 @@ data object MultiThreadViewer : MultiTool, ClipboardTool, PreferenceCategory {
         description = description,
         predicate = { file ->
             file.extension in listOf("json", "txt") &&
-            run {
-                val firstTwoLines =  buildString {
-                    file.bufferedReader().use { br ->
-                        append(br.readLine())
-                        append(br.readLine())
+                run {
+                    val firstTwoLines = buildString {
+                        file.bufferedReader().use { br ->
+                            append(br.readLine())
+                            append(br.readLine())
+                        }
                     }
+                    "Ignition" in firstTwoLines || "version" in firstTwoLines
                 }
-                "Ignition" in firstTwoLines || "version" in firstTwoLines
-            }
-        }
+        },
     )
 
     override val respectsEncoding: Boolean = true

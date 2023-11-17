@@ -8,11 +8,11 @@ import com.formdev.flatlaf.extras.components.FlatTextArea
 import com.formdev.flatlaf.fonts.roboto.FlatRobotoFont
 import com.formdev.flatlaf.fonts.roboto_mono.FlatRobotoMonoFont
 import com.formdev.flatlaf.util.SystemInfo
-import io.github.inductiveautomation.kindling.core.Kindling.BETA_VERSION
 import com.jidesoft.swing.StyleRange.STYLE_UNDERLINED
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.CustomIconView
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.BETA_VERSION
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.Debug
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.ChoosableEncodings
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.DefaultEncoding
@@ -226,7 +226,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             )
         }
     }
-
 
     private val aboutDialog by lazy {
         jFrame(

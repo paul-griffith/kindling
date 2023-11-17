@@ -66,6 +66,7 @@ enum class TagDataType {
     Text,
     Document,
     None,
+
     // Not supported:
     Int1Array,
     Int2Array,

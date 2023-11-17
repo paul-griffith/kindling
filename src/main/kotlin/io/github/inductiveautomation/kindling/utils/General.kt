@@ -1,7 +1,6 @@
 package io.github.inductiveautomation.kindling.utils
 
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Experimental.User
-import io.github.evanrupert.excelkt.workbook
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -18,11 +17,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
-import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.math.BigDecimal
@@ -314,7 +311,6 @@ fun uploadMultipleToWeb(namesAndModels: List<Pair<String, TableModel>>) {
                     }
                 }
             }
-
         }
     } else {
         User.currentValue = ""

@@ -26,11 +26,8 @@ import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
 import org.jdesktop.swingx.JXTaskPaneContainer
 import java.awt.Color
-import java.awt.Desktop
-import java.awt.event.ItemEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.awt.Font
+import java.awt.event.ItemEvent
 import java.text.DecimalFormat
 import java.util.EventListener
 import javax.swing.JPanel

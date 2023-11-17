@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-
 class TagParser(tagProvider: NodeStructure) {
     private val udtPathsToStructures = buildMap {
         val definitions = tagProvider.tags.find { node -> node.name == "_types_" } ?: return@buildMap
@@ -76,7 +75,7 @@ class TagParser(tagProvider: NodeStructure) {
                                 functions[clazz]!!().apply {
                                     generateRandomParametersForFunction(type)
                                 }
-                            }
+                            },
                         ),
                     )
                 }

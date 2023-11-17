@@ -217,7 +217,7 @@ data object Kindling {
                         add(textField)
                         add(submit)
                     }
-                }
+                },
             )
 
             val enableMachineLearning: Preference<Boolean> = preference(
