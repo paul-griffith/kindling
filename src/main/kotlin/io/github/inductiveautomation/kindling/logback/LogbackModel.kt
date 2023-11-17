@@ -297,7 +297,7 @@ class LogbackConfigManager(
             Logger(
                 name = selectedLogger.name,
                 level = selectedLogger.level,
-                additivity = !selectedLogger.separateOutput,
+                additivity = false,
                 appenderRef = if (selectedLogger.separateOutput) {
                     mutableListOf(AppenderRef(selectedLogger.name))
                 } else {
