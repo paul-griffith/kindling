@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.SystemInfo
 import com.github.weisj.jsvg.parser.SVGLoader
+import com.sun.java.accessibility.util.AWTEventMonitor.addActionListener
 import io.github.inductiveautomation.kindling.core.Preference.Companion.PreferenceCheckbox
 import io.github.inductiveautomation.kindling.core.Preference.Companion.preference
 import io.github.inductiveautomation.kindling.utils.CharsetSerializer
@@ -61,7 +62,7 @@ data object Kindling {
 
     const val SECONDARY_ACTION_ICON_SCALE = 0.75F
 
-    const val BETA_VERSION = "1.1.2"
+    const val BETA_VERSION = "1.2.0"
 
     data object Preferences {
         data object General : PreferenceCategory {
