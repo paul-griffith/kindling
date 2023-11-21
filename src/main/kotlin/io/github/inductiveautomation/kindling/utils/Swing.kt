@@ -330,16 +330,14 @@ class FileFilter(
     private val description: String,
     private val predicate: (path: Path) -> Boolean,
 ) : SwingFileFilter(), FileFilter {
-    constructor(description: String, extensions: List<String>) : this(
-        description,
-        { path -> path.extension in extensions },
-    )
+    constructor(description: String, extensions: List<String>) : this(description, { file -> file.extension in extensions })
 
     fun accept(path: Path): Boolean {
         return path.isDirectory() || predicate(path)
     }
 
-    override fun accept(file: File): Boolean = accept(file.toPath())
+    override fun accept(file: File): Boolean = file.isDirectory() || accept(file.toPath())
+
     override fun getDescription(): String = description
 }
 
@@ -534,25 +532,4 @@ fun VerticalSplitPane(
     this.resizeWeight = resizeWeight
 
     block()
-}
-
-inline fun <reified T> JComboBox<T>.configureCellRenderer(
-    configureDefault: Boolean = true,
-    noinline block: BasicComboBoxRenderer.(list: JList<*>?, value: T?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) -> Unit,
-) {
-    renderer = object : BasicComboBoxRenderer() {
-        override fun getListCellRendererComponent(
-            list: JList<*>?,
-            value: Any?,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean,
-        ): Component {
-            if (configureDefault) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            }
-            block(list, value as T?, index, isSelected, cellHasFocus)
-            return this
-        }
-    }
 }
