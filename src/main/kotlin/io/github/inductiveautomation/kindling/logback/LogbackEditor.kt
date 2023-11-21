@@ -224,8 +224,8 @@ class LogbackView(path: Path) : ToolPanel() {
 
         @OptIn(ExperimentalSerializationApi::class)
         private fun getLoggerList(): Array<String> {
-            val filename = "src/main/resources/loggers.json"
-            val stream = File(filename).inputStream()
+            val filename = "/loggers.json"
+            val stream = javaClass.getResourceAsStream(filename)
             val loggerList = Json.decodeFromStream<List<IgnitionLogger>>(stream)
             return loggerList.map { it.name }.toTypedArray()
         }
