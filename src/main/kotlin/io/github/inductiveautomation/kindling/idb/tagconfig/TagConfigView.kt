@@ -173,7 +173,7 @@ class TagConfigView(connection: Connection) : ToolPanel() {
         constructor(treePath: TreePath) : this(treePath, treePath.lastPathComponent as LazyTreeNode)
 
         override val icon: Icon? = null
-        override val tabName: String = "${treeNode.originalNode.config.name ?: treeNode.originalNode.name}"
+        override val tabName: String = treeNode.name
         override val tabTooltip: String = treePath.toTagPath()
 
         private val textArea = JTextArea(
@@ -190,9 +190,9 @@ class TagConfigView(connection: Connection) : ToolPanel() {
 
         companion object {
             fun TreePath.toTagPath(): String {
-                return path.joinToString("/") {
-                    (it as LazyTreeNode).name
-                }
+                val provider = "[${(path.first() as LazyTreeNode).name}]"
+                val tagPath = path.asList().subList(1, path.size).joinToString("/")
+                return "$provider$tagPath"
             }
         }
     }
