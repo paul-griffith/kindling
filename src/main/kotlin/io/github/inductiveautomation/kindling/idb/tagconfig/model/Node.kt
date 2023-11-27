@@ -19,42 +19,34 @@ data class Node(
     var resolved: Boolean = false,
 ) {
     companion object {
-        fun typesNode(providerId: Int): Node = Node(
-            id = "_types_",
-            providerId = providerId,
-            folderId = null,
-            config = TagConfig(
+        fun typesNode(providerId: Int): Node =
+            Node(
+                id = "_types_",
+                providerId = providerId,
+                folderId = null,
+                config = TagConfig(
+                    name = "_types_",
+                    tagType = "Folder",
+                    tags = mutableListOf(),
+                ),
+                rank = 1,
                 name = "_types_",
-                tagType = "Folder",
-                tags = mutableListOf(),
-            ),
-            rank = 1,
-            name = "_types_",
-        )
-
-        fun providerNode(providerId: Int, typesNode: Node? = null): Node = Node(
-            id = "tag-provider",
-            providerId = providerId,
-            folderId = null,
-            config = TagConfig(
-                name = "",
-                tagType = "Provider",
-                tags = typesNode?.let { mutableListOf(it) } ?: mutableListOf(),
-            ),
-            rank = 0,
-            name = null,
-        )
+            )
     }
 }
 
 object NodeDelegateSerializer : KSerializer<Node> {
     @OptIn(ExperimentalSerializationApi::class)
     override val descriptor: SerialDescriptor = SerialDescriptor("ExportNode", TagConfig.serializer().descriptor)
+
     override fun deserialize(decoder: Decoder): Node {
         throw UnsupportedOperationException("Deserialization not supported.")
     }
 
-    override fun serialize(encoder: Encoder, value: Node) {
+    override fun serialize(
+        encoder: Encoder,
+        value: Node,
+    ) {
         encoder.encodeSerializableValue(TagConfigSerializer, value.config)
     }
 }

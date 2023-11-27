@@ -1,4 +1,5 @@
 package io.github.inductiveautomation.kindling.idb.tagconfig.model
+
 import io.github.inductiveautomation.kindling.idb.tagconfig.TagConfigView
 import io.github.inductiveautomation.kindling.utils.toList
 import java.sql.Connection
@@ -22,7 +23,7 @@ class TagProviderRecord(
                         id = rs.getString(1),
                         providerId = rs.getInt(2),
                         folderId = rs.getString(3),
-                        config = TagConfigView.JSON.decodeFromString(TagConfigSerializer, rs.getString(4)),
+                        config = TagConfigView.TagExportJson.decodeFromString(TagConfigSerializer, rs.getString(4)),
                         rank = rs.getInt(5),
                         name = rs.getString(6),
                     )
@@ -43,25 +44,27 @@ class TagProviderRecord(
         rawNodeData.filter { it.isUdtDefinition() }.associateBy { it.getFullPath(nodeGroups) }
     }
     val typesNode = Node.typesNode(id)
-    val providerNode = lazy {
-        Node.providerNode(id, typesNode).apply {
-            for ((_, nodeGroup) in nodeGroups) {
-                with(nodeGroup) {
+    val providerNode =
+        lazy {
+            providerNode(typesNode).apply {
+                for ((_, nodeGroup) in nodeGroups) {
+                    with(nodeGroup) {
 
-                    if (parentNode.isUdtDefinition() || parentNode.isUdtInstance()) {
-                        if (parentNode.isUdtDefinition()) statistics.totalUdtDefinitions++
-                        if (!isResolved) {
-                            resolveInheritance(nodeGroups, udtDefinitions)
+                        if (parentNode.isUdtDefinition() || parentNode.isUdtInstance()) {
+                            if (parentNode.isUdtDefinition()) statistics.totalUdtDefinitions++
+                            if (!isResolved) {
+                                resolveInheritance(nodeGroups, udtDefinitions)
+                            }
                         }
-                    }
-                    resolveHierarchy()
-                    when (val folderId = parentNode.folderId) {
-                        "_types_" -> typesNode.config.tags.add(parentNode)
-                        null -> config.tags.add(parentNode)
-                        else -> {
-                            val folderGroup =
-                                nodeGroups[folderId] ?: throw IllegalStateException("This should never happen")
-                            folderGroup.parentNode.config.tags.add(parentNode)
+                        resolveHierarchy()
+                        when (val folderId = parentNode.folderId) {
+                            "_types_" -> typesNode.config.tags.add(parentNode)
+                            null -> config.tags.add(parentNode)
+                            else -> {
+                                val folderGroup =
+                                    nodeGroups[folderId] ?: throw IllegalStateException("This should never happen")
+                                folderGroup.parentNode.config.tags.add(parentNode)
+                            }
                         }
                     }
                     for (node in nodeGroup) {
@@ -76,12 +79,13 @@ class TagProviderRecord(
                 }
             }
         }
-    }
     val isInitialized
         get() = providerNode.isInitialized()
+
     fun initProviderNode() {
         providerNode.value
     }
+
     inner class Statistics() {
         var totalAtomicTags: Int = 0
         var totalFolderTags: Int = 0
@@ -91,7 +95,9 @@ class TagProviderRecord(
         var totalTagsWithHistory: Int = 0
         var totalTagsWithScripts: Int = 0
     }
+
     private fun getStatistics() {}
+
     private fun processTagProvider() {
     }
 
@@ -112,7 +118,10 @@ class TagProviderRecord(
         }
     }
 
-    private fun NodeGroup.resolveNestedChildInstances(nodeGroups: Map<String, NodeGroup>, udtDefinitions: Map<String, Node>) {
+    private fun NodeGroup.resolveNestedChildInstances(
+        nodeGroups: Map<String, NodeGroup>,
+        udtDefinitions: Map<String, Node>,
+    ) {
         require(parentNode.isUdtDefinition())
 
         val childInstances = childNodes.filter { it.isUdtInstance() }
@@ -129,7 +138,10 @@ class TagProviderRecord(
         }
     }
 
-    private fun NodeGroup.resolveInheritance(nodeGroups: Map<String, NodeGroup>, udtDefinitions: Map<String, Node>) {
+    private fun NodeGroup.resolveInheritance(
+        nodeGroups: Map<String, NodeGroup>,
+        udtDefinitions: Map<String, Node>,
+    ) {
         if (parentNode.isUdtDefinition()) resolveNestedChildInstances(nodeGroups, udtDefinitions)
 
         if (parentNode.config.typeId.isNullOrEmpty()) {
@@ -137,10 +149,11 @@ class TagProviderRecord(
             return
         }
 
-        val inheritedParentNode = parentNode.getParentType(udtDefinitions) ?: run {
-            isResolved = true
-            return
-        }
+        val inheritedParentNode =
+            parentNode.getParentType(udtDefinitions) ?: run {
+                isResolved = true
+                return
+            }
         val inheritedNodeGroup =
             nodeGroups[inheritedParentNode.id] ?: throw IllegalStateException("This should never happen")
 
@@ -152,6 +165,21 @@ class TagProviderRecord(
     }
 
     companion object {
+        fun TagProviderRecord.providerNode(typesNode: Node? = null): Node =
+            Node(
+                id = this.uuid,
+                providerId = this.id,
+                folderId = null,
+                config =
+                TagConfig(
+                    name = "",
+                    tagType = "Provider",
+                    tags = typesNode?.let { mutableListOf(it) } ?: mutableListOf(),
+                ),
+                rank = 0,
+                name = this.name,
+            )
+
         private const val tagProviderTableQuery = "SELECT * FROM TAGPROVIDERSETTINGS ORDER BY NAME"
         private const val tagConfigTableQuery = "SELECT * FROM TAGCONFIG WHERE PROVIDERID = ? ORDER BY ID"
 
@@ -182,7 +210,10 @@ class TagProviderRecord(
             }
         }
 
-        private fun NodeGroup.copyChildrenFrom(otherGroup: NodeGroup, instanceId: String = this.parentNode.id) {
+        private fun NodeGroup.copyChildrenFrom(
+            otherGroup: NodeGroup,
+            instanceId: String = this.parentNode.id,
+        ) {
             otherGroup.childNodes.forEach { childNode ->
                 val newId = childNode.id.replace(otherGroup.parentNode.id, instanceId)
                 val newFolderId = childNode.folderId!!.replace(otherGroup.parentNode.id, instanceId)
@@ -203,7 +234,8 @@ class TagProviderRecord(
                     remove(overrideNode)
                     add(
                         overrideNode.copy(
-                            config = overrideNode.config.copy(
+                            config =
+                            overrideNode.config.copy(
                                 name = childNode.config.name,
                                 tagType = childNode.config.tagType,
                             ),
@@ -212,6 +244,7 @@ class TagProviderRecord(
                 }
             }
         }
+
         fun getProvidersFromDB(connection: Connection): List<TagProviderRecord> {
             return connection.prepareStatement(tagProviderTableQuery).executeQuery().toList { rs ->
                 runCatching {
