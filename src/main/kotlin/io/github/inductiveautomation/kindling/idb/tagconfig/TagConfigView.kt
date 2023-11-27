@@ -167,7 +167,7 @@ class TagConfigView(connection: Connection) : ToolPanel() {
     class NodeConfigTextPane private constructor(
         treePath: TreePath,
         treeNode: LazyTreeNode,
-    ) : JTextArea(TagExportJson.encodeToString(MinimalTagConfigSerializer, treeNode.originalNode.config)),
+    ) : JScrollPane(),
         FloatableComponent,
         PopupMenuCustomizer {
         constructor(treePath: TreePath) : this(treePath, treePath.lastPathComponent as LazyTreeNode)
@@ -176,10 +176,16 @@ class TagConfigView(connection: Connection) : ToolPanel() {
         override val tabName: String = "${treeNode.originalNode.config.name ?: treeNode.originalNode.name}"
         override val tabTooltip: String = treePath.toTagPath()
 
+        private val textArea = JTextArea(
+            TagExportJson.encodeToString(MinimalTagConfigSerializer, treeNode.originalNode.config),
+        ).apply {
+            font = Font(Font.MONOSPACED, Font.PLAIN, 12)
+        }
+
         override fun customizePopupMenu(menu: JPopupMenu) = Unit
 
         init {
-            font = Font(Font.MONOSPACED, Font.PLAIN, 12)
+            setViewportView(textArea)
         }
 
         companion object {
@@ -212,8 +218,7 @@ class LazyTreeNode(
     companion object {
         fun fromNode(node: Node): LazyTreeNode {
             return LazyTreeNode(
-                name =
-                if (node.config.name.isNullOrEmpty()) {
+                name = if (node.config.name.isNullOrEmpty()) {
                     node.name.toString()
                 } else {
                     node.config.name
