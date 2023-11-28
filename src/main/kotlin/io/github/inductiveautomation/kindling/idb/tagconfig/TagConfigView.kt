@@ -46,7 +46,13 @@ class TagConfigView(connection: Connection) : ToolPanel() {
         addItemListener { itemEvent ->
             val selectedTagProvider = itemEvent.item as TagProviderRecord
             selectedTagProvider.initProviderNode()
-            myLabel.text = "Total UDT Definitions: ${selectedTagProvider.statistics.totalUdtDefinitions}"
+            myLabel.text = """
+                Total Folders: ${selectedTagProvider.statistics.totalFolderTags}
+                Total UDT Definitions: ${selectedTagProvider.statistics.totalUdtDefinitions}
+                Total UDT Instances: ${selectedTagProvider.statistics.totalUdtInstances}
+                Total Atomic Tags: ${selectedTagProvider.statistics.totalAtomicTags}   
+             
+            """.trimIndent()
         }
         configureCellRenderer { _, value, _, _, _ ->
             text = value?.name ?: "Select a Tag Provider..."
