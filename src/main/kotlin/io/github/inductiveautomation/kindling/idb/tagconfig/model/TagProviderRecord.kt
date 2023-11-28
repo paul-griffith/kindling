@@ -64,6 +64,15 @@ class TagProviderRecord(
                             folderGroup.parentNode.config.tags.add(parentNode)
                         }
                     }
+                    for (node in nodeGroup) {
+                        if (!nodeGroup.parentNode.isUdtDefinition()) {
+                            when {
+                                node.isAtomicTag() -> statistics.totalAtomicTags++
+                                node.isFolder() -> statistics.totalFolderTags++
+                                node.isUdtInstance() -> statistics.totalUdtInstances++
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -147,9 +156,10 @@ class TagProviderRecord(
         private const val tagConfigTableQuery = "SELECT * FROM TAGCONFIG WHERE PROVIDERID = ? ORDER BY ID"
 
         private fun Node.isUdtDefinition(): Boolean = config.tagType == "UdtType"
-
         private fun Node.isUdtInstance(): Boolean = config.tagType == "UdtInstance"
+        private fun Node.isAtomicTag(): Boolean = config.tagType == "AtomicTag"
 
+        private fun Node.isFolder(): Boolean = config.tagType == "Folder"
         val NodeGroup.parentNode: Node
             get() = first()
 
@@ -168,6 +178,7 @@ class TagProviderRecord(
             for (i in 1..<size) {
                 val childNode = get(i)
                 find { node -> node.id == childNode.folderId }?.config?.tags?.add(childNode)
+                    ?: println("bad node: $childNode")
             }
         }
 
