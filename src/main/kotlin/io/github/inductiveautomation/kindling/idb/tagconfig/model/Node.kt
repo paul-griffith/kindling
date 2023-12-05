@@ -17,7 +17,10 @@ data class Node(
     val rank: Int,
     val name: String?,
     var resolved: Boolean = false,
+    val inferredNode: Boolean = false,
 ) {
+    val statistics = NodeStatistics(this)
+
     companion object {
         fun typesNode(providerId: Int): Node =
             Node(

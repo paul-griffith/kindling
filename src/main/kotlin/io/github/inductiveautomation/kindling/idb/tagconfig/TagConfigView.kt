@@ -1,39 +1,37 @@
 package io.github.inductiveautomation.kindling.idb.tagconfig
 
+import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.inductiveautomation.kindling.core.ToolPanel
-import io.github.inductiveautomation.kindling.idb.tagconfig.model.MinimalTagConfigSerializer
+import io.github.inductiveautomation.kindling.idb.tagconfig.LazyTreeNode.Companion.createLazyTreeStructure
 import io.github.inductiveautomation.kindling.idb.tagconfig.model.Node
 import io.github.inductiveautomation.kindling.idb.tagconfig.model.TagProviderRecord
 import io.github.inductiveautomation.kindling.utils.AbstractTreeNode
-import io.github.inductiveautomation.kindling.utils.FloatableComponent
-import io.github.inductiveautomation.kindling.utils.PopupMenuCustomizer
+import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.TabStrip
 import io.github.inductiveautomation.kindling.utils.configureCellRenderer
+import io.github.inductiveautomation.kindling.utils.tag
+import io.github.inductiveautomation.kindling.utils.treeCellRenderer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import net.miginfocom.swing.MigLayout
-import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.nio.file.Path
 import java.sql.Connection
-import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JFileChooser
 import javax.swing.JOptionPane
 import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.JScrollPane
 import javax.swing.JSplitPane
-import javax.swing.JTextArea
 import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 import kotlin.io.path.Path
-import kotlin.io.path.outputStream
 
 @OptIn(ExperimentalSerializationApi::class)
 class TagConfigView(connection: Connection) : ToolPanel() {
@@ -41,55 +39,65 @@ class TagConfigView(connection: Connection) : ToolPanel() {
 
     override val icon = null
 
-    private val exportButton =
-        JButton("Export Tags").apply {
-            addActionListener {
-                if (exportFileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                    val selectedFilePath = Path(exportFileChooser.selectedFile.absolutePath)
+    private val exportButton = JButton("Export Tags").apply {
+        addActionListener {
+            if (exportFileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                val selectedFilePath = Path(exportFileChooser.selectedFile.absolutePath)
+                val provider = providerDropdown.selectedItem as? TagProviderRecord
 
-                    (providerDropdown.selectedItem as? TagProviderRecord)?.let {
-                        exportToJson(it, selectedFilePath)
-                    } ?: JOptionPane.showMessageDialog(
+                if (provider == null) {
+                    JOptionPane.showMessageDialog(
                         this@TagConfigView,
                         "You must first select a Tag Provider",
                         "Cannot Export Tags",
                         JOptionPane.WARNING_MESSAGE,
                     )
+                } else {
+                    provider.exportToJson(selectedFilePath)
+                    JOptionPane.showMessageDialog(this, "Tag Export Finished.")
                 }
             }
         }
+    }
 
     private val providerDropdown =
-        JComboBox<Any>(tagProviderData.toTypedArray()).apply {
+        JComboBox(tagProviderData.toTypedArray()).apply {
             val defaultPrompt = "Select a Tag Provider..."
             selectedIndex = -1
 
             addItemListener { itemEvent ->
                 val selectedTagProvider = itemEvent.item as TagProviderRecord
-                selectedTagProvider.initProviderNode()
 
-                tabs.setTitleAt(0, selectedTagProvider.name)
-                providerTab.provider = selectedTagProvider
+                CoroutineScope(Dispatchers.Default).launch {
+                    selectedTagProvider.initProviderNode()
 
-                tagProviderTree.model = DefaultTreeModel(LazyTreeNode.fromNode(selectedTagProvider.providerNode.value))
-            }
+                    val lazyTreeNode = createLazyTreeStructure(selectedTagProvider)
 
-            prototypeDisplayValue =
-                run {
-                    val longestName =
-                        tagProviderData.maxBy { record ->
-                            record.name.length
-                        }.name
-
-                    if (defaultPrompt.length > longestName.length) {
-                        defaultPrompt.length
-                    } else {
-                        longestName.length
+                    EDT_SCOPE.launch {
+                        tabs.setTitleAt(0, selectedTagProvider.name)
+                        providerTab.provider = selectedTagProvider
+                        tagProviderTree.model = DefaultTreeModel(lazyTreeNode)
                     }
                 }
+            }
+
+            // Dummy Tag Provider Record for preferred size
+            prototypeDisplayValue = (tagProviderData + TagProviderRecord(
+                    allowBackFill = false,
+                    dbConnection = connection,
+                    description = "",
+                    name = "Select a Tag Provider...",
+                    enabled = false,
+                    id = 0,
+                    typeId = "",
+                    uuid = "",
+                )
+                ).maxBy {
+                it.name.length
+            }
 
             configureCellRenderer { _, value, _, _, _ ->
-                text = (value as? TagProviderRecord)?.name ?: defaultPrompt
+                text = value?.name ?: defaultPrompt
             }
         }
 
@@ -101,122 +109,111 @@ class TagConfigView(connection: Connection) : ToolPanel() {
                     override fun mousePressed(e: MouseEvent?) {
                         if (e?.clickCount == 2) {
                             selectionPath?.let {
-                                tabs.addTab(NodeConfigTextPane(it))
+                                if (it.toTagPath() !in tabs.indices.map(tabs::getToolTipTextAt)) {
+                                    tabs.addTab(NodeConfigPanel(it))
+                                }
                             }
                         }
                     }
                 },
             )
-        }
 
-    private val providerTab =
-        object : JPanel(MigLayout("fill, ins 0")), PopupMenuCustomizer {
-            var provider: TagProviderRecord? = null
-                set(newProvider) {
-                    field = newProvider
-                    textArea.text = "${newProvider?.statistics?.totalUdtDefinitions}"
+            cellRenderer = treeCellRenderer { _, value, _, expanded, _, _, _ ->
+                val actualValue = value as? LazyTreeNode
+
+                text = if (actualValue?.inferred == true) {
+                    buildString {
+                        tag("html") {
+                            tag("i") {
+                                append("${actualValue.name}*")
+                            }
+                        }
+                    }
+                } else {
+                    actualValue?.name.toString()
                 }
 
-            private val textArea =
-                JTextArea("No Tag Provider Selected").apply {
-                    font = Font(Font.MONOSPACED, Font.PLAIN, 12)
+                icon = when (actualValue?.tagType) {
+                    "AtomicTag" -> TAG_ICON
+                    "UdtInstance", "UdtType" -> UDT_ICON
+                    else -> {
+                        if (expanded) FOLDER_OPEN_ICON else FOLDER_CLOSED_ICON
+                    }
                 }
 
-            init {
-                add(textArea, "push, grow, span")
-            }
-
-            override fun customizePopupMenu(menu: JPopupMenu) {
-                menu.removeAll()
+                this
             }
         }
 
-    private val tabs =
-        TabStrip().apply {
-            addTab("Tag Provider Statistics", providerTab)
-            setTabClosable(0, false)
-        }
+    private val providerTab = ProviderStatisticsPanel()
+
+    private val tabs = TabStrip().apply {
+        addTab("Tag Provider Statistics", providerTab)
+        setTabClosable(0, false)
+    }
 
     init {
-        val leftPane =
-            JPanel(MigLayout("fill, ins 5")).apply {
-                add(providerDropdown, "pushx, growx")
-                add(exportButton, "wrap")
-                add(JScrollPane(tagProviderTree), "push, grow, span")
-            }
+        val leftPane = JPanel(MigLayout("fill, ins 5")).apply {
+            add(providerDropdown, "pushx, growx")
+            add(exportButton, "wrap")
+            add(JScrollPane(tagProviderTree), "push, grow, span")
+        }
 
         add(
             JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 leftPane,
                 tabs,
-            ).apply { resizeWeight = 0.25 },
+            ).apply { resizeWeight = 0.0 },
             "push, grow, span",
         )
     }
 
-    private fun exportToJson(
-        tagProvider: TagProviderRecord,
-        selectedFilePath: Path,
-    ) {
-        selectedFilePath.outputStream().use {
-            TagExportJson.encodeToStream(tagProvider.providerNode.value, it)
-        }
-    }
-
-    class NodeConfigTextPane private constructor(
-        treePath: TreePath,
-        treeNode: LazyTreeNode,
-    ) : JScrollPane(),
-        FloatableComponent,
-        PopupMenuCustomizer {
-        constructor(treePath: TreePath) : this(treePath, treePath.lastPathComponent as LazyTreeNode)
-
-        override val icon: Icon? = null
-        override val tabName: String = treeNode.name
-        override val tabTooltip: String = treePath.toTagPath()
-
-        private val textArea = JTextArea(
-            TagExportJson.encodeToString(MinimalTagConfigSerializer, treeNode.originalNode.config),
-        ).apply {
-            font = Font(Font.MONOSPACED, Font.PLAIN, 12)
-        }
-
-        override fun customizePopupMenu(menu: JPopupMenu) = Unit
-
-        init {
-            setViewportView(textArea)
-        }
-
-        companion object {
-            fun TreePath.toTagPath(): String {
-                val provider = "[${(path.first() as LazyTreeNode).name}]"
-                val tagPath = path.asList().subList(1, path.size).joinToString("/")
-                return "$provider$tagPath"
-            }
-        }
-    }
-
     companion object {
-        internal val TagExportJson =
-            Json {
-                prettyPrint = true
-                prettyPrintIndent = "  "
+        internal val TagExportJson = Json {
+            prettyPrint = true
+            prettyPrintIndent = "  "
+        }
+
+        private const val ICON_SIZE = 18
+
+        private val UDT_ICON = FlatSVGIcon("icons/bx-vector.svg").derive(ICON_SIZE, ICON_SIZE)
+        private val TAG_ICON = FlatSVGIcon("icons/bx-purchase-tag.svg").derive(ICON_SIZE, ICON_SIZE)
+        private val FOLDER_CLOSED_ICON = FlatSVGIcon("icons/bx-folder.svg").derive(ICON_SIZE, ICON_SIZE)
+        private val FOLDER_OPEN_ICON = FlatSVGIcon("icons/bx-folder-open.svg").derive(ICON_SIZE, ICON_SIZE)
+
+        fun TreePath.toTagPath(): String {
+            val provider = "[${(path.first() as LazyTreeNode).name}]"
+            val tagPath = path.asList().subList(1, path.size).joinToString("/") {
+                (it as LazyTreeNode).name
             }
+            return "$provider$tagPath"
+        }
     }
 }
 
+@Suppress("unused")
 class LazyTreeNode(
     val name: String,
     val tagType: String?,
     originalNode: Node,
 ) : AbstractTreeNode() {
     val originalNode by lazy { originalNode }
-
-    override fun toString(): String = name
+    val inferred = originalNode.inferredNode
 
     companion object {
-        fun fromNode(node: Node): LazyTreeNode {
+        fun createLazyTreeStructure(provider: TagProviderRecord): LazyTreeNode {
+            val rootNode = fromNode(provider.providerNode.value)
+
+            if (provider.providerStatistics.totalOrphanedTags.value > 0) {
+                val orphanedParentNode = fromNode(provider.orphanedParentNode)
+                rootNode.children.add(orphanedParentNode)
+            }
+
+            return rootNode
+        }
+
+        private fun fromNode(node: Node): LazyTreeNode {
             return LazyTreeNode(
                 name = if (node.config.name.isNullOrEmpty()) {
                     node.name.toString()

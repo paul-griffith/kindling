@@ -15,74 +15,82 @@ import kotlinx.serialization.json.jsonObject
 data class TagConfig(
     // Basic Properties:
     val name: String? = null,
-    val tagGroup: String? = null,
-    val enabled: Boolean? = null,
+    val tagGroup: JsonElement? = null, // String
+    val enabled: JsonElement? = null, // String
     // Value Properties:
     val tagType: String? = null, // Unlisted
     val typeId: String? = null, // Unlisted
     val valueSource: String? = null,
-    val dataType: String? = null,
-    val value: JsonPrimitive? = null,
-    val opcServer: String? = null, // OPC
-    val opcItemPath: JsonElement? = null, // OPC
-    val sourceTagPath: String? = null, // Derived, Reference
-    val executionMode: String? = null,
-    val executionRate: Int? = null,
-    val expression: String? = null, // Expression
+    val dataType: JsonElement? = null, // String
+    val value: JsonElement? = null, // JsonPrimitive
+    val opcServer: JsonElement? = null, // OPC, String
+    val opcItemPath: JsonElement? = null, // OPC // JsonElement
+    val sourceTagPath: JsonElement? = null, // Derived, Reference, String
+    val executionMode: JsonElement? = null, // String
+    val executionRate: JsonElement? = null, // Int
+    val expression: JsonElement? = null, // Expression, String
     @SerialName("deriveExpressionGetter")
-    val readExpression: String? = null, // Derived
+    val readExpression: JsonElement? = null, // Derived, String
     @SerialName("deriveExpressionSetter")
-    val writeExpression: String? = null, // Derived
-    val query: String? = null, // Query
-    val queryType: String? = null, // Query
-    val datasource: String? = null, // Query
+    val writeExpression: JsonElement? = null, // Derived, String
+    val query: JsonElement? = null, // Query, String
+    val queryType: JsonElement? = null, // Query, String
+    val datasource: JsonElement? = null, // Query, String
     // Numeric Properties:
-    val deadband: Double? = null,
-    val deadbandMode: String? = null,
-    val scaleMode: String? = null,
-    val rawLow: Double? = null,
-    val rawHigh: Double? = null,
-    val scaledLow: Double? = null,
-    val scaledHigh: Double? = null,
-    val clampMode: String? = null,
-    val scaleFactor: Double? = null,
-    val engUnit: String? = null,
-    val engLow: Double? = null,
-    val engHigh: Double? = null,
-    val engLimitMode: String? = null,
-    val formatString: String? = null,
+    val deadband: JsonElement? = null, // Double
+    val deadbandMode: JsonElement? = null, // String
+    val scaleMode: JsonElement? = null, // String
+    val rawLow: JsonElement? = null, // Double
+    val rawHigh: JsonElement? = null, // Double
+    val scaledLow: JsonElement? = null, // Double
+    val scaledHigh: JsonElement? = null, // Double
+    val clampMode: JsonElement? = null, // String
+    val scaleFactor: JsonElement? = null, // Double
+    val engUnit: JsonElement? = null, // String
+    val engLow: JsonElement? = null, // Double
+    val engHigh: JsonElement? = null, // Double
+    val engLimitMode: JsonElement? = null, // String
+    val formatString: JsonElement? = null, // String
     // Metadata Properties:
-    val tooltip: String? = null,
-    val documentation: String? = null,
+    val tooltip: JsonElement? = null, // String
+    val documentation: JsonElement? = null, // String
     val typeColor: JsonPrimitive? = null, // UDT Definitions
     // Security Properties
     val readPermissions: JsonObject? = null,
     val readOnly: Boolean? = null,
     val writePermissions: JsonObject? = null,
     // Scripting Properties
-    val eventScripts: JsonArray? = null,
+    val eventScripts: MutableList<ScriptConfig>? = null,
     // Alarm Properties
     val alarms: JsonArray? = null,
-    val alarmEvalEnabled: Boolean? = null,
+    val alarmEvalEnabled: JsonElement? = null, // Boolean
     // Historical Properties
-    val historyEnabled: Boolean? = null,
-    val historyProvider: String? = null,
-    val historicalDeadbandStyle: String? = null,
-    val historicalDeadbandMode: String? = null,
-    val historicalDeadband: Double? = null,
-    val sampleMode: String? = null,
-    val historySampleRate: Int? = null,
-    val historySampleRateUnits: String? = null,
-    val historyTagGroup: String? = null,
-    val historyTimeDeadband: Int? = null,
-    val historyTimeDeadbandUnits: String? = null,
-    val historyMaxAge: Int? = null,
-    val historyMaxAgeUnits: String? = null,
+    val historyEnabled: JsonElement? = null, // Boolean
+    val historyProvider: JsonElement? = null, // String
+    val historicalDeadbandStyle: JsonElement? = null, // String
+    val historicalDeadbandMode: JsonElement? = null, // String
+    val historicalDeadband: JsonElement? = null, // Double
+    val sampleMode: JsonElement? = null, // String
+    val historySampleRate: JsonElement? = null, // Int
+    val historySampleRateUnits: JsonElement? = null, // String
+    val historyTagGroup: JsonElement? = null, // String
+    val historyTimeDeadband: JsonElement? = null, // Int
+    val historyTimeDeadbandUnits: JsonElement? = null, // String
+    val historyMaxAge: JsonElement? = null, // Int
+    val historyMaxAgeUnits: JsonElement? = null, // String
     val tags: NodeGroup = mutableListOf(),
     // UDT
     val parameters: JsonObject? = null,
-    // Custom Properties:,
+    // Custom Properties:
     val customProperties: JsonObject? = null,
+)
+
+@Serializable
+data class ScriptConfig(
+    @SerialName("eventid")
+    val eventId: String,
+    val script: String? = null,
+    var enabled: Boolean? = null,
 )
 
 object TagConfigSerializer : JsonTransformingSerializer<TagConfig>(TagConfig.serializer()) {
@@ -121,9 +129,8 @@ object TagConfigSerializer : JsonTransformingSerializer<TagConfig>(TagConfig.ser
 }
 
 object MinimalTagConfigSerializer : JsonTransformingSerializer<TagConfig>(TagConfig.serializer()) {
-    @OptIn(ExperimentalSerializationApi::class)
     override fun transformDeserialize(element: JsonElement): JsonElement {
-        throw UnsupportedOperationException("This serializer is not meant for deserialization!")
+        throw UnsupportedOperationException("This serializer does not support deserialization!")
     }
 
     override fun transformSerialize(element: JsonElement): JsonElement {
