@@ -28,6 +28,7 @@ import java.util.Locale
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JMenu
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JSpinner
@@ -85,6 +86,7 @@ internal class TimePanel(
     }
 
     override fun filter(item: LogEvent): Boolean = item.timestamp in coveredRange
+
     override fun customizePopupMenu(
         menu: JPopupMenu,
         column: Column<out LogEvent, *>,
@@ -101,6 +103,30 @@ internal class TimePanel(
                     endSelector.time = event.timestamp
                 },
             )
+            menu.add(
+                JMenu("Extend").apply {
+                    timeRanges.forEach { duration ->
+                        add(
+                            Action(
+                                name = "Add $duration minutes after",
+                                description = "Extend time range to ${TimeStampFormatter.format(event.timestamp)} + $duration minutes",
+                            ) {
+                                endSelector.time = event.timestamp.plusSeconds(duration * 60L)
+                            },
+                        )
+                    }
+                    timeRanges.forEach { duration ->
+                        add(
+                            Action(
+                                name = "Add $duration minutes before",
+                                description = "Extend time range to ${TimeStampFormatter.format(event.timestamp)} - $duration minutes",
+                            ) {
+                                endSelector.time = event.timestamp.minusSeconds(duration * 60L)
+                            },
+                        )
+                    }
+                },
+            )
         }
     }
 
@@ -108,6 +134,15 @@ internal class TimePanel(
         startSelector.time = lowerBound
         endSelector.time = upperBound
         updateCoveredRange()
+    }
+
+    companion object {
+        private val timeRanges = listOf(
+            1,
+            5,
+            15,
+            30,
+        )
     }
 }
 

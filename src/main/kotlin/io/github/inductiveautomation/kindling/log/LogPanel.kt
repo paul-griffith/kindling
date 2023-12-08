@@ -49,7 +49,6 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JScrollBar
-import javax.swing.ListSelectionModel
 import javax.swing.SortOrder
 import javax.swing.SwingConstants
 import javax.swing.UIManager
@@ -202,7 +201,7 @@ class LogPanel(
         table.apply {
             selectionModel.addListSelectionListener { selectionEvent ->
                 if (!selectionEvent.valueIsAdjusting) {
-                    selectionModel.updateDetails()
+                    updateDetails()
                 }
             }
             addPropertyChangeListener("model") {
@@ -275,7 +274,7 @@ class LogPanel(
                 updateData()
             }
             version.addActionListener {
-                table.selectionModel.updateDetails()
+                updateDetails()
             }
             showOnlyMarked.addActionListener {
                 updateData()
@@ -292,7 +291,7 @@ class LogPanel(
 
         HyperlinkStrategy.addChangeListener {
             // if the link strategy changes, we need to rebuild all the hyperlinks
-            table.selectionModel.updateDetails()
+            updateDetails()
         }
 
         LogViewer.SelectedTimeZone.addChangeListener {
@@ -300,27 +299,30 @@ class LogPanel(
         }
     }
 
-    private fun ListSelectionModel.updateDetails() {
-        details.events = selectedIndices.filter { isSelectedIndex(it) }.map { table.convertRowIndexToModel(it) }.map { row -> table.model[row] }.map { event ->
-            DetailEvent(
-                title = when (event) {
-                    is SystemLogEvent -> "${TimeStampFormatter.format(event.timestamp)} ${event.thread}"
-                    else -> TimeStampFormatter.format(event.timestamp)
-                },
-                message = event.message,
-                body = event.stacktrace.map { element ->
-                    if (UseHyperlinks.currentValue) {
-                        element.toBodyLine((header.version.selectedItem as MajorVersion).version + ".0")
-                    } else {
-                        BodyLine(element)
-                    }
-                },
-                details = when (event) {
-                    is SystemLogEvent -> event.mdc.associate { (key, value) -> key to value }
-                    is WrapperLogEvent -> emptyMap()
-                },
-            )
-        }
+    private fun updateDetails() {
+        details.events = table.selectedRowIndices()
+            .map { row ->
+                val event = table.model[row]
+
+                DetailEvent(
+                    title = when (event) {
+                        is SystemLogEvent -> "${TimeStampFormatter.format(event.timestamp)} ${event.thread}"
+                        else -> TimeStampFormatter.format(event.timestamp)
+                    },
+                    message = event.message,
+                    body = event.stacktrace.map { element ->
+                        if (UseHyperlinks.currentValue) {
+                            element.toBodyLine((header.version.selectedItem as MajorVersion).version + ".0")
+                        } else {
+                            BodyLine(element)
+                        }
+                    },
+                    details = when (event) {
+                        is SystemLogEvent -> event.mdc.associate { (key, value) -> key to value }
+                        is WrapperLogEvent -> emptyMap()
+                    },
+                )
+            }
     }
 
     inner class GroupingScrollBar : JScrollBar() {
