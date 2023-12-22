@@ -1,6 +1,6 @@
 plugins {
     `kotlin-dsl`
-    alias(libs.plugins.ktlint)
+    alias(libs.plugins.spotless)
 }
 
 repositories {
@@ -9,5 +9,18 @@ repositories {
 
 dependencies {
     implementation(libs.jsoup)
-    implementation(libs.coroutines.core)
+}
+
+spotless {
+    ratchetFrom = "e639479c2bef3553f16c08f8114b4a177c0ebf09"
+    kotlin {
+        // https://github.com/diffplug/spotless/pull/1890#issuecomment-1827263031
+        @Suppress("INACCESSIBLE_TYPE")
+        ktlint()
+    }
+    kotlinGradle {
+        // https://github.com/diffplug/spotless/pull/1890#issuecomment-1827263031
+        @Suppress("INACCESSIBLE_TYPE")
+        ktlint()
+    }
 }
