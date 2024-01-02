@@ -6,6 +6,7 @@ import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.idb.generic.GenericView
 import io.github.inductiveautomation.kindling.idb.metrics.MetricsView
+import io.github.inductiveautomation.kindling.idb.tagconfig.TagConfigView
 import io.github.inductiveautomation.kindling.log.LogPanel
 import io.github.inductiveautomation.kindling.log.MDC
 import io.github.inductiveautomation.kindling.log.SystemLogEvent
@@ -157,6 +158,10 @@ enum class IdbTool {
     Metrics {
         override fun supports(tables: List<String>): Boolean = "SYSTEM_METRICS" in tables
         override fun open(connection: Connection): ToolPanel = MetricsView(connection)
+    },
+    TagConfig {
+        override fun supports(tables: List<String>): Boolean = "TAGCONFIG" in tables
+        override fun open(connection: Connection): ToolPanel = TagConfigView(connection)
     },
 //    Images {
 //        override fun supports(tables: List<String>): Boolean = "IMAGES" in tables
