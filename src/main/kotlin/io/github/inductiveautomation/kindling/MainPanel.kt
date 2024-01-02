@@ -12,6 +12,7 @@ import com.jidesoft.swing.StyleRange.STYLE_UNDERLINED
 import io.github.inductiveautomation.kindling.core.ClipboardTool
 import io.github.inductiveautomation.kindling.core.CustomIconView
 import io.github.inductiveautomation.kindling.core.Kindling
+import io.github.inductiveautomation.kindling.core.Kindling.BETA_VERSION
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.Advanced.Debug
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.ChoosableEncodings
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.DefaultEncoding
@@ -33,7 +34,6 @@ import io.github.inductiveautomation.kindling.utils.chooseFiles
 import io.github.inductiveautomation.kindling.utils.getLogger
 import io.github.inductiveautomation.kindling.utils.jFrame
 import io.github.inductiveautomation.kindling.utils.menuShortcutKeyMaskEx
-import io.github.inductiveautomation.kindling.utils.render
 import io.github.inductiveautomation.kindling.utils.traverseChildren
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
@@ -56,7 +56,6 @@ import java.awt.desktop.QuitStrategy
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.charset.Charset
 import javax.swing.Box
@@ -168,15 +167,6 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 },
             )
         }
-        if (!SystemInfo.isMacOS) {
-            addSeparator()
-            add(
-                Action("Preferences") {
-                    preferencesEditor.isVisible = true
-                    preferencesEditor.toFront()
-                },
-            )
-        }
     }
 
     private val pasteMenu = JMenu("Paste").apply {
@@ -220,6 +210,21 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 }
             },
         )
+        if (!SystemInfo.isMacOS) {
+            add(
+                JMenu("Preferences").apply {
+                    addMouseListener(
+                        object : MouseAdapter() {
+                            override fun mouseClicked(e: MouseEvent?) {
+                                super.mouseClicked(e)
+                                preferencesEditor.isVisible = true
+                                preferencesEditor.toFront()
+                            }
+                        },
+                    )
+                },
+            )
+        }
     }
 
     private val aboutDialog by lazy {
@@ -335,7 +340,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
                 lafSetup()
 
                 jFrame(
-                    title = "Kindling",
+                    title = "Kindling Beta $BETA_VERSION",
                     width = 1280,
                     height = 800,
                     embedContentIntoTitleBar = true,
@@ -399,21 +404,7 @@ class MainPanel : JPanel(MigLayout("ins 6, fill")) {
             if (Taskbar.isTaskbarSupported()) {
                 Taskbar.getTaskbar().apply {
                     if (isSupported(Taskbar.Feature.ICON_IMAGE)) {
-                        val image = Kindling.logo.render(1024, 1024)
-                        val padding = 128
-
-                        val paddedImage = BufferedImage(
-                            image.width + 2 * padding,
-                            image.height + 2 * padding,
-                            image.type,
-                        ).apply {
-                            createGraphics().apply {
-                                drawImage(image, padding, padding, null)
-                                dispose()
-                            }
-                        }
-
-                        setIconImage(paddedImage)
+                        setIconImage(Kindling.frameIcons.last())
                     }
                     if (isSupported(Taskbar.Feature.MENU)) {
                         menu = PopupMenu().apply {

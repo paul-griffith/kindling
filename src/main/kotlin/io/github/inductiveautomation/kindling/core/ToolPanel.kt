@@ -68,7 +68,8 @@ abstract class ToolPanel(
             val action: (TableModel, File) -> Unit,
         ) {
             CSV("Comma Separated Values", "csv", TableModel::exportToCSV),
-            EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX);
+            EXCEL("Excel Workbook", "xlsx", TableModel::exportToXLSX),
+            ;
 
             val fileFilter = FileFilter(description, extension)
         }

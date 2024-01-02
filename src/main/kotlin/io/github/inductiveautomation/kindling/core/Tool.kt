@@ -5,6 +5,7 @@ import io.github.inductiveautomation.kindling.cache.CacheViewer
 import io.github.inductiveautomation.kindling.gatewaynetwork.GatewayNetworkTool
 import io.github.inductiveautomation.kindling.idb.IdbViewer
 import io.github.inductiveautomation.kindling.log.LogViewer
+import io.github.inductiveautomation.kindling.logback.LogbackEditor
 import io.github.inductiveautomation.kindling.thread.MultiThreadViewer
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.loadService
@@ -32,6 +33,7 @@ interface Tool {
                 IdbViewer,
                 CacheViewer,
                 GatewayNetworkTool,
+                LogbackEditor,
             ) + loadService<Tool>().sortedBy { it.title }
         }
 
