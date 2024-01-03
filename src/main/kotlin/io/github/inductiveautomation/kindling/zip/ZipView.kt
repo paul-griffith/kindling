@@ -18,8 +18,10 @@ import io.github.inductiveautomation.kindling.utils.getLogger
 import io.github.inductiveautomation.kindling.utils.toFileSizeLabel
 import io.github.inductiveautomation.kindling.utils.transferTo
 import io.github.inductiveautomation.kindling.zip.ZipViewer.createView
-import io.github.inductiveautomation.kindling.zip.views.FileView
 import io.github.inductiveautomation.kindling.zip.views.ImageView
+import io.github.inductiveautomation.kindling.zip.views.FileView
+import io.github.inductiveautomation.kindling.zip.views.GenericFileView
+import io.github.inductiveautomation.kindling.zip.views.GwbkStatsView
 import io.github.inductiveautomation.kindling.zip.views.MultiToolView
 import io.github.inductiveautomation.kindling.zip.views.PathView
 import io.github.inductiveautomation.kindling.zip.views.ProjectView
@@ -196,7 +198,9 @@ object ZipViewer : Tool {
     override fun open(path: Path): ToolPanel = ZipView(path)
 
     private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
+        put(GwbkStatsView::isGatewayBackup, ::GwbkStatsView)
         put(ToolView::maybeToolPath, ToolView::safelyCreate)
+        put(TextFileView::isTextFile, ::TextFileView)
         put(ImageView::isImageFile, ::ImageView)
         put(ProjectView::isProjectDirectory, ::ProjectView)
         put(Path::isRegularFile, ::FileView)
