@@ -40,7 +40,7 @@ object LogbackEditor : Tool {
     override val description = "logback (.xml) files"
     override val icon = FlatSVGIcon("icons/bx-code.svg")
     private val extensions = listOf("xml")
-    override val filter = FileFilter(description, extensions)
+    override val filter = FileFilter(description, *extensions.toTypedArray())
     override fun open(path: Path): ToolPanel = LogbackView(path)
 }
 
