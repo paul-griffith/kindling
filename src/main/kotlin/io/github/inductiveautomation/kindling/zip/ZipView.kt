@@ -18,10 +18,9 @@ import io.github.inductiveautomation.kindling.utils.getLogger
 import io.github.inductiveautomation.kindling.utils.toFileSizeLabel
 import io.github.inductiveautomation.kindling.utils.transferTo
 import io.github.inductiveautomation.kindling.zip.ZipViewer.createView
-import io.github.inductiveautomation.kindling.zip.views.ImageView
 import io.github.inductiveautomation.kindling.zip.views.FileView
-import io.github.inductiveautomation.kindling.zip.views.GenericFileView
 import io.github.inductiveautomation.kindling.zip.views.GwbkStatsView
+import io.github.inductiveautomation.kindling.zip.views.ImageView
 import io.github.inductiveautomation.kindling.zip.views.MultiToolView
 import io.github.inductiveautomation.kindling.zip.views.PathView
 import io.github.inductiveautomation.kindling.zip.views.ProjectView
@@ -36,6 +35,7 @@ import java.nio.file.spi.FileSystemProvider
 import javax.swing.Icon
 import javax.swing.JFileChooser
 import javax.swing.JLabel
+import javax.swing.SwingUtilities
 import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
@@ -98,6 +98,12 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
     init {
         name = path.name
         toolTipText = path.toString()
+
+        if (path.extension.lowercase() == "gwbk") {
+            SwingUtilities.invokeLater {
+                maybeAddNewTab(path)
+            }
+        }
 
         fileTree.addMouseListener(
             object : MouseAdapter() {
@@ -200,7 +206,6 @@ object ZipViewer : Tool {
     private val handlers: Map<PathPredicate, PathViewProvider> = buildMap {
         put(GwbkStatsView::isGatewayBackup, ::GwbkStatsView)
         put(ToolView::maybeToolPath, ToolView::safelyCreate)
-        put(TextFileView::isTextFile, ::TextFileView)
         put(ImageView::isImageFile, ::ImageView)
         put(ProjectView::isProjectDirectory, ::ProjectView)
         put(Path::isRegularFile, ::FileView)

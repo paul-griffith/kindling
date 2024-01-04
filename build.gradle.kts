@@ -27,7 +27,6 @@ dependencies {
         // Exclude transitive IA dependencies - we only need core Ignition classes for cache deserialization
         isTransitive = false
     }
-    api(libs.bundles.exposed)
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
