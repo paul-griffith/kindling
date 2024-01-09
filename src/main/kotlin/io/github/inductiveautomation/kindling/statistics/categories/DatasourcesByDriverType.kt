@@ -1,9 +1,9 @@
 package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
-import io.github.inductiveautomation.kindling.statistics.StatisticCategory
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class DatasourcesByDriverType(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "DatasourcesByDriverType"
@@ -16,15 +16,17 @@ class DatasourcesByDriverType(override val gwbk: GatewayBackup) : StatisticCateg
     val postgresql by statistic { getDriverCount(DatabaseDriver.POSTGRESQL) }
 
     val other by statistic {
-        val total = it.configIDB.prepareStatement(
-            "SELECT COUNT(1) FROM DATASOURCES"
-        ).executeQuery().getInt(1)
+        coroutineScope {
+            val total = gwbk.configIDB.prepareStatement(
+                "SELECT COUNT(1) FROM DATASOURCES"
+            ).executeQuery().getInt(1)
 
-        total - map {
-            async {
-                it.getValue() as Int
-            }
-        }.awaitAll().sum()
+            total - map {
+                async {
+                    it.getValue() as Int
+                }
+            }.awaitAll().sum()
+        }
     }
 
     private fun getDriverCount(driver: DatabaseDriver): Int {

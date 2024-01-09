@@ -2,7 +2,6 @@ package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup.Companion.XML_FACTORY
-import io.github.inductiveautomation.kindling.statistics.StatisticCategory
 import org.w3c.dom.NodeList
 import java.util.Properties
 import javax.xml.xpath.XPathConstants
@@ -11,21 +10,19 @@ import javax.xml.xpath.XPathFactory
 class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "Meta"
 
-    val uuid by statistic { gwbk ->
+    val uuid by statistic {
         val query = gwbk.configIDB.prepareStatement("SELECT SYSTEMUID FROM SYSPROPS")
         query.executeQuery().getString(1)
     }
 
-    val gatewayName by statistic { gwbk ->
+    val gatewayName by statistic {
         val query = gwbk.configIDB.prepareStatement("SELECT SYSTEMNAME FROM SYSPROPS")
         query.executeQuery().getString(1)
     }
 
-    val gwbkSize by statistic {
-        it.size
-    }
+    val gwbkSize by statistic { gwbk.size }
 
-    val redundancyRole by statistic { gwbk ->
+    val redundancyRole by statistic {
         gwbk.redundancyInfo.use {
             val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
                 normalizeDocument()
@@ -37,7 +34,7 @@ class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
         }
     }
 
-    val version by statistic { gwbk ->
+    val version by statistic {
         gwbk.backupInfo.use {
             val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
                 normalizeDocument()
@@ -46,7 +43,7 @@ class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
         }
     }
 
-    val maxMemory by statistic { gwbk ->
+    val maxMemory by statistic {
         val ignitionConf = Properties().apply {
             gwbk.ignitionConf.use(this::load)
         }

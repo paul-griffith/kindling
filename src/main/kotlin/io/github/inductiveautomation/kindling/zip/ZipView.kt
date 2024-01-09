@@ -35,7 +35,6 @@ import java.nio.file.spi.FileSystemProvider
 import javax.swing.Icon
 import javax.swing.JFileChooser
 import javax.swing.JLabel
-import javax.swing.SwingUtilities
 import javax.swing.tree.TreeSelectionModel
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
@@ -99,12 +98,6 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
         name = path.name
         toolTipText = path.toString()
 
-        if (path.extension.lowercase() == "gwbk") {
-            SwingUtilities.invokeLater {
-                maybeAddNewTab(path)
-            }
-        }
-
         fileTree.addMouseListener(
             object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent?) {
@@ -163,6 +156,10 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
             ),
             "push, grow, span",
         )
+
+        if (path.extension.lowercase() == "gwbk") {
+            maybeAddNewTab(path)
+        }
     }
 
     override val icon: Icon = ZipViewer.icon

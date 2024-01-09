@@ -1,9 +1,8 @@
 package io.github.inductiveautomation.kindling.zip.views
 
-import io.github.inductiveautomation.kindling.statistics.StatisticCategory
 import io.github.inductiveautomation.kindling.statistics.Statistics
+import io.github.inductiveautomation.kindling.statistics.categories.StatisticCategory
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,13 +15,14 @@ import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPopupMenu
 import javax.swing.JScrollPane
-import javax.swing.SwingUtilities
 import kotlin.io.path.extension
 
 class GwbkStatsView(override val provider: FileSystemProvider, override val path: Path) : SinglePathView() {
     override val icon: Icon? = null
     override val tabName: String = "Statistics"
     override fun customizePopupMenu(menu: JPopupMenu) = Unit
+
+    private val taskPaneContainer = JXTaskPaneContainer()
 
     init {
         EDT_SCOPE.launch {
@@ -31,7 +31,7 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
             }
             add(
                 JScrollPane(
-                    JXTaskPaneContainer().apply {
+                    taskPaneContainer.apply {
                         stats.all.map { add(CategoryPane(it)) }
                     }
                 ),
@@ -50,18 +50,16 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
         private var initialized = false
             set(value) {
                 field = value
-                removePropertyChangeListener(initializeListener)
+                removePropertyChangeListener("collapsed", initializeListener)
             }
 
         private val initializeListener = PropertyChangeListener {
             if (it.newValue == false) {
-                SwingUtilities.invokeLater {
-                    CoroutineScope(Dispatchers.Default).launch {
-                        statCategory.forEach { stat ->
-                            launch {
-                                val statDisplay = JLabel("${stat.name}: ${stat.getValue()}")
-                                EDT_SCOPE.launch { add(statDisplay) }
-                            }
+                EDT_SCOPE.launch(Dispatchers.Default) {
+                    statCategory.forEach { stat ->
+                        launch {
+                            val statDisplay = JLabel("${stat.name}: ${stat.getValue()}")
+                            EDT_SCOPE.launch { add(statDisplay) }
                         }
                     }
                     initialized = true
