@@ -61,6 +61,7 @@ data class TagProviderRecord(
 
     val providerNode =
         lazy {
+            println("Initializing provider node on thread ${Thread.currentThread().name}")
             providerNode(typesNode).apply {
                 for ((_, nodeGroup) in nodeGroups) {
 

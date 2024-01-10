@@ -2,6 +2,7 @@ package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
 
+@Suppress("unused")
 class DeviceStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "Devices"
 

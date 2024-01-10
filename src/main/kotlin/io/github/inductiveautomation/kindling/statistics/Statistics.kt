@@ -9,6 +9,7 @@ import io.github.inductiveautomation.kindling.statistics.categories.MetaStatisti
 import io.github.inductiveautomation.kindling.statistics.categories.OpcServerStatistics
 import io.github.inductiveautomation.kindling.statistics.categories.ProjectStatistics
 import io.github.inductiveautomation.kindling.statistics.categories.StatisticCategory
+import io.github.inductiveautomation.kindling.statistics.categories.TagConfigStatistics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -29,11 +30,9 @@ class Statistics private constructor(
     val projects: ProjectStatistics by statsMap
     val gatewayNetwork: GatewayNetworkStatistics by statsMap
     val opcServers: OpcServerStatistics by statsMap
-//    val tagConfig: TagConfigStatistics by statsMap
+    val tagConfig: TagConfigStatistics by statsMap
 
     val all by statsMap::values
-
-    override fun toString(): String = statsMap.values.joinToString("\n\n")
 
     companion object {
         val STATISTICS_IO by lazy { CoroutineScope(Dispatchers.IO) }

@@ -2,6 +2,7 @@ package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
 
+@Suppress("unused")
 class DatabaseStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name: String = "Databases"
 

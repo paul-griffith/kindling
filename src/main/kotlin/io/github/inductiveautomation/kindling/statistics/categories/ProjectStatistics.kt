@@ -2,7 +2,6 @@ package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
 import io.github.inductiveautomation.kindling.statistics.Statistics.Companion.STATISTICS_IO
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -15,18 +14,14 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
 import kotlin.io.path.walk
-import kotlin.properties.PropertyDelegateProvider
-import kotlin.properties.ReadOnlyProperty
 
 /*
 This statistic involves walking a potentially massive file tree.
 Most IO operations for stats are relatively lightweight, but this stat isn't
  */
 @OptIn(ExperimentalPathApi::class, ExperimentalSerializationApi::class)
-class ProjectStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
-    override val name = "Projects"
-
-    private val projectStatAccumulators: CompletableDeferred<Map<String, Int>> = CompletableDeferred()
+@Suppress("unused")
+class ProjectStatistics(gwbk: GatewayBackup) : PrecomputedStatisticCategory("Projects", gwbk) {
 
     init {
         STATISTICS_IO.launch {
@@ -62,28 +57,22 @@ class ProjectStatistics(override val gwbk: GatewayBackup) : StatisticCategory() 
                 }
             }
 
-            projectStatAccumulators.complete(map)
+            dataMap.complete(map)
         }
     }
 
-    val totalProjects by projectStatistic()
-    val totalPerspectiveProjects by projectStatistic()
-    val totalVisionProjects by projectStatistic()
-    val totalPerspectiveViews by projectStatistic()
-    val totalVisionWindows by projectStatistic()
-    val totalEnabled by projectStatistic()
-    val totalInheritable by projectStatistic()
-    val totalInheriting by projectStatistic()
-    val totalReports by projectStatistic()
-    val totalSfcs by projectStatistic()
-    val totalTransactionGroups by projectStatistic()
-    val totalAlarmPipelines by projectStatistic()
-
-    private fun projectStatistic() = PropertyDelegateProvider { thisRef: ProjectStatistics, prop ->
-        val stat = Statistic(prop.name, { thisRef.projectStatAccumulators.await()[prop.name]!! }, thisRef.gwbk)
-        thisRef.add(stat)
-        ReadOnlyProperty { _: ProjectStatistics, _ -> stat }
-    }
+    val totalProjects by statistic<Int>()
+    val totalPerspectiveProjects by statistic<Int>()
+    val totalVisionProjects by statistic<Int>()
+    val totalPerspectiveViews by statistic<Int>()
+    val totalVisionWindows by statistic<Int>()
+    val totalEnabled by statistic<Int>()
+    val totalInheritable by statistic<Int>()
+    val totalInheriting by statistic<Int>()
+    val totalReports by statistic<Int>()
+    val totalSfcs by statistic<Int>()
+    val totalTransactionGroups by statistic<Int>()
+    val totalAlarmPipelines by statistic<Int>()
 
     companion object {
         private val JSON = Json {

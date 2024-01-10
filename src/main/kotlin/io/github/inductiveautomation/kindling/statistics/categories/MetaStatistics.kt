@@ -7,6 +7,7 @@ import java.util.Properties
 import javax.xml.xpath.XPathConstants
 import javax.xml.xpath.XPathFactory
 
+@Suppress("unused")
 class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "Meta"
 

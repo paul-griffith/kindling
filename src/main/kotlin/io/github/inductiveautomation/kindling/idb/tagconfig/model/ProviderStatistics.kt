@@ -1,5 +1,6 @@
 package io.github.inductiveautomation.kindling.idb.tagconfig.model
 
+import io.github.inductiveautomation.kindling.utils.splitCamelCase
 import java.util.Locale
 import kotlin.reflect.KProperty
 
@@ -96,16 +97,6 @@ class ProviderStatistics {
     companion object {
         private const val DEFAULT_DATA_TYPE = "Int4"
         private const val DEFAULT_VALUE_SOURCE = "memory"
-
-        fun String.splitCamelCase(): String = replace(
-            String.format(
-                "%s|%s|%s",
-                "(?<=[A-Z])(?=[A-Z][a-z])",
-                "(?<=[^A-Z])(?=[A-Z])",
-                "(?<=[A-Za-z])(?=[^A-Za-z])",
-            ).toRegex(),
-            " ",
-        )
     }
 
     sealed class ProviderStatistic<T>(val name: String) {

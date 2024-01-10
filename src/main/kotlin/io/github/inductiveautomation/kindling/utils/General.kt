@@ -58,6 +58,17 @@ fun StringBuilder.tag(tag: String, content: String) {
     tag(tag) { append(content) }
 }
 
+// https://stackoverflow.com/a/2560017/9702105
+fun String.splitCamelCase() = replace(
+    String.format(
+        "%s|%s|%s",
+        "(?<=[A-Z])(?=[A-Z][a-z])",
+        "(?<=[^A-Z])(?=[A-Z])",
+        "(?<=[A-Za-z])(?=[^A-Za-z])",
+    ).toRegex(),
+    " ",
+)
+
 /**
  * Returns the mode (most common value) in a Grouping<T>
  */

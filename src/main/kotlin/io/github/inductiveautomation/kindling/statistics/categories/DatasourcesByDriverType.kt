@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
+@Suppress("unused")
 class DatasourcesByDriverType(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "DatasourcesByDriverType"
 
