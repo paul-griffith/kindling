@@ -35,7 +35,7 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
             }
             add(
                 JScrollPane(
-                    JPanel(MigLayout("ins 0, fill, wrap 3, gap 0")).apply {
+                    JPanel(MigLayout("ins 0, fillx, wrap 3, gap 0")).apply {
                         stats.all.map { this@apply.add(CategoryPane(it), "grow, sgx") }
                     }
                 ),
