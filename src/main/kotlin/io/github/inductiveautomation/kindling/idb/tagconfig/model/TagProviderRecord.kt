@@ -61,7 +61,6 @@ data class TagProviderRecord(
 
     val providerNode =
         lazy {
-            println("Initializing provider node on thread ${Thread.currentThread().name}")
             providerNode(typesNode).apply {
                 for ((_, nodeGroup) in nodeGroups) {
 
@@ -191,7 +190,6 @@ data class TagProviderRecord(
         val inheritedParentNode =
             parentNode.getParentType(udtDefinitions) ?: run {
                 isResolved = true
-                println("Missing UDT Definition: ${parentNode.config.typeId}")
                 return
             }
         val inheritedNodeGroup =

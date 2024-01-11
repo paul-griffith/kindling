@@ -153,6 +153,7 @@ class ZipView(path: Path) : ToolPanel("ins 6, flowy") {
             HorizontalSplitPane(
                 FlatScrollPane((fileTree)),
                 tabStrip,
+                0.1
             ),
             "push, grow, span",
         )

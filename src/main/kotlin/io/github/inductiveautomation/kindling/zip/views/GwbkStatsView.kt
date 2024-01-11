@@ -8,6 +8,7 @@ import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.splitCamelCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
 import net.miginfocom.swing.MigLayout
 import org.jdesktop.swingx.JXTaskPane
@@ -35,7 +36,7 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
             add(
                 JScrollPane(
                     JPanel(MigLayout("ins 0, fill, wrap 3, gap 0")).apply {
-                        stats.all.map { this@apply.add(CategoryPane(it), "push, grow, sgx") }
+                        stats.all.map { this@apply.add(CategoryPane(it), "grow, sgx") }
                     }
                 ),
                 "push, grow, span"
@@ -64,7 +65,11 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
 
             addPropertyChangeListener("collapsed") {
                 if (!initialized && it.newValue == false) {
+                    val originalText = title
                     STATISTICS_IO.launch {
+                        withContext(Dispatchers.Swing) {
+                            title = "$originalText (Loading...)"
+                        }
                         statCategory.forEach { stat ->
                             launch(Dispatchers.Default) {
                                 val name = stat.nameAsHumanReadable()
@@ -76,6 +81,10 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
                             }
                         }
                         initialized = true
+                    }.invokeOnCompletion {
+                        EDT_SCOPE.launch {
+                            this@apply.title = originalText
+                        }
                     }
                 }
             }

@@ -22,11 +22,16 @@ class DatasourcesByDriverType(override val gwbk: GatewayBackup) : StatisticCateg
                 "SELECT COUNT(1) FROM DATASOURCES"
             ).executeQuery().getInt(1)
 
-            total - map {
-                async {
-                    it.getValue() as Int
-                }
-            }.awaitAll().sum()
+            val others = listOf(
+                async { mariadb.getValue() },
+                async { sqlite.getValue() },
+                async { mysql.getValue() },
+                async { sqlserver.getValue() },
+                async { oracle.getValue() },
+                async { postgresql.getValue() },
+            ).awaitAll().sum()
+
+            total - others
         }
     }
 

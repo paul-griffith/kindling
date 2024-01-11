@@ -11,15 +11,9 @@ import javax.xml.xpath.XPathFactory
 class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "Meta"
 
-    val uuid by statistic {
-        val query = gwbk.configIDB.prepareStatement("SELECT SYSTEMUID FROM SYSPROPS")
-        query.executeQuery().getString(1)
-    }
+    val uuid by queryStatistic("SELECT SYSTEMUID FROM SYSPROPS") { getString(1) }
 
-    val gatewayName by statistic {
-        val query = gwbk.configIDB.prepareStatement("SELECT SYSTEMNAME FROM SYSPROPS")
-        query.executeQuery().getString(1)
-    }
+    val gatewayName by queryStatistic("SELECT SYSTEMNAME FROM SYSPROPS") { getString(1) }
 
     val gwbkSize by statistic { gwbk.size }
 
