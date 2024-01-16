@@ -11,6 +11,13 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.jsonObject
 
+/*
+Most properties are marked as JsonElement because they are currently unused in tag provider statistics.
+
+Others, like opcItemPath, can exist both as a primitive string or as a JsonObject due to bindings.
+
+Types can be specified explicitly later as needed when more statistics are added which utilize them.
+ */
 @Serializable
 data class TagConfig(
     // Basic Properties:

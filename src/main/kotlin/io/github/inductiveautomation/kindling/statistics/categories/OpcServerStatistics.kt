@@ -10,17 +10,13 @@ class OpcServerStatistics(override val gwbk: GatewayBackup) : StatisticCategory(
         uaServers.getValue() + daServers.getValue()
     }
 
-    val uaServers by queryStatistic(
+    val uaServers by queryScalarStatistic<Int>(
         "SELECT COUNT(*) FROM OPCSERVERS WHERE TYPE = 'com.inductiveautomation.OpcUaServerType'"
-    ) {
-        getInt(1)
-    }
+    )
 
-    val daServers by queryStatistic("SELECT COUNT(*) FROM OPCSERVERS WHERE TYPE = 'OPC_COM_ServerType'") {
-        getInt(1)
-    }
+    val daServers by queryScalarStatistic<Int>("SELECT COUNT(*) FROM OPCSERVERS WHERE TYPE = 'OPC_COM_ServerType'")
 
-    val enabledServers by queryStatistic(
+    val enabledServers by queryScalarStatistic<Int>(
         """
             SELECT SUM(total) FROM (
                 SELECT COUNT(*) AS total FROM OPCUACONNECTIONSETTINGS WHERE ENABLED = 1
@@ -28,11 +24,9 @@ class OpcServerStatistics(override val gwbk: GatewayBackup) : StatisticCategory(
                 SELECT COUNT(*) AS total FROM COMSERVERSETTINGSRECORD WHERE ENABLED = 1
             )
         """.trimIndent()
-    ) {
-        getInt(1)
-    }
+    )
 
-    val disabledServers by queryStatistic(
+    val disabledServers by queryScalarStatistic<Int>(
         """
             SELECT SUM(total) FROM (
                 SELECT COUNT(*) AS total FROM OPCUACONNECTIONSETTINGS WHERE ENABLED = 0
@@ -40,7 +34,5 @@ class OpcServerStatistics(override val gwbk: GatewayBackup) : StatisticCategory(
                 SELECT COUNT(*) AS total FROM COMSERVERSETTINGSRECORD WHERE ENABLED = 0
             )
         """.trimIndent()
-    ) {
-        getInt(1)
-    }
+    )
 }

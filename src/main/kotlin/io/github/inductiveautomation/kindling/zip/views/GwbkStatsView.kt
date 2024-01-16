@@ -73,10 +73,12 @@ class GwbkStatsView(override val provider: FileSystemProvider, override val path
                         statCategory.forEach { stat ->
                             launch(Dispatchers.Default) {
                                 val name = stat.nameAsHumanReadable()
-                                val value = stat.valueAsString()
-                                val statDisplay = JTextArea("$name: $value")
-                                EDT_SCOPE.launch {
-                                    this@apply.add(statDisplay)
+                                val value = stat.getValue()
+                                if (value != 0 && value != null) {
+                                    val statDisplay = JTextArea("$name: ${stat.valueAsString()}")
+                                    EDT_SCOPE.launch {
+                                        this@apply.add(statDisplay)
+                                    }
                                 }
                             }
                         }

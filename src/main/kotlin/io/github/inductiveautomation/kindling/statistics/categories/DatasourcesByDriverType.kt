@@ -1,60 +1,58 @@
 package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import io.github.inductiveautomation.kindling.statistics.Statistics.Companion.STATISTICS_IO
+import io.github.inductiveautomation.kindling.utils.getValue
+import io.github.inductiveautomation.kindling.utils.toList
+import kotlinx.coroutines.launch
 
 @Suppress("unused")
-class DatasourcesByDriverType(override val gwbk: GatewayBackup) : StatisticCategory() {
+class DatasourcesByDriverType(
+    override val gwbk: GatewayBackup
+) : PrecomputedStatisticCategory() {
     override val name = "DatasourcesByDriverType"
 
-    val mariadb by statistic { getDriverCount(DatabaseDriver.MARIADB) }
-    val sqlite by statistic { getDriverCount(DatabaseDriver.SQLITE) }
-    val mysql by statistic { getDriverCount(DatabaseDriver.MYSQL) }
-    val sqlserver by statistic { getDriverCount(DatabaseDriver.SQLSERVER) }
-    val oracle by statistic { getDriverCount(DatabaseDriver.ORACLE) }
-    val postgresql by statistic { getDriverCount(DatabaseDriver.POSTGRESQL) }
+    init {
+        STATISTICS_IO.launch {
+            val map = mutableMapOf(
+                "mariadb" to 0,
+                "sqlite" to 0,
+                "mysql" to 0,
+                "sqlserver" to 0,
+                "oracle" to 0,
+                "postgresql" to 0,
+                "other" to 0,
+            )
 
-    val other by statistic {
-        coroutineScope {
-            val total = gwbk.configIDB.prepareStatement(
-                "SELECT COUNT(1) FROM DATASOURCES"
-            ).executeQuery().getInt(1)
+            gwbk.configIDB.prepareStatement("SELECT CONNECTURL FROM DATASOURCES").executeQuery().toList {
+                it.getString(1)
+            }.forEach {
+                val matchGroups = driverNameRegex.find(it)?.groups
 
-            val others = listOf(
-                async { mariadb.getValue() },
-                async { sqlite.getValue() },
-                async { mysql.getValue() },
-                async { sqlserver.getValue() },
-                async { oracle.getValue() },
-                async { postgresql.getValue() },
-            ).awaitAll().sum()
+                if (matchGroups != null) {
+                    val driver by matchGroups
 
-            total - others
+                    map.computeIfPresent(driver.value) { _, value ->
+                        value + 1
+                    } ?: run {
+                        map["other"]!!.inc()
+                    }
+                }
+            }
+
+            dataMap.complete(map)
         }
     }
 
-    private fun getDriverCount(driver: DatabaseDriver): Int {
-        val query = gwbk.configIDB.prepareStatement(
-            """
-                SELECT COUNT(*) FROM DATASOURCES
-                WHERE CONNECTURL LIKE '${driver.connectionPrefix}%'
-            """.trimIndent()
-        )
-        return query.executeQuery().getInt(1)
-    }
+    val mariadb by statistic<Int>()
+    val sqlite by statistic<Int>()
+    val mysql by statistic<Int>()
+    val sqlserver by statistic<Int>()
+    val oracle by statistic<Int>()
+    val postgresql by statistic<Int>()
+    val other by statistic<Int>()
 
-    enum class DatabaseDriver {
-        MARIADB,
-        SQLITE,
-        MYSQL,
-        SQLSERVER,
-        ORACLE,
-        POSTGRESQL,
-        ;
-
-        val connectionPrefix: String
-            get() = "jdbc:${name.lowercase()}:"
+    companion object {
+        private val driverNameRegex = """jdbc:(?<driver>.*?):.*""".toRegex()
     }
 }

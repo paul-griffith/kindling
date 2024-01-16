@@ -31,6 +31,12 @@ sealed class StatisticCategory private constructor(
         gwbk.configIDB.prepareStatement(query).executeQuery().value()
     }
 
+    protected inline fun <reified T> queryScalarStatistic(
+        query: String
+    ) = statistic {
+        gwbk.configIDB.prepareStatement(query).executeQuery().getObject(1) as T
+    }
+
     fun add(stat: Statistic<*>) {
         list.add(stat)
     }
@@ -52,14 +58,10 @@ sealed class StatisticCategory private constructor(
     }
 }
 
-sealed class PrecomputedStatisticCategory(
-    override val name: String,
-    override val gwbk: GatewayBackup
-) : StatisticCategory() {
+sealed class PrecomputedStatisticCategory : StatisticCategory() {
     protected val dataMap = CompletableDeferred<Map<String, *>>()
 
-    @Suppress("unchecked_cast")
-    protected fun <T> statistic() = PropertyDelegateProvider { thisRef: PrecomputedStatisticCategory, prop ->
+    protected inline fun <reified T> statistic() = PropertyDelegateProvider { thisRef: PrecomputedStatisticCategory, prop ->
         val stat = Statistic(prop.name) { thisRef.dataMap.await()[prop.name] as T }
         thisRef.add(stat)
         ReadOnlyProperty { _: PrecomputedStatisticCategory, _ -> stat }

@@ -1,6 +1,7 @@
 package io.github.inductiveautomation.kindling.statistics
 
 import io.github.inductiveautomation.kindling.utils.SQLiteConnection
+import io.github.inductiveautomation.kindling.utils.transferTo
 import java.io.InputStream
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -21,16 +22,16 @@ class GatewayBackup(path: Path) {
     val size = path.fileSize()
 
     val configIDB: Connection by lazy {
-        SQLiteConnection(
-            Files.createTempFile("gwbk-stats", "idb").also { tempFile ->
-                provider.newInputStream(root.resolve(IDB))
-                    .use { inputStream ->
-                        tempFile.outputStream().use { outputStream ->
-                            inputStream.transferTo(outputStream)
-                        }
-                    }
+        val tempFile = Files.createTempFile("gwbk-stats", "idb")
+        val idbFile = root.resolve(IDB)
+
+        idbFile.inputStream().use { input ->
+            tempFile.outputStream().use { output ->
+                input transferTo output
             }
-        )
+        }
+
+        SQLiteConnection(tempFile)
     }
 
     val backupInfo: InputStream
@@ -61,9 +62,11 @@ class GatewayBackup(path: Path) {
         const val IGNITION_CONF = "ignition.conf"
         const val GATEWAY = "gateway.xml"
 
-        val XML_FACTORY: DocumentBuilderFactory = DocumentBuilderFactory.newDefaultInstance().apply {
+        val XML_FACTORY: DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
             isXIncludeAware = false
             isExpandEntityReferences = false
+//            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+//            setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, true)
         }
     }
 }

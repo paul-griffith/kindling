@@ -10,19 +10,11 @@ class GatewayNetworkStatistics(override val gwbk: GatewayBackup) : StatisticCate
         outGoingConnections.getValue() + incomingConnections.getValue()
     }
 
-    val outGoingConnections by queryStatistic("SELECT COUNT(*) FROM WSCONNECTIONSETTINGS") {
-        getInt(1)
-    }
+    val outGoingConnections by queryScalarStatistic<Int>("SELECT COUNT(*) FROM WSCONNECTIONSETTINGS")
 
-    val incomingConnections by queryStatistic("SELECT COUNT(*) FROM WSINCOMINGCONNECTION") {
-        getInt(1)
-    }
+    val incomingConnections by queryScalarStatistic<Int>("SELECT COUNT(*) FROM WSINCOMINGCONNECTION")
 
-    val enabled by queryStatistic("SELECT ENABLED FROM WSCHANNELSETTINGS") {
-        getBoolean(1)
-    }
+    val enabled by queryScalarStatistic<Boolean>("SELECT ENABLED FROM WSCHANNELSETTINGS")
 
-    val proxyHopsEnabled by queryStatistic("SELECT ALLOWEDPROXYHOPS FROM WSCHANNELSETTINGS") {
-        getBoolean(1)
-    }
+    val proxyHopsEnabled by queryScalarStatistic<Boolean>("SELECT ALLOWEDPROXYHOPS FROM WSCHANNELSETTINGS")
 }

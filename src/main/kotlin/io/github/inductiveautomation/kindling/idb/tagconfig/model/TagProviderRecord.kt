@@ -34,8 +34,6 @@ data class TagProviderRecord(
                         name = rs.getString(6),
                     )
                 } catch (e: NullPointerException) {
-                    // println("Found null record. Id: ${rs.getString(1)}")
-                    // Null records will be ignored.
                     null
                 }
             }.filterNotNull()
@@ -53,7 +51,7 @@ data class TagProviderRecord(
 
     val udtDefinitions: Map<String, Node> by lazy {
         rawNodeData.filter { it.statistics.isUdtDefinition }.associateBy {
-            it.getFullUdtDefinitionPath(nodeGroups)
+            it.getFullUdtDefinitionPath()
         }
     }
 
@@ -68,7 +66,7 @@ data class TagProviderRecord(
                     with(nodeGroup) {
                         if (parentNode.statistics.isUdtDefinition || parentNode.statistics.isUdtInstance) {
                             if (!isResolved) {
-                                resolveInheritance(nodeGroups, udtDefinitions)
+                                resolveInheritance()
                             }
                         }
                         resolveHierarchy()
@@ -137,50 +135,44 @@ data class TagProviderRecord(
     }
 
     // Traversal Helper Functions:
-    private fun Node.getParentType(udtDefinitions: Map<String, Node>): Node? {
+    private fun Node.getParentType(): Node? {
         require((statistics.isUdtDefinition || statistics.isUdtInstance) && config.typeId != null) {
             "Not a top level UDT Instance or type! $this"
         }
         return udtDefinitions[config.typeId.lowercase()]
     }
 
-    private fun Node.getFullUdtDefinitionPath(nodeGroups: Map<String, NodeGroup>): String {
+    private fun Node.getFullUdtDefinitionPath(): String {
         val lowercaseName = config.name!!.lowercase()
         return if (folderId == "_types_") {
             lowercaseName
         } else {
-            val parentName = nodeGroups[folderId!!]?.parentNode?.getFullUdtDefinitionPath(nodeGroups) ?: "<No Name Found?>"
+            val parentName = nodeGroups[folderId!!]?.parentNode?.getFullUdtDefinitionPath() ?: "<No Name Found?>"
             "$parentName/$lowercaseName"
         }
     }
 
-    private fun NodeGroup.resolveNestedChildInstances(
-        nodeGroups: Map<String, NodeGroup>,
-        udtDefinitions: Map<String, Node>,
-    ) {
+    private fun NodeGroup.resolveNestedChildInstances() {
         require(parentNode.statistics.isUdtDefinition)
 
         val childInstances = childNodes.filter { it.statistics.isUdtInstance }
 
         for (childInstance in childInstances) {
-            val childDefinition = childInstance.getParentType(udtDefinitions) ?: continue
+            val childDefinition = childInstance.getParentType() ?: continue
             val childDefinitionGroup =
                 nodeGroups[childDefinition.id] ?: throw IllegalStateException(
                     "This should never happen. Please report this issue to the maintainers of Kindling.",
                 )
 
             // nodeGroups being ordered by rank will make this check not happen very often
-            if (!childDefinitionGroup.isResolved) childDefinitionGroup.resolveInheritance(nodeGroups, udtDefinitions)
+            if (!childDefinitionGroup.isResolved) childDefinitionGroup.resolveInheritance()
 
             copyChildrenFrom(childDefinitionGroup, instanceId = childInstance.id)
         }
     }
 
-    private fun NodeGroup.resolveInheritance(
-        nodeGroups: Map<String, NodeGroup>,
-        udtDefinitions: Map<String, Node>,
-    ) {
-        if (parentNode.statistics.isUdtDefinition) resolveNestedChildInstances(nodeGroups, udtDefinitions)
+    private fun NodeGroup.resolveInheritance() {
+        if (parentNode.statistics.isUdtDefinition) resolveNestedChildInstances()
 
         if (parentNode.config.typeId.isNullOrEmpty()) {
             isResolved = true
@@ -188,14 +180,14 @@ data class TagProviderRecord(
         }
 
         val inheritedParentNode =
-            parentNode.getParentType(udtDefinitions) ?: run {
+            parentNode.getParentType() ?: run {
                 isResolved = true
                 return
             }
         val inheritedNodeGroup =
             nodeGroups[inheritedParentNode.id] ?: throw IllegalStateException("This should never happen")
 
-        if (!inheritedNodeGroup.isResolved) inheritedNodeGroup.resolveInheritance(nodeGroups, udtDefinitions)
+        if (!inheritedNodeGroup.isResolved) inheritedNodeGroup.resolveInheritance()
 
         copyChildrenFrom(inheritedNodeGroup)
 

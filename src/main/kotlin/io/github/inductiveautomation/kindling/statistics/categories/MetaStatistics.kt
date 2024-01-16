@@ -11,14 +11,17 @@ import javax.xml.xpath.XPathFactory
 class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     override val name = "Meta"
 
-    val uuid by queryStatistic("SELECT SYSTEMUID FROM SYSPROPS") { getString(1) }
+    val uuid by queryScalarStatistic<String>("SELECT SYSTEMUID FROM SYSPROPS")
 
-    val gatewayName by queryStatistic("SELECT SYSTEMNAME FROM SYSPROPS") { getString(1) }
+    val gatewayName by queryScalarStatistic<String>("SELECT SYSTEMNAME FROM SYSPROPS")
 
     val gwbkSize by statistic { gwbk.size }
 
     val redundancyRole by statistic {
-        gwbk.redundancyInfo.use {
+        val redundancyInfo = gwbk.redundancyInfo.use { input ->
+            input.readAllBytes().decodeToString().replace("http:", "https:", true)
+        }
+        redundancyInfo.byteInputStream().use {
             val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
                 normalizeDocument()
             }
@@ -30,7 +33,10 @@ class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
     }
 
     val version by statistic {
-        gwbk.backupInfo.use {
+        val backupInfo = gwbk.backupInfo.use { input ->
+            input.readAllBytes().decodeToString().replace("http:", "https:", true)
+        }
+        backupInfo.byteInputStream().use {
             val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
                 normalizeDocument()
             }

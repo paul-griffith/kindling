@@ -21,7 +21,8 @@ Most IO operations for stats are relatively lightweight, but this stat isn't
  */
 @OptIn(ExperimentalPathApi::class, ExperimentalSerializationApi::class)
 @Suppress("unused")
-class ProjectStatistics(gwbk: GatewayBackup) : PrecomputedStatisticCategory("Projects", gwbk) {
+class ProjectStatistics(override val gwbk: GatewayBackup) : PrecomputedStatisticCategory() {
+    override val name = "Projects"
 
     init {
         STATISTICS_IO.launch {

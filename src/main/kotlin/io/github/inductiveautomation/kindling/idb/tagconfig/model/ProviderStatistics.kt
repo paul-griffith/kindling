@@ -8,23 +8,23 @@ import kotlin.reflect.KProperty
 class ProviderStatistics {
     val orphanedTags = ListStatistic<Node>("orphanedTags")
 
-    val all = listOf(
-        QuantitativeStatistic("totalAtomicTags"),
-        MappedStatistic("dataTypes"),
-        MappedStatistic("valueSources"),
-        QuantitativeStatistic("totalFolders"),
-        QuantitativeStatistic("totalUdtInstances"),
-        QuantitativeStatistic("totalUdtDefinitions"),
-        QuantitativeStatistic("totalTagsWithAlarms"),
-        QuantitativeStatistic("totalAlarms"),
-        QuantitativeStatistic("totalTagsWithHistory"),
-        QuantitativeStatistic("totalTagsWithEnabledScripts"),
-        QuantitativeStatistic("totalEnabledScripts"),
-        DependentStatistic("totalOrphanedTags", orphanedTags) { it.size },
-        QuantitativeStatistic("totalReadOnlyTags")
+    private val statsMap = mapOf(
+        "totalAtomicTags" to QuantitativeStatistic("totalAtomicTags"),
+        "dataTypes" to MappedStatistic("dataTypes"),
+        "valueSources" to MappedStatistic("valueSources"),
+        "totalFolders" to QuantitativeStatistic("totalFolders"),
+        "totalUdtInstances" to QuantitativeStatistic("totalUdtInstances"),
+        "totalUdtDefinitions" to QuantitativeStatistic("totalUdtDefinitions"),
+        "totalTagsWithAlarms" to QuantitativeStatistic("totalTagsWithAlarms"),
+        "totalAlarms" to QuantitativeStatistic("totalAlarms"),
+        "totalTagsWithHistory" to QuantitativeStatistic("totalTagsWithHistory"),
+        "totalTagsWithEnabledScripts" to QuantitativeStatistic("totalTagsWithEnabledScripts"),
+        "totalEnabledScripts" to QuantitativeStatistic("totalEnabledScripts"),
+        "totalOrphanedTags" to DependentStatistic("totalOrphanedTags", orphanedTags) { it.size },
+        "totalReadOnlyTags" to QuantitativeStatistic("totalReadOnlyTags")
     )
 
-    private val statsMap = all.associateBy { it.name }
+    val all by statsMap::values
 
     val totalAtomicTags: QuantitativeStatistic by statsMap
     val totalFolders: QuantitativeStatistic by statsMap
@@ -80,9 +80,9 @@ class ProviderStatistics {
     override fun toString(): String = buildString {
         appendLine("Atomic Tags: $totalAtomicTags")
         appendLine("- By Data Source")
-        appendLine(valueSources.value.entries.joinToString("\n|- ", prefix = "|- ") { (key, value) -> "$key: $value" })
+        valueSources.value.entries.joinTo(this, "\n|- ", prefix = "\n|- ") { (key, value) -> "$key: $value" }
         appendLine("- By Data Type")
-        appendLine(dataTypes.value.entries.joinToString("\n|- ", prefix = "|- ") { (key, value) -> "$key: $value" })
+        dataTypes.value.entries.joinTo(this, "\n|- ", prefix = "\n|- ") { (key, value) -> "$key: $value" }
         appendLine("Folders: $totalFolders")
         appendLine("Udt Instances: $totalUdtInstances")
         appendLine("Udt Definition: $totalUdtDefinitions")
@@ -109,22 +109,22 @@ class ProviderStatistics {
         override fun toString(): String = value.toString()
     }
 
-    class QuantitativeStatistic internal constructor(
+    class QuantitativeStatistic(
         name: String,
         override var value: Int = 0,
     ) : ProviderStatistic<Int>(name)
 
-    class MappedStatistic internal constructor(
+    class MappedStatistic(
         name: String,
         override val value: MutableMap<String, Int> = mutableMapOf(),
     ) : ProviderStatistic<MutableMap<String, Int>>(name)
 
-    class ListStatistic<T> internal constructor(
+    class ListStatistic<T>(
         name: String,
         override val value: MutableList<T> = mutableListOf(),
     ) : ProviderStatistic<MutableList<T>>(name)
 
-    class DependentStatistic<T, P> internal constructor(
+    class DependentStatistic<T, P>(
         name: String,
         private val dependentStatistic: ProviderStatistic<P>,
         private val transform: (P) -> T,

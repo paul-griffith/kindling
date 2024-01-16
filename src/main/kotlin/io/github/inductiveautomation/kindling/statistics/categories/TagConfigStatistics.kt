@@ -11,7 +11,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Suppress("unused")
-class TagConfigStatistics(override val gwbk: GatewayBackup) : PrecomputedStatisticCategory("TagConfig", gwbk) {
+class TagConfigStatistics(override val gwbk: GatewayBackup) : PrecomputedStatisticCategory() {
+    override val name = "TagConfig"
+
     init {
         STATISTICS_IO.launch {
             val allProviderStats = TagProviderRecord.getProvidersFromDB(gwbk.configIDB).map {
