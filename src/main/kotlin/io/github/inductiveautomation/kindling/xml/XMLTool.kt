@@ -14,29 +14,33 @@ import kotlin.io.path.name
 enum class XMLTools {
     LogbackEditor {
         override fun supports(topLevelElement: String): Boolean = topLevelElement.contains("</configuration>", ignoreCase = true)
+
         override fun open(path: Path): ToolPanel {
             return LogbackEditor(path)
         }
     },
     XMLViewer {
         override fun supports(topLevelElement: String): Boolean = true
-        override fun open(path: Path): ToolPanel  {
-            return XMLViewerPanel(path)
+
+        override fun open(path: Path): ToolPanel {
+            return XMLViewer(path)
         }
-    };
+    }, ;
+
     abstract fun supports(topLevelElement: String): Boolean
+
     abstract fun open(path: Path): ToolPanel
 }
 
 class XMLToolPanel(path: Path) : ToolPanel() {
-
-    private val tabs = TabStrip().apply {
-        trailingComponent = null
-        isTabsClosable = false
-        tabType = FlatTabbedPane.TabType.underlined
-        tabHeight = 16
-        isHideTabAreaWithOneTab = true
-    }
+    private val tabs =
+        TabStrip().apply {
+            trailingComponent = null
+            isTabsClosable = false
+            tabType = FlatTabbedPane.TabType.underlined
+            tabHeight = 16
+            isHideTabAreaWithOneTab = true
+        }
 
     init {
         name = path.name
@@ -68,5 +72,6 @@ object XMLTool : Tool {
     override val icon = FlatSVGIcon("icons/bx-code.svg")
     private val extensions = listOf("xml")
     override val filter = FileFilter(description, *extensions.toTypedArray())
+
     override fun open(path: Path): ToolPanel = XMLToolPanel(path)
 }

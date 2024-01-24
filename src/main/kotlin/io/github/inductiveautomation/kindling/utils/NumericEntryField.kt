@@ -20,15 +20,18 @@ class NumericEntryField(inputValue: Long) : JFormattedTextField(inputValue) {
     private var previousValue = inputValue.toString()
 
     val listeners = EventListenerList()
+
     fun addNumericChangeListener(listener: NumericChangeListener) {
         listeners.add(listener)
     }
+
     fun fireListeners() {
         listeners.getAll<NumericChangeListener>().forEach(NumericChangeListener::valueChanged)
     }
 
     // Clean this up.... eventually.
     private var isValidating = 2
+
     fun validateTextField(): Boolean {
         return if (text.all { it.isDigit() } && text.length < 19) {
             previousValue = text
@@ -51,11 +54,21 @@ class NumericEntryField(inputValue: Long) : JFormattedTextField(inputValue) {
         document.addDocumentListener(
             object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) {
-                    SwingUtilities.invokeLater { if (validateTextField()) { fireListeners() } }
+                    SwingUtilities.invokeLater {
+                        if (validateTextField()) {
+                            fireListeners()
+                        }
+                    }
                 }
+
                 override fun removeUpdate(e: DocumentEvent?) {
-                    SwingUtilities.invokeLater { if (validateTextField()) { fireListeners() } }
+                    SwingUtilities.invokeLater {
+                        if (validateTextField()) {
+                            fireListeners()
+                        }
+                    }
                 }
+
                 override fun changedUpdate(e: DocumentEvent?) { }
             },
         )

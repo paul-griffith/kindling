@@ -12,20 +12,29 @@ import javax.swing.Icon
 import javax.swing.JPanel
 import kotlin.io.path.name
 
-class XMLViewerPanel(path: Path) : ToolPanel() {
+class XMLViewer(path: Path) : ToolPanel() {
     override val icon: Icon = XMLTool.icon
 
     init {
         name = path.name
         val content = File(path.toString()).readText()
-        add(JPanel(MigLayout("fill, ins 6").apply {
-            add(RTextScrollPane(RSyntaxTextArea(content).apply {
-                isEditable = false
-                syntaxEditingStyle = "text/xml"
-                theme = Kindling.Preferences.UI.Theme.currentValue
-            }).apply {
-                lineNumbersEnabled = true
-            }, "grow, push")
-        }))
+        add(
+            JPanel(
+                MigLayout("fill, ins 6").apply {
+                    add(
+                        RTextScrollPane(
+                            RSyntaxTextArea(content).apply {
+                                isEditable = false
+                                syntaxEditingStyle = "text/xml"
+                                theme = Kindling.Preferences.UI.Theme.currentValue
+                            },
+                        ).apply {
+                            lineNumbersEnabled = true
+                        },
+                        "grow, push",
+                    )
+                },
+            ),
+        )
     }
 }

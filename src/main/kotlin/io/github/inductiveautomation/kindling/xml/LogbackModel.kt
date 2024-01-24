@@ -24,30 +24,22 @@ followed by at most one <root> element.
 @JacksonXmlRootElement(localName = "configuration")
 @JsonPropertyOrder("logHomeDir") // ensure that "logHomeDir" is declared before other elements that reference its value
 data class LogbackConfigData(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "debug")
     var debug: Boolean = true,
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "scan")
     var scan: Boolean? = null,
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "scanPeriod")
     var scanPeriod: String? = null,
-
     @field:JacksonXmlProperty(localName = "property")
     var logHomeDir: LogHomeDirectory? = null,
-
     @field:JacksonXmlProperty(localName = "root")
     var root: Root = Root("INFO"),
-
     @JacksonXmlProperty(localName = "appender")
     @JacksonXmlElementWrapper(useWrapping = false)
     var appender: List<Appender>? = listOf(),
-
     @JacksonXmlProperty(localName = "logger")
     @JacksonXmlElementWrapper(useWrapping = false)
     var logger: List<Logger>? = listOf(),
-
 )
 
 /*
@@ -55,10 +47,8 @@ The log home directory is a <property> element which stores the root log output 
  */
 @JacksonXmlRootElement
 data class LogHomeDirectory(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "name")
     var name: String = "LOG_HOME",
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "value")
     var value: String = System.getProperty("user.home"),
 )
@@ -75,17 +65,15 @@ each appender thus referenced is added to the root logger.
  */
 @JacksonXmlRootElement(localName = "root")
 data class Root(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "level")
     var level: String? = null,
-
     @field:JacksonXmlProperty(localName = "appender-ref")
     @JacksonXmlElementWrapper(localName = "appender-ref", useWrapping = false)
-    var appenderRef: MutableList<AppenderRef>? = mutableListOf(
-        AppenderRef("SysoutAsync"),
-        AppenderRef("DBAsync"),
-    ),
-
+    var appenderRef: MutableList<AppenderRef>? =
+        mutableListOf(
+            AppenderRef("SysoutAsync"),
+            AppenderRef("DBAsync"),
+        ),
 )
 
 /*
@@ -98,51 +86,37 @@ JavaBean properties of the appender class.
  */
 @JacksonXmlRootElement(localName = "appender")
 data class Appender(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "name")
     var name: String,
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "class")
     var className: String,
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "queueSize")
     var queueSize: String? = null,
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "discardingThreshold")
     var discardingThreshold: String? = null,
-
     @field:JacksonXmlProperty(localName = "rollingPolicy")
     var rollingPolicy: RollingPolicy? = null,
-
     @JacksonXmlProperty(localName = "encoder")
     @JacksonXmlElementWrapper(useWrapping = false)
     var encoder: MutableList<Encoder>? = mutableListOf(),
-
     @JacksonXmlProperty(localName = "filter")
     @JacksonXmlElementWrapper(useWrapping = false)
     var levelFilter: LevelFilter? = null,
-
     @field:JacksonXmlProperty(localName = "dir")
     var dir: String? = null,
-
     @field:JacksonXmlProperty(localName = "appender-ref")
     @JacksonXmlElementWrapper(useWrapping = false)
     var appenderRef: MutableList<AppenderRef>? = mutableListOf(),
-
 )
 
 data class AppenderRef(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "ref")
     var ref: String,
-
 )
 
 data class Encoder(
-
     @field:JacksonXmlProperty(localName = "pattern")
     var pattern: String = "%.-1p [%-30c{1}] [%d{MM:dd:YYYY HH:mm:ss, America/Los_Angeles}]: %m %X%n",
-
 )
 
 /*
@@ -155,20 +129,15 @@ The <logger> element may contain zero or more <appender-ref> elements.
 */
 @JacksonXmlRootElement(localName = "logger")
 data class Logger(
-
     @JacksonXmlProperty(isAttribute = true, localName = "name")
     var name: String,
-
     @JacksonXmlProperty(isAttribute = true, localName = "level")
     var level: String? = null,
-
     @JacksonXmlProperty(isAttribute = true, localName = "additivity")
     var additivity: Boolean? = null,
-
     @field:JacksonXmlProperty(localName = "appender-ref")
     @JacksonXmlElementWrapper(useWrapping = false)
     var appenderRef: MutableList<AppenderRef>? = mutableListOf(),
-
 )
 
 /*
@@ -178,19 +147,14 @@ configuration of the onMatch and onMismatch properties.
  */
 @JacksonXmlRootElement(localName = "filter")
 data class LevelFilter(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "class")
     var className: String = "ch.qos.logback.classic.filter.LevelFilter",
-
     @field:JacksonXmlProperty(localName = "level")
     var level: String,
-
     @field:JacksonXmlProperty(localName = "onMatch")
     var onMatch: String? = "ACCEPT",
-
     @field:JacksonXmlProperty(localName = "onMismatch")
     var onMismatch: String? = "DENY",
-
 )
 
 /*
@@ -209,40 +173,35 @@ i.e. at the largest index number for the current period.
  */
 @JacksonXmlRootElement(localName = "rollingPolicy")
 data class RollingPolicy(
-
     @field:JacksonXmlProperty(isAttribute = true, localName = "class")
     var className: String = "ch.qos.logback.core.rolling.RollingFileAppender",
-
     @field:JacksonXmlProperty(localName = "fileNamePattern")
     var fileNamePattern: String = "\${ROOT}\\\\AdditionalLogs.%d{yyyy-MM-dd}.%i.log",
-
     @field:JacksonXmlProperty(localName = "maxFileSize")
     var maxFileSize: String = "10MB",
-
     @field:JacksonXmlProperty(localName = "totalSizeCap")
     var totalSizeCap: String = "1GB",
-
     @field:JacksonXmlProperty(localName = "maxHistory")
     var maxHistory: String = "5",
-
 )
 
 class LogbackConfigManager(
     var configs: LogbackConfigData,
 ) {
-
     // Build XmlMapper with the parameters for serialization
-    private val xmlMapperBuilder = XmlMapper.builder()
-        .defaultUseWrapper(false)
-        .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-        .build()
+    private val xmlMapperBuilder =
+        XmlMapper.builder()
+            .defaultUseWrapper(false)
+            .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+            .build()
 
-    private val xmlMapper: XmlMapper = xmlMapperBuilder.apply {
-        setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-        enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION)
-        enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
-        enable(SerializationFeature.INDENT_OUTPUT)
-    }
+    private val xmlMapper: XmlMapper =
+        xmlMapperBuilder.apply {
+            setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+            enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION)
+            enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+            enable(SerializationFeature.INDENT_OUTPUT)
+        }
 
     // Convert LogbackConfigData data class to XML string (for UI and clipboard)
     fun getXmlString(): String {
@@ -287,96 +246,107 @@ class LogbackConfigManager(
     Each selected logger will either output to a separate appender or use the default Sysout appender.
     In either case, we need a <logger> element.
     For those using a separate appender, we need to generate that <appender> element.
-    */
+     */
     fun updateLoggerConfigs(selectedLoggers: MutableList<SelectedLogger>) {
-        val separateOutputLoggers = selectedLoggers.filter { selectedLogger: SelectedLogger ->
-            selectedLogger.separateOutput
-        }
+        val separateOutputLoggers =
+            selectedLoggers.filter { selectedLogger: SelectedLogger ->
+                selectedLogger.separateOutput
+            }
 
-        val loggerElements = selectedLoggers.map { selectedLogger: SelectedLogger ->
-            Logger(
-                name = selectedLogger.name,
-                level = selectedLogger.level,
-                additivity = false,
-                appenderRef = if (selectedLogger.separateOutput) {
-                    mutableListOf(AppenderRef(selectedLogger.name))
-                } else {
-                    mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
-                },
-            )
-        }
+        val loggerElements =
+            selectedLoggers.map { selectedLogger: SelectedLogger ->
+                Logger(
+                    name = selectedLogger.name,
+                    level = selectedLogger.level,
+                    additivity = false,
+                    appenderRef =
+                        if (selectedLogger.separateOutput) {
+                            mutableListOf(AppenderRef(selectedLogger.name))
+                        } else {
+                            mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
+                        },
+                )
+            }
 
-        val appenderElements = separateOutputLoggers.map { separateOutputLogger: SelectedLogger ->
-            Appender(
-                name = separateOutputLogger.name,
-                className = "ch.qos.logback.core.rolling.RollingFileAppender",
-                rollingPolicy = RollingPolicy(
-                    className = "ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy",
-                    fileNamePattern = separateOutputLogger.outputFolder + separateOutputLogger.filenamePattern,
-                    maxFileSize = separateOutputLogger.maxFileSize.toString() + "MB",
-                    totalSizeCap = separateOutputLogger.totalSizeCap.toString() + "MB",
-                    maxHistory = separateOutputLogger.maxDaysHistory.toString(),
-                ),
-                encoder = mutableListOf(
-                    Encoder(
-                        pattern = "%.-1p [%-30logger] [%d{YYYY/MM/dd HH:mm:ss, SSS}]: {%thread} %replace(%m){\"[\\r\\n]+\", \"\"} %X%n",
-                    ),
-                ),
-            )
-        }
+        val appenderElements =
+            separateOutputLoggers.map { separateOutputLogger: SelectedLogger ->
+                Appender(
+                    name = separateOutputLogger.name,
+                    className = "ch.qos.logback.core.rolling.RollingFileAppender",
+                    rollingPolicy =
+                        RollingPolicy(
+                            className = "ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy",
+                            fileNamePattern = separateOutputLogger.outputFolder + separateOutputLogger.filenamePattern,
+                            maxFileSize = separateOutputLogger.maxFileSize.toString() + "MB",
+                            totalSizeCap = separateOutputLogger.totalSizeCap.toString() + "MB",
+                            maxHistory = separateOutputLogger.maxDaysHistory.toString(),
+                        ),
+                    encoder =
+                        mutableListOf(
+                            Encoder(
+                                pattern =
+                                    "%.-1p [%-30logger] [%d{YYYY/MM/dd HH:mm:ss, SSS}]: " +
+                                        "{%thread} %replace(%m){\"[\\r\\n]+\", \"\"} %X%n",
+                            ),
+                        ),
+                )
+            }
 
         configs.logger = loggerElements
         configs.appender = appenderElements.plus(DEFAULT_APPENDERS)
     }
 
     companion object {
-        val DEFAULT_APPENDERS = listOf(
-            Appender(
-                name = "SysoutAppender",
-                className = "ch.qos.logback.core.ConsoleAppender",
-                encoder = mutableListOf(
-                    Encoder(
-                        pattern = "%.-1p [%-30c{1}] [%d{HH:mm:ss,SSS}]: %m %X%n",
-                    ),
+        val DEFAULT_APPENDERS =
+            listOf(
+                Appender(
+                    name = "SysoutAppender",
+                    className = "ch.qos.logback.core.ConsoleAppender",
+                    encoder =
+                        mutableListOf(
+                            Encoder(
+                                pattern = "%.-1p [%-30c{1}] [%d{HH:mm:ss,SSS}]: %m %X%n",
+                            ),
+                        ),
                 ),
-            ),
-            Appender(
-                name = "DB",
-                className = "com.inductiveautomation.logging.SQLiteAppender",
-                dir = "logs",
-            ),
-            Appender(
-                name = "SysoutAsync",
-                className = "ch.qos.logback.classic.AsyncAppender",
-                queueSize = "1000",
-                discardingThreshold = "0",
-                appenderRef = mutableListOf(AppenderRef(ref = "SysoutAppender")),
-            ),
-            Appender(
-                name = "DBAsync",
-                className = "ch.qos.logback.classic.AsyncAppender",
-                queueSize = "100000",
-                discardingThreshold = "0",
-                appenderRef = mutableListOf(AppenderRef(ref = "DB")),
-            ),
-        )
+                Appender(
+                    name = "DB",
+                    className = "com.inductiveautomation.logging.SQLiteAppender",
+                    dir = "logs",
+                ),
+                Appender(
+                    name = "SysoutAsync",
+                    className = "ch.qos.logback.classic.AsyncAppender",
+                    queueSize = "1000",
+                    discardingThreshold = "0",
+                    appenderRef = mutableListOf(AppenderRef(ref = "SysoutAppender")),
+                ),
+                Appender(
+                    name = "DBAsync",
+                    className = "ch.qos.logback.classic.AsyncAppender",
+                    queueSize = "100000",
+                    discardingThreshold = "0",
+                    appenderRef = mutableListOf(AppenderRef(ref = "DB")),
+                ),
+            )
     }
 }
 
 class LogbackConfigDeserializer {
-
-    private val xmlModule = JacksonXmlModule().apply {
-        setDefaultUseWrapper(false)
-    }
-
-    private val xmlMapper = XmlMapper(xmlModule).registerKotlinModule().apply {
-        jacksonMapperBuilder().apply {
-            disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-            enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-            enable(MapperFeature.USE_ANNOTATIONS)
+    private val xmlModule =
+        JacksonXmlModule().apply {
+            setDefaultUseWrapper(false)
         }
-    }
+
+    private val xmlMapper =
+        XmlMapper(xmlModule).registerKotlinModule().apply {
+            jacksonMapperBuilder().apply {
+                disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                enable(MapperFeature.USE_ANNOTATIONS)
+            }
+        }
 
     // Read in XML file as LogbackConfigData data class (deserialization)
     fun getObjectFromXML(filePath: String): LogbackConfigData? {

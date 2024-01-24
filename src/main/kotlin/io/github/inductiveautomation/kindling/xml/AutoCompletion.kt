@@ -17,16 +17,17 @@ import javax.swing.text.BadLocationException
 import javax.swing.text.JTextComponent
 import javax.swing.text.PlainDocument
 
+/* This work is hereby released into the Public Domain.
+* To view a copy of the public domain dedication, visit
+* http://creativecommons.org/licenses/publicdomain/
+*/
+
 /***********************************************************
  * JComboBox Autocomplete decorator class.
  * Written by Thomas Bierhance
  * http://www.orbital-computer.de/JComboBox/
  **********************************************************/
 
-/* This work is hereby released into the Public Domain.
-* To view a copy of the public domain dedication, visit
-* http://creativecommons.org/licenses/publicdomain/
-*/
 class AutoCompletion(var comboBox: JComboBox<*>) : PlainDocument() {
     var model: ComboBoxModel<*>
     var editor: JTextComponent? = null
