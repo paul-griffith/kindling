@@ -1,20 +1,68 @@
 package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
+import io.github.inductiveautomation.kindling.statistics.Statistic
+import io.github.inductiveautomation.kindling.statistics.StatisticCalculator
+import io.github.inductiveautomation.kindling.utils.executeQuery
+import io.github.inductiveautomation.kindling.utils.get
+import io.github.inductiveautomation.kindling.utils.toList
 
-@Suppress("unused")
-class GatewayNetworkStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
-    override val name = "GatewayNetwork"
+data class GatewayNetworkStatistics(
+    val outgoing: List<OutgoingConnection>,
+    val incoming: List<IncomingConnection>,
+) : Statistic {
+    data class OutgoingConnection(
+        val host: String,
+        val port: Int,
+        val enabled: Boolean,
+    )
 
-    val totalConnections by statistic {
-        outGoingConnections.getValue() + incomingConnections.getValue()
+    data class IncomingConnection(
+        val uuid: String,
+    )
+
+    @Suppress("SqlResolve")
+    companion object : StatisticCalculator<GatewayNetworkStatistics> {
+        private val OUTGOING_CONNECTIONS =
+            """
+            SELECT
+                host,
+                port,
+                enabled
+            FROM
+                wsconnectionsettings
+            """.trimIndent()
+
+        private val INCOMING_CONNECTIONS =
+            """
+            SELECT
+                connectionid
+            FROM
+                wsincomingconnection
+            """.trimIndent()
+
+        override suspend fun calculate(backup: GatewayBackup): GatewayNetworkStatistics? {
+            val outgoing =
+                backup.configDb.executeQuery(OUTGOING_CONNECTIONS)
+                    .toList { rs ->
+                        OutgoingConnection(
+                            host = rs[1],
+                            port = rs[2],
+                            enabled = rs[3],
+                        )
+                    }
+
+            val incoming =
+                backup.configDb.executeQuery(INCOMING_CONNECTIONS)
+                    .toList { rs ->
+                        IncomingConnection(rs[1])
+                    }
+
+            if (outgoing.isEmpty() && incoming.isEmpty()) {
+                return null
+            }
+
+            return GatewayNetworkStatistics(outgoing, incoming)
+        }
     }
-
-    val outGoingConnections by queryScalarStatistic<Int>("SELECT COUNT(*) FROM WSCONNECTIONSETTINGS")
-
-    val incomingConnections by queryScalarStatistic<Int>("SELECT COUNT(*) FROM WSINCOMINGCONNECTION")
-
-    val enabled by queryScalarStatistic<Boolean>("SELECT ENABLED FROM WSCHANNELSETTINGS")
-
-    val proxyHopsEnabled by queryScalarStatistic<Boolean>("SELECT ALLOWEDPROXYHOPS FROM WSCHANNELSETTINGS")
 }

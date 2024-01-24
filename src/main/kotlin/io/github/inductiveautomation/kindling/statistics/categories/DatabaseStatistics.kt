@@ -1,38 +1,65 @@
 package io.github.inductiveautomation.kindling.statistics.categories
 
+import com.inductiveautomation.ignition.common.datasource.DatabaseVendor
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
+import io.github.inductiveautomation.kindling.statistics.Statistic
+import io.github.inductiveautomation.kindling.statistics.StatisticCalculator
+import io.github.inductiveautomation.kindling.utils.executeQuery
+import io.github.inductiveautomation.kindling.utils.get
+import io.github.inductiveautomation.kindling.utils.toList
 
-@Suppress("unused")
-class DatabaseStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
-    override val name: String = "Databases"
+data class DatabaseStatistics(
+    val connections: List<Connection>,
+) : Statistic {
+    val enabled: Int = connections.count { it.enabled }
 
-    val totalConnections by queryScalarStatistic<Int>("SELECT COUNT(*) FROM DATASOURCES")
-
-    val totalEnabled by queryScalarStatistic<Int>("SELECT COUNT(*) FROM DATASOURCES WHERE ENABLED = 1")
-
-    val totalDisabled by queryScalarStatistic<Int>("SELECT COUNT(*) FROM DATASOURCES WHERE ENABLED = 0")
-
-    val totalDiskCacheEnabled by queryScalarStatistic<Int>(
-        """
-            SELECT COUNT(*) FROM DATASOURCES d
-            JOIN STOREANDFORWARDSYSSETTINGS s ON d.DATASOURCES_ID = s.STOREANDFORWARDSYSSETTINGS_ID
-            WHERE ENABLEDISKSTORE = 1
-        """.trimIndent(),
+    data class Connection(
+        val name: String,
+        val description: String?,
+        val vendor: DatabaseVendor,
+        val enabled: Boolean,
+        val sfEnabled: Boolean,
+        val bufferSize: Long,
+        val cacheSize: Long,
     )
 
-    val largestMemoryBuffer by queryScalarStatistic<Int>(
-        "SELECT MAX(BUFFERSIZE) FROM STOREANDFORWARDSYSSETTINGS"
-    )
+    @Suppress("SqlResolve")
+    companion object : StatisticCalculator<DatabaseStatistics> {
+        private val DATABASE_STATS =
+            """
+            SELECT
+                ds.name,
+                ds.description,
+                jdbc.dbtype,
+                ds.enabled,
+                sf.enablediskstore,
+                sf.buffersize,
+                sf.storemaxrecords
+            FROM
+                datasources ds
+                JOIN storeandforwardsyssettings sf ON ds.datasources_id = sf.storeandforwardsyssettings_id
+                JOIN jdbcdrivers jdbc ON ds.driverid = jdbc.jdbcdrivers_id
+            """.trimIndent()
 
-    val largestDiskCache by queryScalarStatistic<Long>(
-        "SELECT MAX(STOREMAXRECORDS) FROM STOREANDFORWARDSYSSETTINGS"
-    )
+        override suspend fun calculate(backup: GatewayBackup): DatabaseStatistics? {
+            val connections =
+                backup.configDb.executeQuery(DATABASE_STATS).toList { rs ->
+                    Connection(
+                        name = rs[1],
+                        description = rs[2],
+                        vendor = DatabaseVendor.valueOf(rs[3]),
+                        enabled = rs[4],
+                        sfEnabled = rs[5],
+                        bufferSize = rs[6],
+                        cacheSize = rs[7],
+                    )
+                }
 
-    val totalMemoryBuffer by queryScalarStatistic<Long>(
-        "SELECT SUM(BUFFERSIZE) FROM STOREANDFORWARDSYSSETTINGS"
-    )
+            if (connections.isEmpty()) {
+                return null
+            }
 
-    val totalDiskCache by queryScalarStatistic<Long>(
-        "SELECT SUM(STOREMAXRECORDS) FROM STOREANDFORWARDSYSSETTINGS WHERE ENABLEDISKSTORE = 1",
-    )
+            return DatabaseStatistics(connections)
+        }
+    }
 }

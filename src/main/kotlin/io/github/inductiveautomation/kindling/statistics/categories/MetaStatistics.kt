@@ -1,53 +1,44 @@
 package io.github.inductiveautomation.kindling.statistics.categories
 
 import io.github.inductiveautomation.kindling.statistics.GatewayBackup
-import io.github.inductiveautomation.kindling.statistics.GatewayBackup.Companion.XML_FACTORY
-import org.w3c.dom.NodeList
-import java.util.Properties
-import javax.xml.xpath.XPathConstants
-import javax.xml.xpath.XPathFactory
+import io.github.inductiveautomation.kindling.statistics.Statistic
+import io.github.inductiveautomation.kindling.statistics.StatisticCalculator
+import io.github.inductiveautomation.kindling.utils.asScalarMap
+import io.github.inductiveautomation.kindling.utils.executeQuery
 
-@Suppress("unused")
-class MetaStatistics(override val gwbk: GatewayBackup) : StatisticCategory() {
-    override val name = "Meta"
+data class MetaStatistics(
+    val uuid: String?,
+    val gatewayName: String,
+    val edition: String,
+    val role: String,
+    val version: String,
+    val initMemory: Int,
+    val maxMemory: Int,
+) : Statistic {
+    @Suppress("SqlResolve")
+    companion object : StatisticCalculator<MetaStatistics> {
+        private val SYS_PROPS =
+            """
+            SELECT *
+            FROM
+                sysprops
+            """.trimIndent()
 
-    val uuid by queryScalarStatistic<String>("SELECT SYSTEMUID FROM SYSPROPS")
+        override suspend fun calculate(backup: GatewayBackup): MetaStatistics {
+            val sysPropsMap = backup.configDb.executeQuery(SYS_PROPS).asScalarMap()
 
-    val gatewayName by queryScalarStatistic<String>("SELECT SYSTEMNAME FROM SYSPROPS")
+            val edition = backup.info.getElementsByTagName("edition").item(0)?.textContent
+            val version = backup.info.getElementsByTagName("version").item(0).textContent
 
-    val gwbkSize by statistic { gwbk.size }
-
-    val redundancyRole by statistic {
-        val redundancyInfo = gwbk.redundancyInfo.use { input ->
-            input.readAllBytes().decodeToString().replace("http:", "https:", true)
+            return MetaStatistics(
+                uuid = sysPropsMap["SYSTEMUID"] as String?,
+                gatewayName = sysPropsMap.getValue("SYSTEMNAME") as String,
+                edition = edition.takeUnless { it.isNullOrEmpty() } ?: "Standard",
+                role = backup.redundancyInfo.getProperty("redundancy.noderole"),
+                version = version,
+                initMemory = backup.ignitionConf.getProperty("wrapper.java.initmemory").toInt(),
+                maxMemory = backup.ignitionConf.getProperty("wrapper.java.maxmemory").toInt(),
+            )
         }
-        redundancyInfo.byteInputStream().use {
-            val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
-                normalizeDocument()
-            }
-            val xpath = XPathFactory.newInstance().newXPath()
-            val expr = xpath.compile("//entry[@key=\"redundancy.noderole\"]")
-            val results = expr.evaluate(document, XPathConstants.NODESET) as NodeList
-            results.item(0).textContent
-        }
-    }
-
-    val version by statistic {
-        val backupInfo = gwbk.backupInfo.use { input ->
-            input.readAllBytes().decodeToString().replace("http:", "https:", true)
-        }
-        backupInfo.byteInputStream().use {
-            val document = XML_FACTORY.newDocumentBuilder().parse(it).apply {
-                normalizeDocument()
-            }
-            document.getElementsByTagName("version").item(0).textContent
-        }
-    }
-
-    val maxMemory by statistic {
-        val ignitionConf = Properties().apply {
-            gwbk.ignitionConf.use(this::load)
-        }
-        ignitionConf.getProperty("wrapper.java.maxmemory").toInt()
     }
 }
