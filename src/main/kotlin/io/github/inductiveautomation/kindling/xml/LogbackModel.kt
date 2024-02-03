@@ -188,20 +188,15 @@ data class RollingPolicy(
 class LogbackConfigManager(
     var configs: LogbackConfigData,
 ) {
-    // Build XmlMapper with the parameters for serialization
-    private val xmlMapperBuilder =
+    private val xmlMapper: XmlMapper =
         XmlMapper.builder()
             .defaultUseWrapper(false)
             .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+            .enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION)
+            .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+            .enable(SerializationFeature.INDENT_OUTPUT)
+            .serializationInclusion(JsonInclude.Include.NON_EMPTY)
             .build()
-
-    private val xmlMapper: XmlMapper =
-        xmlMapperBuilder.apply {
-            setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-            enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION)
-            enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
-            enable(SerializationFeature.INDENT_OUTPUT)
-        }
 
     // Convert LogbackConfigData data class to XML string (for UI and clipboard)
     fun getXmlString(): String {
@@ -260,11 +255,11 @@ class LogbackConfigManager(
                     level = selectedLogger.level,
                     additivity = false,
                     appenderRef =
-                        if (selectedLogger.separateOutput) {
-                            mutableListOf(AppenderRef(selectedLogger.name))
-                        } else {
-                            mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
-                        },
+                    if (selectedLogger.separateOutput) {
+                        mutableListOf(AppenderRef(selectedLogger.name))
+                    } else {
+                        mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
+                    },
                 )
             }
 
@@ -274,21 +269,21 @@ class LogbackConfigManager(
                     name = separateOutputLogger.name,
                     className = "ch.qos.logback.core.rolling.RollingFileAppender",
                     rollingPolicy =
-                        RollingPolicy(
-                            className = "ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy",
-                            fileNamePattern = separateOutputLogger.outputFolder + separateOutputLogger.filenamePattern,
-                            maxFileSize = separateOutputLogger.maxFileSize.toString() + "MB",
-                            totalSizeCap = separateOutputLogger.totalSizeCap.toString() + "MB",
-                            maxHistory = separateOutputLogger.maxDaysHistory.toString(),
-                        ),
+                    RollingPolicy(
+                        className = "ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy",
+                        fileNamePattern = separateOutputLogger.outputFolder + separateOutputLogger.filenamePattern,
+                        maxFileSize = separateOutputLogger.maxFileSize.toString() + "MB",
+                        totalSizeCap = separateOutputLogger.totalSizeCap.toString() + "MB",
+                        maxHistory = separateOutputLogger.maxDaysHistory.toString(),
+                    ),
                     encoder =
-                        mutableListOf(
-                            Encoder(
-                                pattern =
-                                    "%.-1p [%-30logger] [%d{YYYY/MM/dd HH:mm:ss, SSS}]: " +
-                                        "{%thread} %replace(%m){\"[\\r\\n]+\", \"\"} %X%n",
-                            ),
+                    mutableListOf(
+                        Encoder(
+                            pattern =
+                            "%.-1p [%-30logger] [%d{YYYY/MM/dd HH:mm:ss, SSS}]: " +
+                                "{%thread} %replace(%m){\"[\\r\\n]+\", \"\"} %X%n",
                         ),
+                    ),
                 )
             }
 
@@ -303,11 +298,11 @@ class LogbackConfigManager(
                     name = "SysoutAppender",
                     className = "ch.qos.logback.core.ConsoleAppender",
                     encoder =
-                        mutableListOf(
-                            Encoder(
-                                pattern = "%.-1p [%-30c{1}] [%d{HH:mm:ss,SSS}]: %m %X%n",
-                            ),
+                    mutableListOf(
+                        Encoder(
+                            pattern = "%.-1p [%-30c{1}] [%d{HH:mm:ss,SSS}]: %m %X%n",
                         ),
+                    ),
                 ),
                 Appender(
                     name = "DB",
@@ -364,6 +359,3 @@ class LogbackConfigDeserializer {
         }
     }
 }
-
-@Serializable
-data class IgnitionLogger(val name: String)

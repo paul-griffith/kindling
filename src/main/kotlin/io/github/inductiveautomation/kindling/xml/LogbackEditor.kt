@@ -1,18 +1,21 @@
 package io.github.inductiveautomation.kindling.xml
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
+import io.github.inductiveautomation.kindling.core.Kindling.Preferences.UI.Theme
+import io.github.inductiveautomation.kindling.core.Theme.Companion.theme
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.utils.NumericEntryField
 import io.github.inductiveautomation.kindling.utils.chooseFiles
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
 import net.miginfocom.swing.MigLayout
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants
+import org.fife.ui.rtextarea.RTextScrollPane
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
 import java.nio.file.Path
+import java.util.Vector
 import javax.swing.BorderFactory
 import javax.swing.Icon
 import javax.swing.JButton
@@ -23,7 +26,6 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JSplitPane
-import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
@@ -54,6 +56,7 @@ class LogbackEditor(path: Path) : ToolPanel() {
                 updateData()
             }
         }
+
     private val editorPanel =
         JPanel(MigLayout("fill, ins 10")).apply {
             add(generalConfigPanel, "growx, wrap")
@@ -62,13 +65,18 @@ class LogbackEditor(path: Path) : ToolPanel() {
         }
 
     private val xmlOutputPreview =
-        JTextArea().apply {
+        RSyntaxTextArea(logbackConfigManager.getXmlString()).apply {
             lineWrap = true
             isEditable = false
-            font = UIManager.getFont("monospaced.font")
-            text = logbackConfigManager.getXmlString()
             caretPosition = 0
+            syntaxEditingStyle = SyntaxConstants.SYNTAX_STYLE_XML
+            theme = Theme.currentValue
+
+            Theme.addChangeListener { newTheme ->
+                theme = newTheme
+            }
         }
+
     private val copyXmlButton =
         JButton("Copy to clipboard").apply {
             addActionListener {
@@ -76,6 +84,7 @@ class LogbackEditor(path: Path) : ToolPanel() {
                 clipboard.setContents(StringSelection(xmlOutputPreview.text), null)
             }
         }
+
     private val saveXmlButton =
         JButton("Save XML file").apply {
             addActionListener {
@@ -91,10 +100,7 @@ class LogbackEditor(path: Path) : ToolPanel() {
             }
         }
 
-    private val scrollPane =
-        JScrollPane(xmlOutputPreview).apply {
-            verticalScrollBar.unitIncrement = 16
-        }
+    private val scrollPane = RTextScrollPane(xmlOutputPreview)
     private val previewPanel =
         JPanel(MigLayout("fill, ins 10")).apply {
             add(JLabel("XML Output Preview"), "north, growx, wrap")
@@ -222,18 +228,19 @@ class LogbackEditor(path: Path) : ToolPanel() {
     }
 
     inner class LoggerSelectorPanel : JPanel(MigLayout("fill, ins 0")) {
-        private val loggerItems = getLoggerList()
-
-        @OptIn(ExperimentalSerializationApi::class)
-        private fun getLoggerList(): Array<String> {
-            val filename = "/loggers.json"
-            val stream = javaClass.getResourceAsStream(filename)!!
-            val loggerList = Json.decodeFromStream<List<IgnitionLogger>>(stream)
-            return loggerList.map { it.name }.toTypedArray()
-        }
+        private val loggerItems = javaClass.getResourceAsStream("/loggers.txt")
+            ?.bufferedReader()
+            ?.useLines { lines ->
+                lines.flatMap { line ->
+                    line.splitToSequence('.').runningReduce { acc, next ->
+                        "$acc.$next"
+                    }
+                }.toSet()
+            }
+            .orEmpty()
 
         private val loggerComboBox =
-            JComboBox(loggerItems).apply {
+            JComboBox(Vector(loggerItems)).apply {
                 isEditable = true
                 insertItemAt("", 0)
                 selectedIndex = -1
@@ -244,11 +251,12 @@ class LogbackEditor(path: Path) : ToolPanel() {
         private val addButton =
             JButton("Add logger").apply {
                 addActionListener {
-                    if (loggerComboBox.selectedItem != null &&
-                        loggerComboBox.selectedItem != "" &&
-                        (loggerComboBox.selectedItem as String) !in selectedLoggersList.map { logger -> logger.name }
+                    val selectedItem = loggerComboBox.selectedItem as String?
+                    if (selectedItem != null &&
+                        selectedItem != "" &&
+                        selectedItem !in selectedLoggersList.map { logger -> logger.name }
                     ) {
-                        selectedLoggersList.add(SelectedLogger((loggerComboBox.selectedItem as String)))
+                        selectedLoggersList.add(SelectedLogger(selectedItem))
                         selectedLoggersPanel.add(
                             SelectedLoggerCard(selectedLoggersList.last()),
                             "north, growx, shrinkx, wrap, gap 5 5 3 3",

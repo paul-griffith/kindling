@@ -19,14 +19,12 @@ class NumericEntryField(inputValue: Long) : JFormattedTextField(inputValue) {
     private val format = NumberFormat.getIntegerInstance().apply { isGroupingUsed = false }
     private var previousValue = inputValue.toString()
 
-    val listeners = EventListenerList()
-
     fun addNumericChangeListener(listener: NumericChangeListener) {
-        listeners.add(listener)
+        listenerList.add(listener)
     }
 
     fun fireListeners() {
-        listeners.getAll<NumericChangeListener>().forEach(NumericChangeListener::valueChanged)
+        listenerList.getAll<NumericChangeListener>().forEach(NumericChangeListener::valueChanged)
     }
 
     // Clean this up.... eventually.

@@ -6,13 +6,15 @@ import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.TabStrip
-import java.io.File
 import java.nio.file.Path
 import javax.swing.Icon
 import kotlin.io.path.name
+import kotlin.io.path.readLines
+import kotlin.io.path.useLines
 
 enum class XMLTools {
     LogbackEditor {
+        override val displayName: String = "Logback Editor"
         override fun supports(topLevelElement: String): Boolean = topLevelElement.contains("</configuration>", ignoreCase = true)
 
         override fun open(path: Path): ToolPanel {
@@ -20,12 +22,16 @@ enum class XMLTools {
         }
     },
     XMLViewer {
+        override val displayName: String = "Raw XML"
         override fun supports(topLevelElement: String): Boolean = true
 
         override fun open(path: Path): ToolPanel {
             return XMLViewer(path)
         }
-    }, ;
+    },
+    ;
+
+    abstract val displayName: String
 
     abstract fun supports(topLevelElement: String): Boolean
 
@@ -45,18 +51,16 @@ class XMLToolPanel(path: Path) : ToolPanel() {
     init {
         name = path.name
         toolTipText = path.toString()
-        var addedTabs = 0
-        val topLevelElement = File(path.toString()).useLines { it.toList() }.toMutableList().apply { removeAll(listOf("")) }.last()
-        for (tool in XMLTools.entries) {
-            if (tool.supports(topLevelElement)) {
-                tabs.addLazyTab(
-                    tabName = tool.name,
-                ) {
+        val topLevelElement = path.useLines { lines -> lines.last(String::isNotEmpty) }
+
+        val addedTabs = XMLTools.entries
+            .filter { it.supports(topLevelElement) }
+            .onEach { tool ->
+                tabs.addLazyTab(tool.displayName) {
                     tool.open(path)
                 }
-                addedTabs += 1
             }
-        }
+            .count()
         if (addedTabs == 1) {
             tabs.selectedIndex = tabs.indices.last
         }

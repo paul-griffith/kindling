@@ -75,7 +75,6 @@ class GwbkStatsView(
                     measureTimedValue {
                         calculator.calculate(gatewayBackup)
                     }
-                println("Calculated ${renderer.title} in $duration")
                 EDT_SCOPE.launch {
                     if (statistic == null) {
                         this@GwbkStatsView.remove(this@apply)

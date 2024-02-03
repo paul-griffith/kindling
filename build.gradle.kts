@@ -30,10 +30,8 @@ dependencies {
     api(libs.excelkt)
     api(libs.jfreechart)
     api(libs.rsyntaxtextarea)
+    api(libs.bundles.jackson)
     runtimeOnly(libs.bundles.ia.transitive)
-
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
 
     testImplementation(libs.bundles.kotest)
 }
