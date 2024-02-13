@@ -6,6 +6,7 @@ import com.github.weisj.jsvg.attributes.ViewBox
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
+import org.jdesktop.swingx.prompt.BuddySupport
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
@@ -19,6 +20,7 @@ import java.util.EventListener
 import javax.swing.JComponent
 import javax.swing.JFileChooser
 import javax.swing.JPopupMenu
+import javax.swing.JTextField
 import javax.swing.SwingUtilities
 import javax.swing.event.EventListenerList
 import javax.swing.text.Document
@@ -100,3 +102,19 @@ fun SVGDocument.render(width: Int, height: Int, x: Int = 0, y: Int = 0): Buffere
 inline fun <reified C> Component.getAncestorOfClass(): C? {
     return SwingUtilities.getAncestorOfClass(C::class.java, this) as? C
 }
+
+var JTextField.leftBuddy: JComponent?
+    get() {
+        return BuddySupport.getLeft(this)?.firstOrNull() as? JComponent
+    }
+    set(buddy) {
+        BuddySupport.addLeft(buddy, this)
+    }
+
+var JTextField.rightBuddy: JComponent?
+    get() {
+        return BuddySupport.getRight(this)?.firstOrNull() as? JComponent
+    }
+    set(buddy) {
+        BuddySupport.addRight(buddy, this)
+    }

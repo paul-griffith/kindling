@@ -255,11 +255,11 @@ class LogbackConfigManager(
                     level = selectedLogger.level,
                     additivity = false,
                     appenderRef =
-                    if (selectedLogger.separateOutput) {
-                        mutableListOf(AppenderRef(selectedLogger.name))
-                    } else {
-                        mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
-                    },
+                        if (selectedLogger.separateOutput) {
+                            mutableListOf(AppenderRef(selectedLogger.name))
+                        } else {
+                            mutableListOf(AppenderRef("SysoutAsync"), AppenderRef("DBAsync"))
+                        },
                 )
             }
 
