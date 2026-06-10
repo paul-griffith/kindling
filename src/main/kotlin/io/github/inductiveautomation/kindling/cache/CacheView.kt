@@ -8,6 +8,8 @@ import io.github.inductiveautomation.kindling.core.DetailsPane
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
+import io.github.inductiveautomation.kindling.serial.model.StreamParser
+import io.github.inductiveautomation.kindling.serial.model.toDump
 import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FileFilter
@@ -298,11 +300,9 @@ class CacheView(path: Path) : ToolPanel() {
                             } catch (e: Exception) {
                                 // It's not serialized with a class in the public API, or some other problem;
                                 // give up, and try to just dump the serialized data in a friendlier format
-                                val serializationDumper = deser.SerializationDumper(bytes)
-
                                 Detail(
                                     title = "Serialization dump of ${bytes.size} bytes:",
-                                    body = serializationDumper.parseStream().lines(),
+                                    body = StreamParser.parse(bytes).toDump().lines(),
                                 )
                             }
                         }

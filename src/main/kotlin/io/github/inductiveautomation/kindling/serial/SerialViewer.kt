@@ -1,9 +1,10 @@
 package io.github.inductiveautomation.kindling.serial
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
-import deser.SerializationDumper
 import io.github.inductiveautomation.kindling.core.Tool
 import io.github.inductiveautomation.kindling.core.ToolPanel
+import io.github.inductiveautomation.kindling.serial.model.StreamParser
+import io.github.inductiveautomation.kindling.serial.model.toDump
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.HorizontalSplitPane
@@ -30,7 +31,7 @@ class SerialViewPanel(private val path: Path) : ToolPanel() {
 
     init {
         val data = path.readBytes()
-        serialDump.text = SerializationDumper(data).parseStream()
+        serialDump.text = StreamParser.parse(data).toDump()
         rawBytes.text = path.inputStream().toHumanReadableBinary()
         name = path.name
 

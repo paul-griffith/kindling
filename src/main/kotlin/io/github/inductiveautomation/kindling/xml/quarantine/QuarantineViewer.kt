@@ -1,8 +1,9 @@
 package io.github.inductiveautomation.kindling.xml.quarantine
 
-import deser.SerializationDumper
 import io.github.inductiveautomation.kindling.core.Detail
 import io.github.inductiveautomation.kindling.core.DetailsPane
+import io.github.inductiveautomation.kindling.serial.model.StreamParser
+import io.github.inductiveautomation.kindling.serial.model.toDump
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
 import io.github.inductiveautomation.kindling.utils.HorizontalSplitPane
 import io.github.inductiveautomation.kindling.utils.XML_FACTORY
@@ -52,7 +53,7 @@ internal class QuarantineViewer(data: List<QuarantineRow>) : JPanel(MigLayout("i
                 binaryData.deserializeStoreAndForward().toDetail()
             } catch (e: Exception) {
                 XmlTool.logger.error("Unable to deserialize quarantine data", e)
-                val serializedData = SerializationDumper(binaryData).parseStream().lines()
+                val serializedData = StreamParser.parse(binaryData).toDump().lines()
                 Detail(
                     title = "Error",
                     message = "Failed to deserialize: ${e.message}",
