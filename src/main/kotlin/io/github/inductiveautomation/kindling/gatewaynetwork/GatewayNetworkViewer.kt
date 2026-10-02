@@ -6,9 +6,14 @@ import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
 import io.github.inductiveautomation.kindling.utils.Action
+import io.github.inductiveautomation.kindling.utils.EDT_SCOPE
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
+import io.github.inductiveautomation.kindling.utils.Jcef
 import io.github.inductiveautomation.kindling.utils.transferTo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -16,14 +21,20 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.serializer
+import me.friwi.jcefmaven.EnumProgress
+import java.awt.BorderLayout
 import java.awt.Desktop
 import java.net.URI
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JButton
+import javax.swing.JLabel
 import javax.swing.JOptionPane
+import javax.swing.JPanel
+import javax.swing.JTabbedPane
 import javax.swing.JTextArea
+import javax.swing.SwingConstants
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
@@ -72,6 +83,8 @@ class GatewayNetworkViewer(tabName: String, tooltip: String, json: String) : Too
         },
     )
 
+    private val diagramPanel = JPanel(BorderLayout())
+
     init {
         name = tabName
         toolTipText = tooltip
@@ -79,7 +92,45 @@ class GatewayNetworkViewer(tabName: String, tooltip: String, json: String) : Too
         validateJson(json)
 
         add(JButton(openBrowserAction))
-        add(FlatScrollPane(textArea), "newline, push, grow, span")
+        add(
+            JTabbedPane().apply {
+                addTab("Diagram", diagramPanel)
+                addTab("JSON", FlatScrollPane(textArea))
+            },
+            "newline, push, grow, span",
+        )
+
+        loadEmbeddedDiagram()
+    }
+
+    private fun loadEmbeddedDiagram() {
+        val status = JLabel("Initializing Chromium...", SwingConstants.CENTER)
+        diagramPanel.add(status, BorderLayout.CENTER)
+
+        val progressJob = EDT_SCOPE.launch {
+            Jcef.progress.collect { (state, percent) ->
+                status.text = when {
+                    state == EnumProgress.DOWNLOADING && percent >= 0 -> "Downloading Chromium... ${percent.toInt()}%"
+                    else -> "${state.name.lowercase().replaceFirstChar(Char::uppercase)} Chromium..."
+                }
+            }
+        }
+
+        EDT_SCOPE.launch {
+            try {
+                val app = withContext(Dispatchers.IO) { Jcef.app }
+                val url = writeStaticFiles(textArea.text).resolve("index.html").toString()
+                val browser = app.createClient().createBrowser(url, false, false)
+                diagramPanel.remove(status)
+                diagramPanel.add(browser.uiComponent, BorderLayout.CENTER)
+                diagramPanel.revalidate()
+                diagramPanel.repaint()
+            } catch (e: Exception) {
+                status.text = "Unable to initialize embedded browser: ${e.message}"
+            } finally {
+                progressJob.cancel()
+            }
+        }
     }
 
     /**

@@ -35,6 +35,7 @@ dependencies {
     api(libs.jfreechart)
     api(libs.questdb)
     api(libs.rsyntaxtextarea)
+    api(libs.jcefmaven)
     api(libs.bundles.jackson)
     runtimeOnly(libs.bundles.ia.transitive)
     testImplementation(libs.bundles.kotest)
@@ -48,6 +49,10 @@ application {
         "--add-exports=java.base/sun.security.action=ALL-UNNAMED",
         "--add-exports=java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED",
         "--add-exports=java.desktop/apple.laf=ALL-UNNAMED",
+        // required by JCEF on macOS
+        "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
+        "--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED",
+        "--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED",
         "-XX:+UseZGC",
         "-XX:+ZGenerational",
     )
