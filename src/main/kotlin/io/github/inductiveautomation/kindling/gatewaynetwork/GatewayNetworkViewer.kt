@@ -2,13 +2,14 @@ package io.github.inductiveautomation.kindling.gatewaynetwork
 
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import io.github.inductiveautomation.kindling.core.ClipboardTool
+import io.github.inductiveautomation.kindling.core.Detail
+import io.github.inductiveautomation.kindling.core.DetailsPane
 import io.github.inductiveautomation.kindling.core.Kindling.Preferences.General.DefaultEncoding
 import io.github.inductiveautomation.kindling.core.ToolOpeningException
 import io.github.inductiveautomation.kindling.core.ToolPanel
-import io.github.inductiveautomation.kindling.utils.Action
 import io.github.inductiveautomation.kindling.utils.FileFilter
 import io.github.inductiveautomation.kindling.utils.FlatScrollPane
-import io.github.inductiveautomation.kindling.utils.transferTo
+import io.github.inductiveautomation.kindling.utils.HorizontalSplitPane
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -16,27 +17,18 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.serializer
-import java.awt.Desktop
-import java.net.URI
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import javax.swing.JButton
-import javax.swing.JOptionPane
+import javax.swing.JTabbedPane
 import javax.swing.JTextArea
-import kotlin.io.path.createTempDirectory
 import kotlin.io.path.inputStream
 import kotlin.io.path.name
-import kotlin.io.path.outputStream
 import kotlin.io.path.useLines
-import kotlin.io.path.writeText
 
 /**
- * Opens the raw file that contains a gateway network diagram as JSON text. After opening, the user can click a
- * button to open a browser that will show the actual diagram. The diagram is served from html and javascript files
- * copied out to a temp folder on the local file system. The source of the static files is the
- * cytoscape-server IA internal repository, in the 'cytoscape-server.zip' file. Within the zip file,
- * navigate to 'server/static' to view the actual files.
+ * Opens a file containing a gateway network diagram as JSON, and renders it as a laid-out diagram, with details of
+ * the selected gateway or connection in a sidebar. The raw JSON is available in a separate tab.
  *
  * To get a JSON diagram in Ignition 8.1:
  * Set the 'gateway.routes.status.GanRoutes' logger set to DEBUG in an Ignition gateway to generate diagram JSON while
@@ -51,89 +43,112 @@ class GatewayNetworkViewer(tabName: String, tooltip: String, json: String) : Too
         isEditable = false
     }
 
-    private val openBrowserAction: Action = Action(
-        name = "View diagram in browser",
-        description = "View diagram in browser",
-        action = {
-            // We need to load the contents from the text area and place them in a file
-            // with the other static files
-            val tmpDir = writeStaticFiles(textArea.text)
+    private val details = DetailsPane(listOf(NO_SELECTION))
 
-            try {
-                Desktop.getDesktop().browse(tmpDir.resolve("index.html"))
-            } catch (error: Exception) {
-                JOptionPane.showMessageDialog(
-                    null,
-                    "Error: ${error.message}",
-                    "Browser Opening Error",
-                    JOptionPane.ERROR_MESSAGE,
-                )
-            }
-        },
-    )
+    private val diagram = GanDiagramView(GanGraph.from(parseJson(json))).apply {
+        onSelectionChanged = { selection ->
+            details.events = listOf(
+                when (selection) {
+                    is DiagramSelection.Node -> selection.node.toDetail()
+                    is DiagramSelection.Edge -> selection.edge.toDetail()
+                    null -> NO_SELECTION
+                },
+            )
+        }
+    }
 
     init {
         name = tabName
         toolTipText = tooltip
 
-        validateJson(json)
-
-        add(JButton(openBrowserAction))
-        add(FlatScrollPane(textArea), "newline, push, grow, span")
+        add(
+            JTabbedPane().apply {
+                addTab("Diagram", HorizontalSplitPane(FlatScrollPane(diagram), details, resizeWeight = 0.75))
+                addTab("JSON", FlatScrollPane(textArea))
+            },
+            "push, grow",
+        )
     }
 
     /**
-     * Verifies that the provided text is valid gateway network diagram JSON
-     * @throws ToolOpeningException to abort the parsing file early, before we actually create any temp files.
+     * Parses and verifies that the provided text is valid gateway network diagram JSON
+     * @throws ToolOpeningException to abort opening the file early
      */
-    private fun validateJson(json: String) {
-        try {
-            val model: DiagramModel = JSON.decodeFromString(serializer(), json)
-            if (model.connections.isEmpty()) {
-                throw ToolOpeningException("Incomplete GAN diagram - no connections")
-            }
+    private fun parseJson(json: String): DiagramModel {
+        val model: DiagramModel = try {
+            JSON.decodeFromString(serializer(), json)
         } catch (e: SerializationException) {
             throw ToolOpeningException("Error parsing GAN diagram JSON", e)
         }
-    }
-
-    private fun writeStaticFiles(jsonText: String): URI {
-        // Make a temp dir for the static html/js files
-        val tmpDir: Path = createTempDirectory("kindling-gateway-network-diagram").apply {
-            for (resource in RESOURCES) {
-                writeStaticFile(resource)
-            }
-
-            // This file is what the compiled React js file uses to populate the gateway network diagram.
-            resolve(EXTERNAL_DIAGRAM_JS).writeText(PREAMBLE + jsonText)
+        if (model.connections.isEmpty()) {
+            throw ToolOpeningException("Incomplete GAN diagram - no connections")
         }
-        tmpDir.toFile().deleteOnExit()
-
-        return tmpDir.toUri()
+        return model
     }
 
     companion object {
-        private val RESOURCES = listOf(
-            "favicon.ico",
-            "favicon-32x32.png",
-            "favicon-48x48.png",
-            "favicon-160x160.png",
-            "index.html",
-            "main.js",
-            "style.css",
-        )
-        private const val EXTERNAL_DIAGRAM_JS = "external-diagram.js"
-        private const val PREAMBLE = "window.externalDiagram = "
-
-        private fun Path.writeStaticFile(file: String) {
-            resolve(file).outputStream().use { fileStream ->
-                val inputStream = GatewayNetworkViewer::class.java.getResourceAsStream(file) ?: return
-                inputStream transferTo fileStream
-            }
-        }
-
         private val JSON = Json {
             ignoreUnknownKeys = true
+            coerceInputValues = true
+        }
+
+        private val NO_SELECTION = Detail(
+            title = "No selection",
+            message = "Click on a gateway or connection to see its details.",
+        )
+
+        private fun GanNode.toDetail() = Detail(
+            title = if (isLocal) "Local Gateway Properties" else "Remote Gateway Properties",
+            body = detailLines(
+                "Gateway Name" to gatewayName,
+                "Redundancy Mode" to if (isRedundant) "Redundant-$redundantRole" else null,
+                "Network Address" to if (isLocal) null else networkAddress ?: "N/A",
+                "Version" to (version?.ifEmpty { null } ?: "N/A"),
+                "Edition" to when (edition) {
+                    null -> "N/A"
+                    "" -> "standard"
+                    else -> edition
+                },
+            ),
+        )
+
+        private fun GanEdge.toDetail(): Detail = if (status == EdgeStatus.Proxy) {
+            Detail(
+                title = "Connection Properties",
+                body = detailLines(
+                    "Server Status" to connection.connectionStatus,
+                    "Proxy Connection" to "true",
+                    "Routed Through" to source.gatewayName,
+                    "Target" to target.gatewayName,
+                ),
+            )
+        } else {
+            val (origin, destination) = if (isIncoming) target to source else source to target
+            Detail(
+                title = "Connection Properties",
+                body = detailLines(
+                    "Connection Status" to connection.connectionStatus,
+                    "Direction" to if (isIncoming) "Incoming" else "Outgoing",
+                    "Origin" to origin.gatewayName,
+                    "Target" to destination.gatewayName,
+                    "Ping Time" to connection.pingTime.orNA(::formatPing),
+                    "Outgoing Rate" to connection.outgoingRate.orNA(::formatRate),
+                    "Incoming Rate" to connection.incomingRate.orNA(::formatRate),
+                    "SSL Connection" to (connection.ssl?.toString() ?: "N/A"),
+                    "Fault Count" to (connection.faultCount?.toString() ?: "N/A"),
+                ),
+            )
+        }
+
+        private fun Double?.orNA(format: (Double) -> String) = if (this == null || this < 0) "N/A" else format(this)
+
+        /**
+         * Aligned "key: value" lines; lines with a null value don't apply and are omitted.
+         */
+        private fun detailLines(vararg lines: Pair<String, String?>): List<String> {
+            val present = lines.filter { (_, value) -> value != null }
+            val width = present.maxOf { (key, _) -> key.length } + 2
+            return present.map { (key, value) -> "$key:".padEnd(width) + value }
         }
     }
 }

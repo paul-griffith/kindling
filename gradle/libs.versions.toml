@@ -44,6 +44,9 @@ jide-common = { group = "com.formdev", name = "jide-oss", version = "3.7.15" }
 swingx = { group = "org.swinglabs.swingx", name = "swingx-all", version = "1.6.5-1" }
 rsyntaxtextarea = { group = "com.fifesoft", name = "rsyntaxtextarea", version = "3.6.0" }
 jfreechart = { group = "org.jfree", name = "jfreechart", version = "1.5.6" }
+elk-layered = { group = "org.eclipse.elk", name = "org.eclipse.elk.alg.layered", version = "0.12.0" }
+# required by ELK at runtime, but not declared in its POMs
+xtext-xbase-lib = { group = "org.eclipse.xtext", name = "org.eclipse.xtext.xbase.lib", version = "2.44.0" }
 
 # Ignition
 ignition-common = { group = "com.inductiveautomation.ignition", name = "common", version.ref = "ignition" }

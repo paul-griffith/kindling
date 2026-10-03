@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+    <defs>
+        <linearGradient id="a" x1="26.4" x2="34.8" y1="15.6" y2="36.2" gradientUnits="userSpaceOnUse">
+            <stop offset="11%" stop-color="#000682"/>
+            <stop offset="17%" stop-color="#122698"/>
+            <stop offset="27%" stop-color="#325dbc"/>
+            <stop offset="37%" stop-color="#4b88d9"/>
+            <stop offset="46%" stop-color="#5ca7ee"/>
+            <stop offset="54%" stop-color="#67bafa"/>
+            <stop offset="59%" stop-color="#6bc1ff"/>
+        </linearGradient>
+        <linearGradient id="b" x1="11.8" x2="4.9" y1="28.7" y2="10.4" gradientUnits="userSpaceOnUse">
+            <stop offset="9%" stop-color="#f03c34"/>
+            <stop offset="16%" stop-color="#f14b35"/>
+            <stop offset="45%" stop-color="#f58437"/>
+            <stop offset="69%" stop-color="#f8ae39"/>
+            <stop offset="88%" stop-color="#fac83b"/>
+            <stop offset="100%" stop-color="#fbd13b"/>
+        </linearGradient>
+        <linearGradient id="c" x1="23.9" x2="22" y1="18.3" y2="-1.7" gradientUnits="userSpaceOnUse">
+            <stop offset="38%" stop-color="#00a878"/>
+            <stop offset="42%" stop-color="#00a078"/>
+            <stop offset="48%" stop-color="#008c7a"/>
+            <stop offset="55%" stop-color="#006a7c"/>
+            <stop offset="64%" stop-color="#003b7f"/>
+            <stop offset="72%" stop-color="#000682"/>
+        </linearGradient>
+    </defs>
+    <g fill="#000682">
+        <path d="M19.3 31.8a18 18 0 0 1-2.5 4.2 18 18 0 0 0 8.4-1.5L20 30.1zM9.3 2.2A18 18 0 0 0 4 6.6q4.6.3 8.6 2.8z"/>
+    </g>
+    <path fill="url(#a)" d="m35.4 13.3-14 6.3-1.2.3a18 18 0 0 1-.3 10.3l5.2 4.4a18 18 0 0 0 10.3-21.3"/>
+    <path fill="url(#b)"
+          d="M19.3 31.9a18 18 0 0 0 .9-12c-1.6.2-3.2-.7-3.8-2.2l-.6-1.3-3.2-7a18 18 0 0 0-8.5-2.8 18 18 0 0 0 1 24l.2.2c3 3 7.1 4.9 11.4 5.2a19 19 0 0 0 2.6-4.1"/>
+    <path fill="url(#c)" d="m15.7 16.4.6 1.3a4 4 0 0 0 5 1.9l14-6.3a18 18 0 0 0-4.6-8 18 18 0 0 0-21.4-3l3.3 7.2z"/>
+    <path fill="#fff" fill-rule="evenodd"
+          d="M18 16.7a4 4 0 0 0 4-4 4 4 0 1 0-4 4m0 2.6c-3.1 0-9.3 1.6-9.3 4.7v3.3h18.6V24c0-3.1-6.2-4.7-9.3-4.7"/>
+</svg>

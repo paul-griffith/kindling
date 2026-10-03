@@ -22,6 +22,9 @@ This repository incorporates material as listed below or described in the code.
 - JSVG - MIT License - https://github.com/weisJ/jsvg/LICENSE
 - Jide Common Layer - GPL with classpath exception - http://www.jidesoft.com/products/oss.htm
 - RSyntaxTextArea - BSD 3-Clause - https://github.com/bobbylight/RSyntaxTextArea/blob/master/LICENSE.md
+- Eclipse Layout Kernel (ELK) - Eclipse Public License 2.0 - https://github.com/eclipse-elk/elk/blob/master/LICENSE.md
+  - Eclipse Modeling Framework (EMF) - Eclipse Public License 2.0 - https://github.com/eclipse-emf/org.eclipse.emf/blob/master/LICENSE
+  - Xtext (xbase.lib) - Eclipse Public License 2.0 - https://github.com/eclipse-xtext/xtext/blob/main/LICENSE
 
 ### Test Dependencies
 - Kotest - Apache License 2.0 - https://github.com/kotest/kotest/blob/master/LICENSE

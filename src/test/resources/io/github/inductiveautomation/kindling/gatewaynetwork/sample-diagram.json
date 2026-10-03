@@ -1,0 +1,122 @@
+{
+  "localGatewayName": "Central",
+  "redundantRole": "Master",
+  "version": "8.1.48",
+  "edition": "",
+  "connections": [
+    {
+      "systemName": "Site-A",
+      "connectionId": "Site-A|5d0e8a1c",
+      "connectionStatus": "Running",
+      "redundantRole": "Independent",
+      "direction": "Outgoing",
+      "ssl": true,
+      "pingTime": 12,
+      "incoming_rate": 1500,
+      "outgoing_rate": 2500,
+      "faultCount": 0,
+      "networkAddress": "10.0.0.2",
+      "version": "8.1.48",
+      "edition": "edge",
+      "connections": [
+        {
+          "systemName": "Shared",
+          "connectionId": "Shared|77ab01f2",
+          "connectionStatus": "Running",
+          "redundantRole": "Independent",
+          "direction": "Incoming",
+          "ssl": true,
+          "pingTime": 30,
+          "incoming_rate": 200,
+          "outgoing_rate": 100,
+          "faultCount": 2,
+          "networkAddress": "10.0.1.5",
+          "version": "8.1.45",
+          "edition": "standard"
+        }
+      ]
+    },
+    {
+      "systemName": "Site-B",
+      "connectionId": "Site-B|9c3f4410",
+      "connectionStatus": "Running",
+      "redundantRole": "Backup",
+      "direction": "Incoming",
+      "ssl": false,
+      "pingTime": 5,
+      "incoming_rate": 1200000,
+      "outgoing_rate": 300000,
+      "faultCount": 0,
+      "networkAddress": "10.0.0.3",
+      "version": "8.1.48",
+      "edition": "standard",
+      "connections": [
+        {
+          "systemName": "Shared",
+          "connectionId": "Shared|77ab01f2",
+          "connectionStatus": "Running",
+          "redundantRole": "Independent",
+          "direction": "Outgoing",
+          "ssl": true,
+          "pingTime": 40,
+          "incoming_rate": 50,
+          "outgoing_rate": 50,
+          "faultCount": 0,
+          "networkAddress": "10.0.1.5",
+          "version": "8.1.45",
+          "edition": "standard"
+        },
+        {
+          "systemName": "Proxied",
+          "connectionId": "Proxied|1e2d3c4b",
+          "connectionStatus": "Running",
+          "redundantRole": "Independent",
+          "isProxy": true,
+          "pingTime": -1,
+          "networkAddress": "10.0.2.8",
+          "version": "8.1.40",
+          "edition": "maker"
+        }
+      ]
+    },
+    {
+      "systemName": "N/A",
+      "connectionId": "N/A|00000000",
+      "connectionStatus": "Faulted",
+      "redundantRole": "Independent",
+      "direction": "Outgoing",
+      "pingTime": -1,
+      "faultCount": 17,
+      "networkAddress": "10.0.0.9"
+    },
+    {
+      "systemName": "Site-A",
+      "connectionId": "Site-A|5d0e8a1c",
+      "connectionStatus": "Running",
+      "redundantRole": "Independent",
+      "direction": "Incoming",
+      "ssl": true,
+      "pingTime": 13,
+      "incoming_rate": 900,
+      "outgoing_rate": 100,
+      "faultCount": 0,
+      "networkAddress": "10.0.0.2",
+      "version": "8.1.48",
+      "edition": "edge"
+    },
+    {
+      "systemName": "Cloud-1",
+      "connectionId": "Cloud-1|ab12cd34",
+      "connectionStatus": "Connected",
+      "redundantRole": "Independent",
+      "direction": "Outgoing",
+      "ssl": true,
+      "pingTime": 80.4,
+      "incoming_rate": 0,
+      "outgoing_rate": 0,
+      "networkAddress": "cloud.example.com",
+      "version": "8.3.0",
+      "edition": "cloud"
+    }
+  ]
+}

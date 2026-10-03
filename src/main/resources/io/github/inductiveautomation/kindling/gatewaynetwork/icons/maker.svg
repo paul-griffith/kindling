@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+    <defs>
+        <linearGradient id="a" x1="26.4" x2="34.8" y1="15.6" y2="36.2" gradientUnits="userSpaceOnUse">
+            <stop offset="11%" stop-color="#000682"/>
+            <stop offset="17%" stop-color="#122698"/>
+            <stop offset="27%" stop-color="#325dbc"/>
+            <stop offset="37%" stop-color="#4b88d9"/>
+            <stop offset="46%" stop-color="#5ca7ee"/>
+            <stop offset="54%" stop-color="#67bafa"/>
+            <stop offset="59%" stop-color="#6bc1ff"/>
+        </linearGradient>
+        <linearGradient id="b" x1="11.8" x2="4.9" y1="28.7" y2="10.4" gradientUnits="userSpaceOnUse">
+            <stop offset="9%" stop-color="#f03c34"/>
+            <stop offset="16%" stop-color="#f14b35"/>
+            <stop offset="45%" stop-color="#f58437"/>
+            <stop offset="69%" stop-color="#f8ae39"/>
+            <stop offset="88%" stop-color="#fac83b"/>
+            <stop offset="100%" stop-color="#fbd13b"/>
+        </linearGradient>
+        <linearGradient id="c" x1="23.9" x2="22" y1="18.3" y2="-1.7" gradientUnits="userSpaceOnUse">
+            <stop offset="38%" stop-color="#00a878"/>
+            <stop offset="42%" stop-color="#00a078"/>
+            <stop offset="48%" stop-color="#008c7a"/>
+            <stop offset="55%" stop-color="#006a7c"/>
+            <stop offset="64%" stop-color="#003b7f"/>
+            <stop offset="72%" stop-color="#000682"/>
+        </linearGradient>
+    </defs>
+    <g fill="#000682">
+        <path d="M19.3 31.8a18 18 0 0 1-2.5 4.2 18 18 0 0 0 8.4-1.5L20 30.1zM9.3 2.2A18 18 0 0 0 4 6.6q4.6.3 8.6 2.8z"/>
+    </g>
+    <path fill="url(#a)" d="m35.4 13.3-14 6.3-1.2.3a18 18 0 0 1-.3 10.3l5.2 4.4a18 18 0 0 0 10.3-21.3"/>
+    <path fill="url(#b)"
+          d="M19.3 31.9a18 18 0 0 0 .9-12c-1.6.2-3.2-.7-3.8-2.2l-.6-1.3-3.2-7a18 18 0 0 0-8.5-2.8 18 18 0 0 0 1 24l.2.2c3 3 7.1 4.9 11.4 5.2a19 19 0 0 0 2.6-4.1"/>
+    <path fill="url(#c)" d="m15.7 16.4.6 1.3a4 4 0 0 0 5 1.9l14-6.3a18 18 0 0 0-4.6-8 18 18 0 0 0-21.4-3l3.3 7.2z"/>
+    <g fill="#fff">
+        <path d="M26.5 9.2a2 2 0 0 0-.8-1L24.5 8q-.7 0-1.1.9l-1 2.1-.4.7-2.6 5.7-1 2.1-.5 1.1-1 2.2-.4.9.6.3 9.2-13.5q.5-.8.2-1.3M14 23.7 12.4 18q-.3-.4-.7-.6h-1l-.6.7v1l.3.4q.1.3.5.8l2.7 3.7zM15.3 28.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8"/>
+    </g>
+</svg>

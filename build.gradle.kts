@@ -33,6 +33,10 @@ dependencies {
         isTransitive = false
     }
     api(libs.jfreechart)
+    api(libs.elk.layered) {
+        exclude(group = "org.eclipse.emf", module = "org.eclipse.emf.ecore.xmi")
+    }
+    runtimeOnly(libs.xtext.xbase.lib)
     api(libs.questdb)
     api(libs.rsyntaxtextarea)
     api(libs.bundles.jackson)
